@@ -1,0 +1,52 @@
+fixed~Carbamidomethyl (C):C, caC
+fixed~HGly-HGly (K):K, cgK
+fixed~HCGly-HCGly (K):K,cgK
+fixed~HCGly-HCGly-HCGly-HCGly (K):K,cgcgK
+fixed~HNGly-HNGly (K):K,ngK
+fixed~iTRAQ4plex (K):K, itraqK
+fixed~iTRAQ8plex (K):K, eK
+fixed~Methylthio (C):C, mtC
+fixed~TMT6plex (K):K, tmtK
+fixed~LbA-LbA (K):K,lbalbaK
+fixed~LbA-HbA (K):K,lbahbaK
+fixed~HbA-HbA (K):K,hbahbaK
+fixed~HCGly-HCGly:K,cgK
+fixed~HNGly-HNGly:K,ngK
+variable~C|Pip:pipC
+variable~S|Fucosylation:fucS
+variable~S|Fringe:gfS
+variable~T|Fringe:gfT
+variable~C|SML:smlC
+variable~S|HexNAc: gS
+variable~T|HexNAc: gT
+variable~S|XylXylGal: xxgS
+variable~T|XylXylGal: xxgT
+variable~S|Hex:galS
+variable~T|Hex:galT
+variable~K|iTRAQ8plex:eK
+variable~T|Fucosylation:fucT
+variable~C|ADP-Ribosyl:arC
+variable~C|Carbamidomethyl:caC
+variable~Q|Deamidated : E
+variable~N|Deamidated : D
+variable~M|Oxidation : oxM
+variable~S|Phospho : pS
+variable~T|Phospho : pT
+variable~Y|Phospho : pY
+variable~E|ADP-Ribosyl:arE
+variable~N|ADP-Ribosyl:arN
+variable~S|ADP-Ribosyl:arS
+variable~D|ADP-Ribosyl:arD
+variable~C|ADP-Ribosyl:arC
+variable~Q|ADP-Ribosyl:arQ
+variable~K|ADP-Ribosyl:arK
+variable~R|ADP-Ribosyl:arR
+variable~K|LbA-LbA:lbalbaK
+variable~K|LbA-HbA:lbahbaK
+variable~K|HbA-HbA:hbahbaK
+variable~S|Phosphate Elimination:dhA
+variable~K|HCGly-HCGly:cgK
+variable~K|HNGly-HNGly:ngK
+variable~K|HNGly-HNGly-HNGly-HNGly:ngngK
+variable~K|HCGly-HCGly-HCGly-HCGly:cgcgK
+variable~E|Glu->pyro-Glu:pE

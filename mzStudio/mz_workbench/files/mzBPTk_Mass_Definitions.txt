@@ -1,0 +1,69 @@
+GIPS Mass Definition File (First line monoisotopic second line average)
+Carbon
+C
+ 12 
+ 12.01104 
+Hydrogen
+H
+ 1.007825 
+ 1.007976 
+Nitrogen
+N
+ 14.003074 
+ 14.00666 
+Oxygen
+O
+ 15.994915 
+ 15.99932 
+Phosphorus
+P
+ 30.973762 
+ 30.973762 
+Sulfer
+S
+ 31.97207 
+ 32.06469 
+Fluorine
+F
+ 18.9984046 
+ 18.9984046 
+Deuterium
+D
+ 2.014101779 
+ 2.014 
+Carbon-13
+C13
+ 13.003354826 
+ 13.0034 
+Sulfer-35
+S35
+ 0 
+ 0 
+Nitrogen-15
+N15
+ 15.00010897 
+ 0
+Chlorine
+Cl
+ 34.968852721
+ 34.968852721
+Bromine
+Br
+ 78.9183361
+ 78.9183361
+Electron
+e-
+0.0005485798959
+0
+Oxygen-18
+O18
+17.9991603
+0
+Oxygen-18 Balance
+O18 balance
+2.0042453
+0
+Iron
+Fe
+55.845
+55.845

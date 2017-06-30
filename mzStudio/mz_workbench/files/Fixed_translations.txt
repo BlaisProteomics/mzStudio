@@ -1,0 +1,15 @@
+Carbamidomethyl (C):C, caC
+HGly-HGly (K):K, cgK
+HCGly-HCGly (K):K,cgK
+HCGly-HCGly-HCGly-HCGly (K):K,cgcgK
+HNGly-HNGly (K):K,ngK
+iTRAQ4plex (K):K, itraqK
+iTRAQ8plex (K):K, eK
+Methylthio (C):C, mtC
+TMT6plex (K):K, tmtK
+LbA-LbA (K):K,lbalbaK
+LbA-HbA (K):K,lbahbaK
+HbA-HbA (K):K,hbahbaK
+HCGly-HCGly:K,cgK
+HNGly-HNGly:K,ngK
+Propionyl (K):K,pK

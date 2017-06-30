@@ -1,0 +1,38 @@
+viewCentroid	False
+max_cg	100
+min_cg	2
+MALDIServer	None
+label_res	False
+label_threshold	Thermo	200
+label_threshold	ABI	10
+label_threshold	ABI-MALDI	10
+label_threshold	mgf	10
+maintext	BLACK
+mainfont	size	10
+mainfont	font	ROMAN
+mainfont	style	NORMAL
+mainfont	weight	BOLD
+mainfont	face	Times New Roman
+mainfont	color	BLACK
+abi_centroid	new
+eliminate_noise	True
+step_length	0.02
+peak_min	5
+threshold_cent_abi	0
+line color	[0, 0, 0, 255]
+line width	1.0
+space	40
+inter_raw_space	80
+y_marg	50
+total_xic_height	450
+total_spec_height	450
+inter_axis_factor	10
+inter_xic_space	60
+spec_indent	50
+spec_width	900
+ric_spec_indent	600
+ric_spec_width	550
+auto_resize	True
+drawCentroid	False
+xic_titles	False
+searchAlgorithm	Comet

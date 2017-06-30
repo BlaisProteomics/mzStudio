@@ -1,0 +1,25 @@
+iTRAQ4plex(N-term)|iTRAQ
+iTRAQ4plex (N-term)|iTRAQ
+TMT6plex(N-term)|TMT
+iTRAQ8plex (N-term)|iTRAQ8plex
+iTRAQ8plex(N-term)|iTRAQ8plex
+iTRAQ8plex@N-term|iTRAQ8plex
+HGly-HGly(N-term)|HCGlyHCGly
+HCGly-HCGly(N-term)|HCGlyHCGly
+HNGly-HNGly(N-term)|HNGlyHNGly
+LbA-LbA(N-term)|LbALbA
+LbA-HbA(N-term)|LbAHbA
+HbA-HbA(N-term)|HbAHbA
+HCGly-HCGly-HCGly-HCGly(N-term)|HCGlyHCGlyHCGlyHCGly
+HNGly-HNGly-HNGly-HNGly(N-term)|HNGlyHNGlyHNGlyHNGly
+N-term: Acetyl|Acetyl
+iTRAQ8plex@N-term|iTRAQ8plex
+iTRAQ8plex@N-term|iTRAQ8plex
+N-term: HNGly-HNGly|HNGlyHNGly
+N-term: HCGly-HCGly|HCGlyHCGly
+N-term: HbA-HbA|HbAHbA
+N-term: LbA-HbA|LbAHbA
+N-term: LbA-LbA|LbALbA
+N-term: HNGly-HNGly-HNGly-HNGly|HNGlyHNGlyHNGlyHNGly
+N-term: HCGly-HCGly-HCGly-HCGly|HCGlyHCGlyHCGlyHCGly
+N-term: Propionyl|Propionyl

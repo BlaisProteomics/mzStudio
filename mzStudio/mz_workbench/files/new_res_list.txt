@@ -1,0 +1,160 @@
+tapS|Staple|C:7, H:11, O:1, N:1|Misc
+ngG|Dual gly label HR 2 15Ns|C:4, H:6, O:2, N15:2|PAL Labels
+omiuK|o-methyl isourea lysine|C:7, H:14, O:1, N:4|Lysine
+pcS|Serine Cystamine Phosphoramidate|C:7, H:16, O:4, P:1, S:2, N:3|Misc
+ngK|HNGly-HNGly Lysine|C:10, H:18, O:3, N15:2, N:2|PAL Labels
+pcY|Cystamine Phosphoramidate Tyrosine|C:13, H:20, O:4, P:1, S:2, N:3|Common
+gfT|GlcNAc-Fucose Threonine|C:18, H:30, O:11, N:2|Glyco
+bkgglT|BiokgalglcThreonine|C:33, H:53, O:15, S:1, N:7|Common
+citraqK|Cold iTRAQ Lysine|C:13, H:24, O:2, N:4|Lysine
+bkgglS|BiokgalglcSerine|C:32, H:51, O:15, S:1, N:7|Common
+ethaD|Ethanolamine blocked Aspartic Acid|C:6, H:10, O:3, N:2|Common
+gT|GlcNAC Thr|C:12, H:20, O:7, N:2|Glyco
+gS|GlcNAC Serine|C:11, H:18, O:7, N:2|Glyco
+fucT|fucosylated Threonine|C:10, H:17, O:6, N:1|Glyco
+arD|ADP-Ribose Asp|C:19, H:26, O:16, P:2, N:6|ADP-Ribose
+arE|ADP-Ribose Glutamic Acid|C:20, H:28, O:16, P:2, N:6|ADP-Ribose
+silacR|6-13C SILAC Arginine|H:12, O:1, C13:6, N:4|SILAC
+galkglcnT|Gal-ket-GlcNAc-Thr|C:21, H:34, O:12, N:2|Glyco
+D|Aspartic Acid|C:4, H:5, O:3, N:1|Common
+glyeeD|Glycine Ethyl Ester Aspartic Acid|C:8, H:12, O:4, N:2|Common
+glyeeE|Glycine Ethyl Ester Glutamic Acid|C:9, H:14, O:4, N:2|Common
+glyeehydD|Hydrolyzed Glycine Ethyl Ester Aspartic Acid|C:6, H:8, O:4, N:2|Common
+glyeeEhyd|Hydrolyzed Glycine Ethyl Ester Glutamic Acid|C:7, H:10, O:4, N:2|Common
+H|Histidine|C:6, H:7, O:1, N:3|Common
+L|Leucine|C:6, H:11, O:1, N:1|Common
+oxM|Oxidized Methionine|C:5, H:9, O:2, S:1, N:1|Common
+aeC|amino ethyl cysteine|C:5, H:10, O:1, S:1, N:2|Cysteine
+doxC|double ox Cysteine|C:3, H:5, O:3, S:1, N:1|Common
+T|Threonine|C:4, H:7, O:2, N:1|Common
+biotK|biotin lysine|C:16, H:26, O:3, S:1, N:4|Common
+X|Staple 2|C:8, H:13, O:1, N:1|Misc
+cgcgK|HCGly-HCGly-HCGly-HCGly Lysine|C:10, H:24, O:5, C13:4, N:6|PAL Labels
+hbahbaK|Heavy Bala Heavy Bala Lysine|C:6, H:22, O:3, N15:2, C13:6, N:2|PAL Lables
+oxC|Single Ox Cysteine|C:3, H:5, O:2, S:1, N:1|Common
+piS|Phosphoserine imidazolide|C:6, H:8, O:4, P:1, N:3|Misc
+fdK|c4f9 lysine|C:13, F:9, H:16, O:2, N:2|Fluorous
+gglqK|gglqK|C:21, H:37, O:6, N:7|Lysine
+ltfaalaK|Light TFA Beta Alanyl Lysine|C:11, F:3, H:16, O:3, N:3|PAL Labels
+ltaaK|Light TFA Bala Bala Lysine|C:14, F:3, H:21, O:4, N:4|PAL Labels
+halaK|13C3 15N1 Beta Alanyl Lysine|C:6, H:17, O:2, N15:1, C13:3, N:2|PAL Lables
+bmxiC|bmx inhibitor Cysteine|C:32, H:29, O:5, S:2, N:5|Common
+G|Glycine|C:2, H:3, O:1, N:1|Common
+btS|Butane thiol Serine|C:7, H:13, O:1, S:1, N:1|Common
+nglbahbaK|HNGly-HNGly-LbA-HbA Lysine|C:13, S35:1, H:26, O:5, N15:5, N:3|PAL Labels
+gfS|GlcNAc-Fucose Serine|C:17, H:28, O:11, N:2|Glyco
+mdD|d3-Methyl Aspartic Acid|C:5, D:3, H:4, O:3, N:1|Common
+mdE|d3Methyl Glu|C:6, D:3, H:6, O:3, N:1|Common
+arC|ADP-Ribose Cysteine|C:18, H:26, O:14, P:2, S:1, N:6|ADP-Ribose
+fliaaC|F13IAA mod Cys|C:14, F:13, H:13, O:2, S:1, N:2|Fluorous
+seK|6-13C 2-15N Silac Lysine|H:12, O:1, N15:2, C13:6|SILAC
+arN|ADP-Ribose Asn|C:19, H:27, O:15, P:2, N:7|ADP-Ribose
+C|Cysteine|H:5, C:3, S:1, O:1, N:1|Common
+icatlC|ICAT light Cysteine|C:13, H:22, O:4, S:1, N:4|Cysteine
+acK|Acetylated Lysine|C:8, H:14, O:2, N:2|Common
+O|Ornithine|C:5, H:10, O:1, N:2|Common
+tdfoaC|TDFOA mod Cys|C:14, F:13, H:12, O:3, S:1, N:1|Fluorous
+acS|Acetylated Serine|C:5, H:7, O:3, N:1|Common
+S|Serine|C:3, H:5, O:2, N:1|Common
+pdK|Propionyl and 4-2H Silac Lysine|H:12, C:9, D:4, O:2, N:2|SILAC
+W|Tryptophan|C:11, H:10, O:1, N:2|Common
+lproK|Prolyl Lysine|C:11, H:19, O:2, N:3|PAL Labels
+cgK|HCGly-HCGly Lysine|C:8, H:18, O:3, C13:2, N:4|PAL Labels
+cghbahbaK|HCGly-HCGly-HbA-HbA Lysine|C:8, H:26, O:5, N15:2, C13:8, N:6|PAL Labels
+cgG|Dual gly label HR 2 13Cs|C:2, H:6, O:2, C13:2, N:2|PAL Labels
+mmR|monomethyl Arginine|C:7, H:14, O:1, N:4|Common
+cC|Celastrol Cysteine|C:32, H:41, O:5, S:1, N:1|Misc
+bocggK|BocGGLys|C:15, H:26, O:5, N:4|Common
+deutK|4-2H Silac Lysine|C:6, D:4, H:8, O:1, N:2|SILAC
+mmK|mono methyl Lysine|C:7, H:14, O:1, N:2|Lysine
+tpS|Thiophosphoserine|C:3, H:6, O:4, N:1, P:1, S:1|Common
+ggK|Ubiq-Lys|C:10, H:18, O:3, N:4|Lysine
+pS|Phosphoserine|H:6, C:3, P:1, O:5, N:1|Common
+itraqK|iTRAQ Lysine|C:10, H:24, O:2, N15:1, C13:3, N:3|Lysine
+pT|Phosphothreonine|C:4, H:8, O:5, P:1, N:1|Common
+pY|Phosphotyrosine|C:9, H:10, O:5, P:1, N:1|Common
+d3mE|d3Methyl Glu|C:6, H:12, O:3, N:1|Common
+pcrS|Serine Reduced Cystamine Phosphoramidate|C:5, H:11, O:4, P:1, S:1, N:2|Misc
+pE|pyroGlutamic Acid|C:5, H:5, O:2, N:1|Common
+pK|Propionyl Lysine|H:16, C:9, O:2, N:2|Lysine
+pcrY|Reduced Cystamine Phosphoramidate Tyrosine|C:11, H:15, O:4, P:1, S:1, N:2|Misc
+ppE|pyrimidyl piperazine Glutamic Acid|C:13, H:17, O:2, N:5|Common
+ppD|pyrimidyl piperazine Aspartic Acid|C:12, H:15, O:2, N:5|Common
+pK|Propionylated Lysine|C:9, H:16, O:2, N:2|Common
+lbalbaK|Light Bala Light Bala Lysine|C:12, H:22, O:3, N:4|PAL Labels
+tdfoapcrY|TDFOA reduced cystamine phosphoramidate tyrosine|C:22, F:13, H:22, O:6, P:1, S:1, N:2|Fluorous
+flthS|C8F17mod serine|C:13, F:17, H:8, O:1, S:1, N:1|Fluorous
+Q|Glutamine|C:5, H:8, O:2, N:2|Common
+hproK|13C5 15N1 Prolyl Lysine|C:6, H:19, O:2, N15:1, C13:5, N:2|PAL Lables
+mE|Methyl Glu|C:6, H:9, O:3, N:1|Common
+mD|Mehtyl Aspartic Acid|C:5, H:7, O:3, N:1|Common
+sggfT|Neu-gal-GlcNac-fuc Threonine|C:35, H:57, O:23, N:3|Glyco
+B|Cysteinylated Cysteine|C:6, H:10, O:3, S:2, N:2|Cysteine
+sggfS|Neu-gal-GlcNac-fuc Serine|C:34, H:55, O:23, N:3|Glyco
+F|Phenylalanine|C:9, H:9, O:1, N:1|Common
+cglbahbaK|HCGly-HCGly-LbA-HbA Lysine|C:11, H:26, O:5, N15:1, C13:5, N:5|PAL Labels
+dmK|di methyl Lysine|C:8, H:16, O:1, N:2|Lysine
+smR|6-13C 4-15N SILAC monomethyl Arginine|C:1, H:14, O:1, N15:4, C13:6|SILAC
+dmR|dimethyl Arginine|C:8, H:16, O:1, N:4|Common
+R|Arginine|C:6, H:12, O:1, N:4|Common
+V|Valine|C:5, H:9, O:1, N:1|Common
+caC|Carboxyamidated Cysteine|C:5, H:8, O:2, S:1, N:2|Common
+mtC|Methyl thio Cysteine|C:4, H:7, O:1, S:2, N:1|Cysteine
+mY|Myristoyl Tyrosine|C:23, H:35, O:3, N:1|Common
+sdR|6-13C 4-15N SILAC dimethyl Arginine|C:2, H:16, O:1, N15:4, C13:6|SILAC
+dnpA|dnp A|C:9, H:8, O:5, N:4|Misc
+ethaE|Ethanolamine blocked Glutamic Acid|C:7, H:12, O:3, N:2|Common
+prN|PhosphoRibose Asn|C:9, H:15, O:9, P:1, N:2|ADP-Ribose
+cyC|Cysteine|C:40, H:49, O:10, S:3, N:5|Cysteine
+lalaK|Beta Alanyl Lysine|C:9, H:17, O:2, N:3|PAL Labels
+pfY|C4F9 Phosphorimidazolide Tyrosine|C:16, F:13, H:16, O:5, P:1, N:3|Fluorous
+ctmtK|cold TMT Lysine|C:18, H:32, O:3, N:4|Lysine
+dhC|dehydro cysteic acid cysteine|H:3, C:3, S:1, O:4, N:1|Common
+silacP|13C5-Proline|H:7, O:1, C13:5, N:1|SILAC
+dhA|Dehydroalanine|C:3, H:3, O:1, N:1|Common
+xxgS|XylXylGalSer|C:19, H:31, O:15, N:1|Glyco
+foxthT|F13 mod ox Thr|C:12, F:13, H:10, O:2, S:1, N:1|Fluorous
+fpY|FP 1 Tyrosine|C:39, H:47, Cl:1, O:9, P:1, N:7|Misc
+galkglcnS|Gal-ket-GlcNAc-Ser|C:20, H:32, O:12, N:2|Glyco
+galT|galactosylated Threonine|C:10, H:17, O:7, N:1|Glyco
+prD|PhosphoRibose Asp|C:9, H:14, O:10, P:1, N:1|ADP-Ribose
+sC|Cysteic acid|C:3, H:5, O:4, S:1, N:1|Common
+galS|galactosylated Serine|C:9, H:15, O:7, N:1|Glyco
+foxthS|F13 mod ox Serine|C:11, F:13, H:8, O:2, S:1, N:1|Fluorous
+pseK|Propionyl and 6-13C 2-15N Silac Lysine|C13:6, H:16, C:3, O:2, N15:2|SILAC
+piY|Phosphorimidazolide tyrosine|C:12, H:12, O:4, P:1, N:3|Misc
+pstwoY|Phenyl sulfonate 1 Tyrosine|C:38, H:44, Cl:1, O:7, N:6|Misc
+flseviaaC|F13IAA mod Cys|C:16, F:17, H:13, O:2, S:1, N:2|Fluorous
+fucS|fucosylated Serine|C:9, H:15, O:6, N:1|Glyco
+dsbC|Disulfide Cysteine|C:3, H:3, O:1, S:1, N:1|Common
+dhhyA|hydroxy dehydroalanine|H:3, C:3, O:2, N:1|Common
+tdfS|F13 mod Serine|C:11, F:13, H:8, O:1, S:1, N:1|Fluorous
+A|Alanine|C:3, H:5, O:1, N:1|Common
+sY|Sulfotyrosine|C:9, H:9, O:5, S:1, N:1|Common
+E|Glutamic Acid|C:5, H:7, O:3, N:1|Common
+I|Isoleucine|C:6, H:11, O:1, N:1|Common
+sR|6-13C 4-15N SILAC Arginine|H:12, O:1, N15:4, C13:6|SILAC
+icathC|icat heavy Cysteine|C:4, H:22, O:4, S:1, C13:9, N:4|Cysteine
+sP|13C5,15N1-Proline|H:7, O:1, N15:1, C13:5|SILAC
+M|Methionine|C:5, H:9, O:1, S:1, N:1|Common
+sV|Silac Valine|H:9, O:1, N15:1, C13:5|SILAC
+sK|6-13C Silac Lysine|H:12, O:1, C13:6, N:2|SILAC
+sI|Silac Isoleucine|H:11, O:1, N15:1, C13:6|SILAC
+nglbalbaK|HNGly-HNGly-LbA-LbA Lysine|C:16, H:26, O:5, N15:2, N:4|PAL Labels
+U|linker|C:6, H:11, O:3, N:1|Misc
+sL|Silac Leucine|H:11, O:1, N15:1, C13:6|SILAC
+Y|Tyrosine|C:9, H:9, O:2, N:1|Common
+axK|Lysine|C:16, H:28, O:3, N:4|Common
+ngngK|HNGly-HNGly-HNGly-HNGly Lysine|C:14, H:24, O:5, N15:4, N:2|PAL Labels
+N|Asparagine|C:4, H:6, O:2, N:2|Common
+lbahbaK|Light Bala Heavy Bala Lysine|C:9, H:22, O:3, N15:1, C13:3, N:3|PAL Labels
+tdfT|F13 mod Threonine|C:12, F:13, H:10, O:1, S:1, N:1|Fluorous
+fthoxS|C8F17mod serine sulfoxide|C:13, F:17, H:8, O:2, S:1, N:1|Fluorous
+eK|8-plex Lysine|C:13, H:36, O:4, N15:1, C13:7, N:5|Lysine
+P|Proline|C:5, H:7, O:1, N:1|Common
+psoneY|Phenyl sulfonate 1 Tyrosine|C:37, H:42, Cl:1, O:7, N:7|Misc
+dtdmK|ditrideut methyl Lysine|C:8, D:6, H:10, O:1, N:2|Lysine
+cglbalbaK|HCGly-HCGly-LbA-LbA Lysine|C:14, H:26, O:5, C13:2, N:6|PAL Labels
+tmtK|TMT Lysine|C:13, H:32, O:3, C13:5, N:4|Lysine
+fcK|c4f9 Ubiq-Lys|C:17, F:9, H:22, O:4, N:4|Fluorous
+nghbahbaK|HNGly-HNGly-HbA-HbA Lysine|C:10, S35:2, H:26, O:5, N15:8, N:2|PAL Labels
