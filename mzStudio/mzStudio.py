@@ -1,30 +1,69 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '0.9.0'
+__version__ = '0.9.9'
+
+import wx, os
+
+global installdir
+installdir = os.path.abspath(os.path.dirname(__file__))
+try:
+    dirName = os.path.dirname(os.path.abspath(__file__))
+except:
+    dirName = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+
+if __name__ == '__main__':
+    app = wx.App(False)    
+    
+    ID_Dict = {}
+    
+    bitmapDir = os.path.join(dirName, 'bitmaps')
+    
+    img = wx.Image(os.path.join(bitmapDir, "SplashScreen.png"), wx.BITMAP_TYPE_PNG)
+    bmp=img.ConvertToBitmap()
+    wx.SplashScreen(bmp, wx.SPLASH_CENTER_ON_SCREEN|wx.SPLASH_TIMEOUT, 1000, None, -1)
+    wx.Yield()
 
 #--------------POSSIBLE FIXES/FEATURES
 
-# 1) WHEN IMPORT SEARCH RESULTS, it reloads current data file - should not have to do this.
+# 1) Toolar - make first appear with just open; other functions will throw error until data file is opened.
+# 2) When close dbframe, clear ID_Dict
 # 2) mzCore Nterm and variable translations are hard-coded i.e. Ntranslate = {'iTRAQ4plex (N-term)': 'iTRAQ',
 #     This makes it difficult to add new mods.  Should be read from text file.
 # 3) Spectrum text add column headers (mz, intensity).  Maybe put in agw window?
 # 4) XIC add ability for individual time ranges per XIC and "link" "unlink" option for zoom.
-# 5) mdLC: load all or sequential?
 # 6) Settings: save scan_dict and xic?
 # 7) Settings: Some Display item parameters are not used since auto size detect was implemented.
 # 8) FIX LOAD XIC
+# 9) SVL RVL - put in a sizer.
+
+try:
+    import wxversion
+    wxversion.select("3.0")
+except:
+    pass
+
+import wx
+
+if wx.__version__[0] != '3':
+    print "WARNING- wxPython version %s may not be fully supported.  Please install wxPython 3." % wx.__version__
 
 
 
-def signal(*foo):
-    print 'FOOBAR %s' % foo
+
+            
+        
+            
+
 
 #-----------------SYSTEM IMPORTS                      
-import wx, os, re, sys, cPickle, platform, time, thread, csv, gc
+import os, re, sys, cPickle, platform, time, thread, csv, gc
 from collections import defaultdict
 from tempfile import mkdtemp
 from random import seed
 seed(1)
 import math
+
+
 
 #-----------------mzStudio IMPORTS
 import ObjectOrganizer
@@ -175,15 +214,6 @@ from wx.lib.agw.fmresources import FM_OPT_SHOW_CUSTOMIZE, FM_OPT_SHOW_TOOLBAR, F
 #-----------------Globals
 global images 
 USE_BUFFERED_DC = True
-global installdir
-installdir = os.path.abspath(os.path.dirname(__file__))
-try:
-    dirName = os.path.dirname(os.path.abspath(__file__))
-except:
-    dirName = os.path.dirname(os.path.abspath(sys.argv[0]))
-
-bitmapDir = os.path.join(dirName, 'bitmaps')
-print bitmapDir
 
 TBFLAGS = ( wx.TB_HORIZONTAL
             | wx.NO_BORDER
@@ -622,15 +652,17 @@ class MS_Data_Manager():
         self.parent.parent.StartGauge(text="Building Scan Dictionaries...", color=wx.BLUE)
         t = ScanDictThread(m, start, stop)
         
-        print "NONTHREAD MODE"
-        t.Run()     
-        #try:
-        #t.Start()
-        #while t.IsRunning():
-            #time.sleep(0.1)
-            #wx.Yield()
-        #except sqlite3.ProgrammingError:
-            #t.Run()        
+        #print "NONTHREAD MODE"
+        #t.Run()    
+    
+        # "Threaded mode"
+        try:
+            t.Start()
+            while t.IsRunning():
+                time.sleep(0.1)
+                wx.Yield()
+        except sqlite3.ProgrammingError:
+            t.Run()        
             
         scan_dict = t.scan_dict
         rt_dict = t.rt_dict
@@ -1245,7 +1277,7 @@ class MS_Data_Manager():
             self.files[filename]["targ_check"] = False
             self.files[filename]["targ_filt"] = []
             
-            print "Scott, don't put local paths in the code!"
+            #-----------------------------TIMING TEST CODE.  Make sure to comment out when done.
             #t2=time.time()
             #filew = open(r'D:\SBF\mzStudio\multifile\times.txt','a')
             #filew.write(filename + '\t' + str(t2-t1) + '\n')
@@ -1606,7 +1638,7 @@ class MS_Data_Manager():
                 if not self.files[filename]["viewMascot"]:
                     for i in range(1, int(cg+1)):
                         self.files[filename]["mz"], self.files[filename]["b_ions"], self.files[filename]["y_ions"] = mz_core.calc_pep_mass_from_residues(seq, i, varmod, fixedmod, ions=_ions)
-                        if varmod.find("Fucosylation") > -1 or varmod.find("Phospho") >-1 or varmod.find("Hex") > - 1 or varmod.find("Xyl") > -1 or seq.find("p") >-1:
+                        if varmod.find("Fucosylation") > -1 or varmod.find("Phospho") >-1 or varmod.find("Hex") > - 1 or varmod.find("Xyl") > -1 or seq.find("p") >-1 or varmod.find("SML") > -1:
                             self.files[filename]["NL_ions"] = mz_core.get_fragment_neutral_losses(seq, self.files[filename]["b_ions"], self.files[filename]["y_ions"], varmod, i)
                             self.files[filename]["precNL_ions"] = mz_core.get_precursor_neutral_losses(self.files[filename]["mz"], i, varmod) 
                             #print self.files[filename]["NL_ions"]
@@ -2566,8 +2598,12 @@ class DrawPanel(wx.Panel):
         Code for drag and drop xic
     
         
-        '''        
+        '''                
         currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
+        if currentFile['Filename'].lower().endswith('mgf'):
+            wx.MessageBox('XIC operations are not supported on MGF files.')
+            print "Not making XIC object for MGF file."
+            return
         
         data = currentFile["xic"]
         xr = currentFile["xr"]
@@ -5655,6 +5691,7 @@ class xicFrame(wx.Frame):
         #for j in range(counter, 150):
         #    self.mark_base.append({})
         self.radiobox = wx.RadioBox(self.panel, -1, label='Parameters', pos=(150, 210), size=wx.DefaultSize, choices=['Start\Stop', 'Center\Width'], majorDimension=2, style=wx.RA_SPECIFY_COLS | wx.NO_BORDER) #
+        self.radiobox.Hide()
         self.Bind(wx.EVT_RADIOBOX, self.OnRadio, self.radiobox)
         self.type = "SS"
     
@@ -5738,6 +5775,11 @@ class xicFrame(wx.Frame):
             self.mark_base.append({})
     
     def GetXICEntries(self):
+        '''
+        
+        Counts the number of entries in the XIC grid.
+        
+        '''
         for i in range(0, 150):
             if self.grid.GetCellValue(i, 13) == '':
                 break
@@ -5793,7 +5835,21 @@ class xicFrame(wx.Frame):
                         self.grid.SetCellValue(i,1,str(xr))
                                 
 
+    def CountMarks(self):
+        marks = 0
+        for i, window in enumerate(self.mark_base):
+            for j, xic in enumerate(window):
+                mark_dict = self.mark_base[i][j]
+                marks += len(mark_dict.keys())
+        return marks
+                
     def OnSave(self, event):
+        '''
+        
+        Save grid settings to file.
+        
+        
+        '''
         dlg = wx.FileDialog(None, "Save as..", pos = (2,2), style = wx.SAVE, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
@@ -5831,6 +5887,11 @@ class xicFrame(wx.Frame):
         file_w.close()
 
     def OnLoad(self, event):
+        '''
+        
+        Load contents of text file into grid.
+        
+        '''
         dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.OPEN, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
@@ -5841,6 +5902,7 @@ class xicFrame(wx.Frame):
         self.loadfilename = filename
         #print dir
         #print filename
+        self.grid.ClearGrid()
         file_r = open(dir + '\\' + filename, 'r')
         lines = file_r.readlines()
         self.mark_base = []
@@ -5856,6 +5918,7 @@ class xicFrame(wx.Frame):
             self.grid.SetCellValue(i, 10, str(data[9]).strip() if str(data[9]).strip() != '0' else '')
             self.grid.SetCellValue(i, 11, str(data[10]).strip() if str(data[10]).strip() != '0' else '')
             self.grid.SetCellValue(i, 12, str(data[11]).strip() if str(data[11]).strip() != '0' else '')
+            self.grid.SetCellValue(i, 13, str('(...)'))
             self.mark_base.append({})
             
         file_r.close()
@@ -5863,6 +5926,11 @@ class xicFrame(wx.Frame):
 
     #SET_XIC
     def OnClick(self, event): #WINDOW, START, STOP, FILTER, REMOVE, SCALE, ACTIVE, VIEW
+        '''
+        
+        Apply grid entries to make XICs.
+        
+        '''
         # SHOULD ADD CODE TO VALIDATE SCALES i.e. MAKE SURE they reference existing traces
         self.Hide()
         #--------------------THIS SECTION READS THE GRID AND PLACES IN RESULT
@@ -6332,23 +6400,23 @@ class TopLevelFrame(wx.Frame):
         self._mgr.Update()
         #self.ObjectOrganizer.addObject(sb, "SpecBase") 
         
-    def CreateMinibar(self, parent):
-        # create mini toolbar
-        self._mtb = FM.FlatMenuBar(parent, wx.ID_ANY, 16, 6, options = FM_OPT_SHOW_TOOLBAR|FM_OPT_MINIBAR)
+    #def CreateMinibar(self, parent):
+        ## create mini toolbar
+        #self._mtb = FM.FlatMenuBar(parent, wx.ID_ANY, 16, 6, options = FM_OPT_SHOW_TOOLBAR|FM_OPT_MINIBAR)
 
-        checkCancelBmp = wx.Bitmap(os.path.join(bitmapDir, "ok-16.png"), wx.BITMAP_TYPE_PNG)
-        viewMagBmp = wx.Bitmap(os.path.join(bitmapDir, "viewmag-16.png"), wx.BITMAP_TYPE_PNG)
-        viewMagFitBmp = wx.Bitmap(os.path.join(bitmapDir, "viewmagfit-16.png"), wx.BITMAP_TYPE_PNG)
-        viewMagZoomBmp = wx.Bitmap(os.path.join(bitmapDir, "viewmag-p-16.png"), wx.BITMAP_TYPE_PNG)
-        viewMagZoomOutBmp = wx.Bitmap(os.path.join(bitmapDir, "viewmag-m-16.png"), wx.BITMAP_TYPE_PNG)
+        #checkCancelBmp = wx.Bitmap(os.path.join(bitmapDir, "ok-16.png"), wx.BITMAP_TYPE_PNG)
+        #viewMagBmp = wx.Bitmap(os.path.join(bitmapDir, "viewmag-16.png"), wx.BITMAP_TYPE_PNG)
+        #viewMagFitBmp = wx.Bitmap(os.path.join(bitmapDir, "viewmagfit-16.png"), wx.BITMAP_TYPE_PNG)
+        #viewMagZoomBmp = wx.Bitmap(os.path.join(bitmapDir, "viewmag-p-16.png"), wx.BITMAP_TYPE_PNG)
+        #viewMagZoomOutBmp = wx.Bitmap(os.path.join(bitmapDir, "viewmag-m-16.png"), wx.BITMAP_TYPE_PNG)
 
-        self._mtb.AddCheckTool(wx.ID_ANY, "Check Settings Item", checkCancelBmp)
-        self._mtb.AddCheckTool(wx.ID_ANY, "Check Info Item", checkCancelBmp)
-        self._mtb.AddSeparator()
-        self._mtb.AddRadioTool(wx.ID_ANY, "Magnifier", viewMagBmp)
-        self._mtb.AddRadioTool(wx.ID_ANY, "Fit", viewMagFitBmp)
-        self._mtb.AddRadioTool(wx.ID_ANY, "Zoom In", viewMagZoomBmp)
-        self._mtb.AddRadioTool(wx.ID_ANY, "Zoom Out", viewMagZoomOutBmp)    
+        #self._mtb.AddCheckTool(wx.ID_ANY, "Check Settings Item", checkCancelBmp)
+        #self._mtb.AddCheckTool(wx.ID_ANY, "Check Info Item", checkCancelBmp)
+        #self._mtb.AddSeparator()
+        #self._mtb.AddRadioTool(wx.ID_ANY, "Magnifier", viewMagBmp)
+        #self._mtb.AddRadioTool(wx.ID_ANY, "Fit", viewMagFitBmp)
+        #self._mtb.AddRadioTool(wx.ID_ANY, "Zoom In", viewMagZoomBmp)
+        #self._mtb.AddRadioTool(wx.ID_ANY, "Zoom Out", viewMagZoomOutBmp)    
     
     def createMenuBar(self):
         menuBar = wx.MenuBar()
@@ -6443,7 +6511,7 @@ class TopLevelFrame(wx.Frame):
             ("&XIC", "XIC", self.OnXIC),
             #("Generate XIC Report", "Generate XIC Report", self.XICReport),
             #("&Propagate XICs within Window", "Propagate in Window", self.PropagateXICsInWindow),
-            ("Propagate XICs All Windows All Files", "Propagate all Windows", self.PropagateXICsAllWindows))),
+            ("Propagate XICs", "Propagate XICs all Windows", self.PropagateXICsAllWindows))),
                 #("Analysis", (
             #("&Save Analysis", "Save Analysis", self.OnSaveAnalysis),
             #("&Load Analysis", "Save Analysis", self.OnLoadAnalysis))),
@@ -6867,6 +6935,10 @@ class TopLevelFrame(wx.Frame):
         #self._mgr.Update()         
         self._mgr.AddPane(b, aui.AuiPaneInfo().Left().MaximizeButton(True).MinimizeButton(True).Caption("PepCalc"))
         self._mgr.Update()
+        
+        dbf.aui_pane = self._mgr.GetPaneByWidget(dbf)
+        
+        self._mgr.Bind(wx.lib.agw.aui.EVT_AUI_PANE_CLOSE, dbf.OnClose)
             
         #except:
             #del busy
@@ -6975,26 +7047,40 @@ class TopLevelFrame(wx.Frame):
         tb.SetToolBitmapSize(tsize)
         tb.Realize() 
 
+images = [wx.Image(os.path.join(os.path.dirname(__file__), 'image', '%s.PNG' % x)) for x in range(1,10)]
+    
 if __name__ == '__main__':
-    ID_Dict = {}
-    app = wx.App(False)
-    images = [wx.Image(os.path.join(os.path.dirname(__file__), 'image', '%s.PNG' % x)) for x in range(1,10)]
-
-    
-    if len(sys.argv) > 1:
-        frame = DrawPanel(sys.argv[1], 1)
-    else:
-        frame = TopLevelFrame(None)
+    import platform
+    if 'Windows' in platform.platform():
+        import multiplierz.mzAPI.management as api_management
+        guids_that_work = api_management.testInterfaces()
+        if not all(guids_that_work):
+            print "NOTE- One or more vendor file interfaces are not currently installed."
+            print "Access to some files may fail."
+            print "To fix, run multiplierz.mzAPI.management.registerInterfaces()"
+        elif not any(guids_that_work):
+            ask_about_mzAPI = """
+The multiplierz mzAPI vendor file interface modules
+have not been enabled on this machine; these are required
+in order to access .RAW, .WIFF and .D files.  Enable now?
+(This requires administrator priviledges.)
+            """
         
+            askdialog = wx.MessageDialog(None, ask_about_mzAPI, 'mzAPI Setup', wx.YES_NO | wx.ICON_QUESTION)
+            if askdialog.ShowModal() == wx.ID_YES:
+                api_management.registerInterfaces()
+                print "Press enter to continue."
+                raw_input()   
+                
+    
+    try:
+        frame = TopLevelFrame(None)        
+        frame.Show()
+    except wx._core.PyNoAppError:
+        app = wx.App(False)
+        frame = TopLevelFrame(None)        
+        frame.Show()
         
-    frame.Show()
-    
-    #print "TEST MODE"
-    ##frame.OnNewChild(None, r'\\rc-data1\blaise\ms_data_share\Max\2016-11-2-enole100fm.wiff')
-    #import cProfile as profile
-    #profile.runctx(r"frame.OnNewChild(None, r'C:\Users\Max\Desktop\SpectrometerData\2014-09-30-enolase-100fmol-1.HCD_FTMS.mgf')",
-                   #globals(), locals(), r'C:\Users\Max\Desktop\Projects\mzB_profiling')
-    
     app.MainLoop()
 
     
