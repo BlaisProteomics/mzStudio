@@ -670,9 +670,3 @@ def runMascotSearch(targetdata):
     return mascot_frame.psm_results, mascot_frame.header_results
     
     
-if __name__ == '__main__':
-    print "TEST MODE"
-    foo = wx.App()
-    bar = MascotSearch(foo, 'pipeline', 'pipeline', ([(1, 2), (3, 4)], 'Filter String!', 300.0))
-    bar.Show()
-    foo.MainLoop()
