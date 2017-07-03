@@ -1,24 +1,28 @@
 import wx
-import wx.dataview as dv
+#import wx.dataview as dv
 import cPickle
 import TreeCtrl2 as TreeCtrl
-import HTreeCtrl
+#import HTreeCtrl
 from collections import defaultdict
 import multiplierz.mzAPI as mzAPI
 import SpecViewLite_build2 as svl
-import RICviewLite as rvl
 import RICviewLite_multi as rvlm
+
 try:
     import MSO
     import win32com
 except:
     pass
+
 import time
+
 import BlaisPepCalcSlim_aui2
 import wx.lib.agw.aui as aui
 
-import wx.lib.agw.flatmenu as FM
-from wx.lib.agw.flatmenu import FlatMenu
+#import wx.lib.agw.flatmenu as FM
+#from wx.lib.agw.flatmenu import FlatMenu
+import flatmenu_patched as FM
+from flatmenu_patched import FlatMenu
 from wx.lib.agw.artmanager import ArtManager, RendererBase, DCSaver
 from wx.lib.agw.fmresources import ControlFocus, ControlPressed
 from wx.lib.agw.fmresources import FM_OPT_SHOW_CUSTOMIZE, FM_OPT_SHOW_TOOLBAR, FM_OPT_MINIBAR
@@ -34,29 +38,7 @@ except:
     dirName = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 bitmapDir = os.path.join(dirName, 'bitmaps')
-print "SPECBASE ----"
-print bitmapDir
 
-
-
-
-
- # Attempts for wxPython 4.0 adaptation; should probably just be removed.
-#from wx.lib.agw.flatmenu import FlatMenuBase
-#class FlatMenuFixed(FM.FlatMenu):
-    #def Dismiss(self, dismissParent, resetOwner):
-        #if self._focusWin:
-
-            #self._focusWin.PopEventHandler(True)
-            #self._focusWin = None
-
-        #self._selectedItem = -1
-
-        #if self._mb:
-            #self._mb.RemoveHelp()   
-        #FlatMenuBase.Dismiss(self, dismissParent, resetOwner)
-        
-#FlatMenuFixed = FlatMenu
 
 def writeMSP(scanData, outputPath):
     if not outputPath.lower().endswith('.msp'):
@@ -303,16 +285,29 @@ class YourDropTarget(wx.PyDropTarget):
             elif df == wx.DF_BITMAP:
                 bmp = self.bmpdo.GetBitmap()
 
-            elif df == 50092:
-                print "SPECRUM DROP"
-                data = self.specdo.GetData()
-                dropped_obj = cPickle.loads(data)
-                node = self.window.tc.tree.GetSelection()
+            #elif df == 50092 or df == 49894:
+            else:
+                # This part is structured to ensure that nothing happens if 
+                # the drop doesn't have proper pyData or the '.type' member
+                # isn't set appropriately.
+                #---------------------------------TITLE = "mass spectrum""
+                #---------------------------------'exp' = 'Title' - this is what appears in title bar.
+                #---------------------------------This code sets item text as infobar, which is the sequence
+                #---------------------------------InsertItems setlabeltext as 'label'
+                #---------------------------------SaveItems Getlabeltext and saves as 'label'
+                try:
+                    print "SPECRUM DROP"
+                    data = self.specdo.GetData()
+                    dropped_obj = cPickle.loads(data)
+                    node = self.window.tc.tree.GetSelection()
+                    dropped_obj.type
+                except (EOFError, TypeError, AttributeError):
+                    return
                 
                 if dropped_obj.type == "Spectrum":
                     
-                    title = dropped_obj.sequence 
-                    item = self.window.tc.tree.AppendItem(node, title) 
+                    infobar = dropped_obj.sequence 
+                    item = self.window.tc.tree.AppendItem(node, infobar) 
                 
                     be = BaseEntry(None, sequence=dropped_obj.sequence, filter=dropped_obj.filter, title="Mass Spectrum", charge=dropped_obj.charge, 
                                full_range=dropped_obj.display_range, mass_ranges=dropped_obj.mass_ranges, scan=dropped_obj.scan, 
@@ -325,6 +320,8 @@ class YourDropTarget(wx.PyDropTarget):
                     self.window.TreeRefresh()
                 
                 if dropped_obj.type == "XIC":
+                    #------------------------------Titlebar is data['exp']
+                    #------------------------------xic_data.title = Infobar
                     item = self.window.tc.tree.AppendItem(node, "XIC") 
                     
                     mxe = multiRICentry(None, rawfile=dropped_obj.rawfile, data=dropped_obj.data, sequence='', title='XIC', xr=dropped_obj.xr, time_range=dropped_obj.time_range, 
@@ -334,7 +331,7 @@ class YourDropTarget(wx.PyDropTarget):
                     self.window.tc.tree.SetPyData(item, {"type":"XIC", "flag":"experiment", "exp":'Title', "xic_data": mxe, "raw_xic": dropped_obj})
                     #Do we need a base entry?  Why not just pass the spec object?
                     self.window.TreeRefresh()                    
-                    
+                
         return d  # you must return this
 
 class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
@@ -415,7 +412,7 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         export_menu = FlatMenu()
         b_menu = FlatMenu()
         database_menu = FlatMenu()
-        close_menu = FlatMenu()
+        #close_menu = FlatMenu()
         # Append the menu items to the menus
         
         # Basic menu option doesn't seem to allow attaching the 
@@ -447,8 +444,9 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         self.menubar.Append(export_menu, "Export Images")
         self.menubar.Append(b_menu, "PepCalc") 
         self.menubar.Append(database_menu, "Export Spectra")
-        self.menubar.Append(close_menu, "Close")
+        #self.menubar.Append(close_menu, "Close")
         
+        #self.menubar.SetAcceleratorTable(wx.AcceleratorTable ([(wx.ACCEL_CTRL, ord('Q'), 231)]))
         #open = wx.Bitmap(os.path.join(os.path.dirname(__file__), 'image', 'open_bank.bmp'), wx.BITMAP_TYPE_BMP)
         #self.menubar.AddTool(20, "Open Memory Bank", open)
         #self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 20)
@@ -494,22 +492,22 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         return [(-1, "Make Spectral Database", "Make spectral database from all MS2 spectra", None, self.OnMakeSpectralDatabase),]    
 
     def OnOpenBPC(self, event):
-        if BlaisPepCalcSlim_aui2.BlaisPepCalc in self.parent.ctrl.ObjectOrganizer.ActiveObjects:
-            self.bpc = self.parent.ctrl.ObjectOrganizer.ActiveObjects[BlaisPepCalcSlim_aui2.BlaisPepCalc]
-            self.parent._mgr.AddPane(self.bpc, aui.AuiPaneInfo().Left().Caption("PepCalc"))
-            self.parent._mgr.Update()
+        if not self.organizer.containsType(BlaisPepCalcSlim_aui2.MainBPC):
+            import wx.lib.agw.aui as aui
+            bpc = BlaisPepCalcSlim_aui2.MainBPC(self.parent, -1, self.organizer)         
+            self.parent._mgr.AddPane(bpc, aui.AuiPaneInfo().Left().MaximizeButton(True).MinimizeButton(True).Caption("PepCalc"))
+            self.parent._mgr.Update()            
         else:
-            self.bpc = BlaisPepCalcSlim_aui2.BlaisPepCalc(self, -1, self.parent.ctrl.ObjectOrganizer)
-            
-        self.bpc.Show()
+            wx.MessageBox("Pep calc already open!")
+        
 
     def OnMakeSpectralDatabase(self, event):
         if not self.tc.tree.GetRootItem().IsOk():
             wx.MessageBox("No Items to make database from!")
             return
-        if event.GetInt() == 118: # 2 key?2
-            event.Skip()
-            return
+        #if event.GetInt() == 118: # 2 key?2
+        #    event.Skip()
+        #    return
         
         filedialog = wx.FileDialog(self, 'Save MSP file as...', style = wx.FD_SAVE)
         if filedialog.ShowModal() == wx.ID_OK:
@@ -667,44 +665,10 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
                 shape = Slide.Shapes.AddTextbox(MSO.constants.msoTextOrientationHorizontal, Left=10, Top=40, Width = 750, Height = 40 )
                 shape.TextFrame.TextRange.Text = xic.title   
                 shape.TextFrame.TextRange.Font.Size=10                    
-                                #shape = Slide.Shapes.AddTextbox(MSO.constants.msoTextOrientat                
-                #shape = Slide.Shapes.AddTextbox(MSO.constants.msoTextOrientationHorizontal, Left=10, Top=10, Width = 750, Height = 40 )
-                #shape.TextFrame.TextRange.Text = spectrum.sequence + "  Mascot Score: " + str(spectrum.mascot_score) #+' (' + spectrum.title + ')' 
-                #shape.TextFrame.TextRange.Font.Size=10
-                #shape = Slide.Shapes.AddTextbox(MSO.constants.msoTextOrientationHorizontal, Left=10, Top=40, Width = 750, Height = 40 )
-                #shape.TextFrame.TextRange.Text = spectrum.notes   
-                #shape.TextFrame.TextRange.Font.Size=10                    
-              
-            
-        #shape = Slide.Shapes.AddTextbox(1, 10, 10, Width = 600, Height = 40)
-        #shape.TextFrame.TextRange.Font.Name = "Arial"
-        #shape.TextFrame.TextRange.Font.Size = 24
-        #shape.TextFrame.TextRange.Text = "Unique Peptides: " + str(len(main[member]["pepset"]))
-        #shape = Slide.Shapes.AddTextbox(1, 10, 40, Width = 600, Height = 40)
-        #shape.TextFrame.TextRange.Font.Name = "Arial"
-        #shape.TextFrame.TextRange.Font.Size = 24
-        #shape.TextFrame.TextRange.Text = "Total Spectra: " + str(main[member]["pepcount"])
+                                
         Pres.SaveAs(filename)
         Pres.Close()
         App.Quit()        
-    
-
-    def OnTest(self,event):
-        #save = self.tc.tree.SaveItemsToList(self.tc.root)
-        #self.UpdateSpecBaseData()
-        #print self.db.DumpLabels()
-        exp = "2012-04-12"
-        seq = 'DASLVSSRPSpSPEPD'
-        title = "Olig2-S14"
-        scan = 2888
-        rawfile = r'\\Glu\Userland\SBF\DataMain\Collaborations\Stiles\2012-06-22-Olig2\2012-06-22-Olig2-Cos-AspN-Targ-1.raw'
-        m = mzAPI.mzFile(rawfile)
-        scan_data = m.scan(int(scan))
-        #display_range=(200,1650), full_range=(200,1650), mass_ranges=[((200,1650))]
-        self.db.addItem(exp, seq, title, scan, rawfile, scan_data, (100,1650), [((200,1650))], 2)
-        self.TreeRefresh()
-        #self.Destroy()
-
 
     def Create_Image_List(self):
         isz = (16,16)
@@ -821,22 +785,21 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         # MAIN EDIT FRAME
         #-----------------------------------------------------
         item=self.tc.tree.GetSelection()
-        try:
-            id = self.tc.tree.GetPyData(item)["id"]
-            cur_obj = self.db.get_base_entry_from_id(id)
-            if cur_obj.type == "Spectrum":
+        if item.IsOk():
+            data = self.tc.tree.GetPyData(item)
+            if 'spectrum_data' in data.keys():
+                cur_obj = data['spectrum_data']
                 Edit = EditFrame(self, id=-1, obj=cur_obj, item=item)
                 Edit.Show()
-            if cur_obj.type == "multiXIC":
+            if 'xic_data' in data.keys():
+                cur_obj = data['xic_data']
                 Edit = EditXICFrame(self, id=-1, obj=cur_obj, item=item)
                 Edit.Show()         
-            if cur_obj.type == "AuxFile":
-                Edit = EditAuxFrame(self, id=-1, obj=cur_obj, item=item)
-                Edit.Show()                     
-        except:
-            #self.tc.tree.SetItemText(item, "BARBARBAR")
-            print "Folder or root"
-            print self.tc.tree.GetItemText(item)
+            #if cur_obj.type == "AuxFile":
+            #    Edit = EditAuxFrame(self, id=-1, obj=cur_obj, item=item)
+            #    Edit.Show()                     
+        else:
+            wx.MessageBox("Cannot Edit Object!")
 
     def OnLoad(self, event):
         dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.OPEN, wildcard = "SpecBrary files (*.sbr)|*.sbr|Any|*")
@@ -896,7 +859,10 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         pass
     
     def OnClose(self, event):
-        del self.organizer.ActiveObjects[type(self)]
+        try:
+            del self.organizer.ActiveObjects[type(self)]
+        except:
+            pass
         mgr = self.parent._mgr
         mgr.ClosePane(self.aui_pane_obj)
         self.Destroy()
@@ -977,24 +943,16 @@ class AddFrame(wx.Frame):
 
 class EditFrame(wx.Frame):
     def __init__(self, parent, id, obj, item):
-        wx.Frame.__init__(self, parent, id, 'Edit Entry', size =(580,660), pos = (50,50))
+        wx.Frame.__init__(self, parent, id, 'Edit Entry', size =(450,220), pos = (50,50))
         panel = wx.Panel(self)
-        gbs = wx.GridBagSizer(11, 5)
-        gbs.Add( wx.StaticText(panel, -1, 'Folder', style=wx.ALIGN_RIGHT),
-                     (0, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-        gbs.Add( wx.ComboBox(panel, -1, name='Experiment', value=obj.experiment, choices=list(parent.db.getExperimentNames())),
-                     (0, 1), (1,8) )
-        for i,c in enumerate(['Sequence', 'Title', 'Varmods', 'Rawfile', 'Scan', 'Axes', 'Display Range', 'Filter']):
-            gbs.Add( wx.StaticText(panel, -1, c, style=wx.ALIGN_RIGHT),
-                     (i+1, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-            gbs.Add( wx.TextCtrl(panel, -1, '', name = c),
-                     (i+1, 1), (1,8))#size=(250, 25) 
+        gbs = wx.GridBagSizer(4, 2)
+      
+        for i,c in enumerate(['Sequence', 'Title', 'Varmods']):   #for i,c in enumerate(['Sequence', 'Title', 'Varmods', 'Rawfile', 'Scan', 'Axes', 'Display Range', 'Filter']):
+            gbs.Add( wx.StaticText(panel, -1, c, style=wx.ALIGN_RIGHT), (i+1, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
+            gbs.Add( wx.TextCtrl(panel, -1, '', name = c, size = (350, 25)),(i+1, 1), (1,8))#size=(250, 25) 
         add_files_btn = wx.Button(panel, -1, 'Update')
         #grab_spec_btn = wx.Button(panel, -1, 'Grab Spectrum')
-        gbs.Add( add_files_btn,
-                 (9,0) )
-        #gbs.Add( grab_spec_btn,
-        #        (10,0) )
+        gbs.Add( add_files_btn, (0,3))
         add_files_btn.Bind(wx.EVT_BUTTON, self.on_click_update)
         #grab_spec_btn.Bind(wx.EVT_BUTTON, self.on_click_grab)
 
@@ -1004,109 +962,78 @@ class EditFrame(wx.Frame):
         #self.db = db
         self.parent = parent
         #self.db.Rebuild_Order_from_tree(parent)
-        self.FindWindowByName("Experiment").SetValue(obj.experiment)
+        #self.FindWindowByName("Experiment").SetValue(obj.experiment)
         self.FindWindowByName("Sequence").SetValue(obj.sequence)
-        self.FindWindowByName("Title").SetValue(obj.title)
-        self.FindWindowByName("Scan").SetValue(obj.scan)
-        self.FindWindowByName("Filter").SetValue(obj.filter)
-        self.FindWindowByName("Rawfile").SetValue(obj.rawfile)
-        self.FindWindowByName("Varmods").SetValue(obj.varmod)
+        data = self.parent.tc.tree.GetPyData(item)
+        self.FindWindowByName("Title").SetValue(data['exp'])
+        #self.FindWindowByName("Scan").SetValue(str(obj.scan))
+        #self.FindWindowByName("Filter").SetValue(obj.filter)
+        #self.FindWindowByName("Rawfile").SetValue(obj.rawfile)
+        #self.FindWindowByName("Varmods").SetValue(obj.varmod)
         self.obj = obj
         self.item = item
 
     def on_click_update(self, event):
-        self.obj.experiment = self.FindWindowByName("Experiment").GetValue().strip()
+        #self.obj.experiment = self.FindWindowByName("Experiment").GetValue().strip()
         self.obj.sequence = self.FindWindowByName("Sequence").GetValue().strip()
         self.obj.title = self.FindWindowByName("Title").GetValue().strip()
-        self.obj.scan = self.FindWindowByName("Scan").GetValue().strip()
-        self.obj.filter = self.FindWindowByName("Filter").GetValue().strip()
-        self.obj.rawfile = self.FindWindowByName("Rawfile").GetValue().strip()
+        #self.obj.scan = self.FindWindowByName("Scan").GetValue().strip()
+        #self.obj.filter = self.FindWindowByName("Filter").GetValue().strip()
+        #self.obj.rawfile = self.FindWindowByName("Rawfile").GetValue().strip()
         self.obj.varmod = self.FindWindowByName("Varmods").GetValue().strip()
         pid = self.obj.pid
-        self.parent.tc.tree.SetLabel(self.obj.sequence)#self.item, 
-        self.parent.tc.tree.SetItemText(self.item, self.obj.title, 1)
-        #self.db.addItem(exp, seq, title, scan, rawfile, self.scan, self.display_range, self.mass_ranges, self.charge, filter)
-        #self.db.addItem(exp, seq, title, scan, rawfile, scan_data, (100,1650), [((200,1650))], 2)
-        for i, member in enumerate(self.parent.db.sequences[self.obj.experiment]):
-            #print member
-            if member[2]==pid:
-                index = i
-                break
-        self.parent.db.sequences[self.obj.experiment][index][0] = self.obj.sequence
-        self.parent.db.sequences[self.obj.experiment][index][1] = self.obj.title
-        #.append([sequence, title, self.pid])
+        data = self.parent.tc.tree.GetPyData(self.item)
+        data['exp']=self.obj.title
+        item = self.parent.tc.tree.GetSelection()
+        self.parent.tc.tree.SetItemText(item, self.obj.sequence, 0)
         self.parent.TreeRefresh()
         self.Destroy()
 
-    def on_click_grab(self, event):
-        rawfile = self.FindWindowByName("Rawfile").GetValue().strip()
-        scan = self.FindWindowByName("Scan").GetValue().strip()
-        m = mzAPI.mzFile(rawfile)
-        scan_data = m.scan(int(scan))
-        dlg = wx.MessageDialog(None, "Scan data was read!", "", wx.OK)
-        retCode = dlg.ShowModal()
-        if (retCode == wx.ID_OK):
-            #print "Scan data read"
-            self.scan = scan_data
-
 class EditXICFrame(wx.Frame):
     def __init__(self, parent, id, obj, item):
-        wx.Frame.__init__(self, parent, id, 'Edit XIC Entry', size =(580,660), pos = (50,50))
+        wx.Frame.__init__(self, parent, id, 'Edit XIC Entry', size =(400,180), pos = (50,50))   #obj.title = 'XIC' pydata['exp']='Title'
         panel = wx.Panel(self)
-        gbs = wx.GridBagSizer(11, 5)
-        gbs.Add( wx.StaticText(panel, -1, 'Folder', style=wx.ALIGN_RIGHT), (0, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-        gbs.Add( wx.ComboBox(panel, -1, name='Experiment', value=obj.experiment, choices=list(parent.db.getExperimentNames())), (0, 1), (1,8) )
-        for i,c in enumerate(['Sequence', 'Title', 'Rawfile']):
+        gbs = wx.GridBagSizer(4, 4)
+        #gbs.Add( wx.StaticText(panel, -1, 'Folder', style=wx.ALIGN_RIGHT), (0, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
+        #gbs.Add( wx.ComboBox(panel, -1, name='Experiment', value=obj.experiment, choices=list(parent.db.getExperimentNames())), (0, 1), (1,8) )
+        for i,c in enumerate(['Infobar', 'Title']):
             gbs.Add( wx.StaticText(panel, -1, c, style=wx.ALIGN_RIGHT), (i+1, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-            gbs.Add( wx.TextCtrl(panel, -1, '', name = c), (i+1, 1), (1,8))#size=(250, 25) 
+            gbs.Add( wx.TextCtrl(panel, -1, '', name = c, size=(350, 25) ), (i+1, 1), (1,8))#
         add_files_btn = wx.Button(panel, -1, 'Update')
-        gbs.Add( add_files_btn, (9,0) )
+        gbs.Add( add_files_btn, (0,3) )
         add_files_btn.Bind(wx.EVT_BUTTON, self.on_click_update)
         box = wx.BoxSizer()
         box.Add(gbs, 1, wx.ALL|wx.EXPAND, 10)
         panel.SetSizerAndFit(box)
         self.parent = parent
-        self.FindWindowByName("Experiment").SetValue(obj.experiment)
-        self.FindWindowByName("Sequence").SetValue(obj.sequence)
-        self.FindWindowByName("Title").SetValue(obj.title)
+        #------------------------------Titlebar is data['exp']
+        #------------------------------xic_data.title = Infobar        
+        #self.FindWindowByName("Experiment").SetValue(obj.experiment)
+        info = self.parent.tc.tree.GetItemText(item, 0)
+        #self.FindWindowByName("Sequence").SetValue(obj.sequence)
+        self.FindWindowByName("Infobar").SetValue(obj.title)  #Infobar
+        data = parent.tc.tree.GetPyData(item)
+        self.FindWindowByName("Title").SetValue(data['exp']) # Titlebar
         #self.FindWindowByName("Filter").SetValue(obj.filter)
-        self.FindWindowByName("Rawfile").SetValue(obj.rawfile)
+        #self.FindWindowByName("Rawfile").SetValue(obj.rawfile)
         self.obj = obj
         self.item = item
         
     def on_click_update(self, event):
-        self.obj.experiment = self.FindWindowByName("Experiment").GetValue().strip()
-        self.obj.sequence = self.FindWindowByName("Sequence").GetValue().strip()
-        self.obj.title = self.FindWindowByName("Title").GetValue().strip()
+        #self.obj.experiment = self.FindWindowByName("Experiment").GetValue().strip()
+        #self.obj.sequence = self.FindWindowByName("Sequence").GetValue().strip()
+        self.obj.title = self.FindWindowByName("Infobar").GetValue().strip()
         #self.obj.filter = self.FindWindowByName("Filter").GetValue().strip()
-        self.obj.rawfile = self.FindWindowByName("Rawfile").GetValue().strip()
+        #self.obj.rawfile = self.FindWindowByName("Rawfile").GetValue().strip()
         pid = self.obj.pid
-        self.parent.tc.tree.SetLabel(self.obj.sequence)#self.item, 
-        self.parent.tc.tree.SetItemText(self.item, self.obj.title, 1)
-        #self.db.addItem(exp, seq, title, scan, rawfile, self.scan, self.display_range, self.mass_ranges, self.charge, filter)
-        #self.db.addItem(exp, seq, title, scan, rawfile, scan_data, (100,1650), [((200,1650))], 2)
-        for i, member in enumerate(self.parent.db.sequences[self.obj.experiment]):
-            #print member
-            if member[2]==pid:
-                index = i
-                break
-        self.parent.db.sequences[self.obj.experiment][index][0] = self.obj.sequence
-        self.parent.db.sequences[self.obj.experiment][index][1] = self.obj.title
-        #.append([sequence, title, self.pid])
+        
+        data = self.parent.tc.tree.GetPyData(self.item)
+        data['exp']=self.FindWindowByName("Title").GetValue().strip()
+        item = self.parent.tc.tree.GetSelection()
+        self.parent.tc.tree.SetItemText(item, self.obj.title, 0)
         self.parent.TreeRefresh()
         self.Destroy()
         
-    def on_click_grab(self, event):
-        rawfile = self.FindWindowByName("Rawfile").GetValue().strip()
-        scan = self.FindWindowByName("Scan").GetValue().strip()
-        m = mzAPI.mzFile(rawfile)
-        scan_data = m.scan(int(scan))
-        dlg = wx.MessageDialog(None, "Scan data was read!", "", wx.OK)
-        retCode = dlg.ShowModal()
-        if (retCode == wx.ID_OK):
-            #print "Scan data read"
-            self.scan = scan_data 
-            
 class EditAuxFrame(wx.Frame):
     def __init__(self, parent, id, obj, item):
         wx.Frame.__init__(self, parent, id, 'Edit Entry', size =(300,300), pos = (50,50))
@@ -1160,43 +1087,6 @@ class EditAuxFrame(wx.Frame):
         self.parent.TreeRefresh()
         self.Destroy()
         
-    
-
-class AddAnalysisFrame(wx.Frame):
-    def __init__(self, parent, id, db):
-        wx.Frame.__init__(self, parent, id, 'Add Analysis', size =(580,660), pos = (50,50))
-        panel = wx.Panel(self)
-        gbs = wx.GridBagSizer(11, 5)
-        gbs.Add( wx.StaticText(panel, -1, 'Experiment', style=wx.ALIGN_RIGHT),
-                     (0, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-        gbs.Add( wx.ComboBox(panel, -1, name='Experiment', value='', choices=list(parent.db.getExperimentNames())),
-                     (0, 1), (1,8) )
-        for i,c in enumerate(['Title']):
-            gbs.Add( wx.StaticText(panel, -1, c, style=wx.ALIGN_RIGHT),
-                     (i+1, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-            gbs.Add( wx.TextCtrl(panel, -1, '', name = c),
-                     (i+1, 1), (1,8))#, size=(250, 25)
-        add_files_btn = wx.Button(panel, -1, 'Add')
-        gbs.Add( add_files_btn,
-                 (9,0) )
-        add_files_btn.Bind(wx.EVT_BUTTON, self.on_click_add)
-
-        box = wx.BoxSizer()
-        box.Add(gbs, 1, wx.ALL|wx.EXPAND, 10)
-        panel.SetSizerAndFit(box)
-        self.db = db
-        self.parent = parent
-        self.db.Rebuild_Order_from_tree(parent)
-        self.file_data = defaultdict(dict)
-        self.display= []
-
-    def on_click_add(self, event):
-        exp = self.FindWindowByName("Experiment").GetValue().strip()
-        title = self.FindWindowByName("Title").GetValue().strip()
-        self.db.addAnalysisItem(experiment=exp, title=title, file_data=self.file_data, display=self.display)
-        self.parent.TreeRefresh()
-        self.Destroy()
-
 class AddXICFrame(wx.Frame):
     def __init__(self, parent, id, db):
         wx.Frame.__init__(self, parent, id, 'Add XIC', size =(580,660), pos = (50,50))
@@ -1255,52 +1145,6 @@ def get_single_file(self, caption='Select File...', wx_wildcard = "XLS files (*.
         dlg.Destroy()
         return None, ''
 
-class AddProteinFrame(wx.Frame):
-    def __init__(self, parent, id, db):
-        wx.Frame.__init__(self, parent, id, 'Add Protein Coverage map', size =(580,660), pos = (50,50))
-        panel = wx.Panel(self)
-        gbs = wx.GridBagSizer(11, 5)
-        gbs.Add( wx.StaticText(panel, -1, 'Experiment', style=wx.ALIGN_RIGHT),
-                     (0, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-        gbs.Add( wx.ComboBox(panel, -1, name='Experiment', value='', choices=list(parent.db.getExperimentNames())),
-                     (0, 1), (1,8) )
-        for i,c in enumerate(['Filename', 'Title']):
-            gbs.Add( wx.StaticText(panel, -1, c, style=wx.ALIGN_RIGHT),
-                     (i+1, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-            gbs.Add( wx.TextCtrl(panel, -1, '', name = c),
-                     (i+1, 1), (1,8))#, size=(250, 25)
-        add_files_btn = wx.Button(panel, -1, 'Add')
-        select_prot_btn = wx.Button(panel, -1, 'Select prt file')
-        gbs.Add( add_files_btn,
-                 (10,0) )
-        gbs.Add( select_prot_btn,
-                 (11,0) )
-        add_files_btn.Bind(wx.EVT_BUTTON, self.on_click_add)
-        select_prot_btn.Bind(wx.EVT_BUTTON, self.on_select_prot)
-
-        box = wx.BoxSizer()
-        box.Add(gbs, 1, wx.ALL|wx.EXPAND, 10)
-        panel.SetSizerAndFit(box)
-        self.db = db
-        self.parent = parent
-        self.db.Rebuild_Order_from_tree(parent)
-        self.scan_data = None
-        self.display_range = []
-        self.mass_ranges = []
-        self.charge = 0
-
-    def on_click_add(self, event):
-        exp = self.FindWindowByName("Experiment").GetValue().strip()
-        filename = self.FindWindowByName("Filename").GetValue().strip()
-        title = self.FindWindowByName("Title").GetValue().strip()
-        self.db.addProtein(exp, title, filename)
-        self.parent.TreeRefresh()
-        self.Destroy()
-
-    def on_select_prot(self, event):
-        filename, dir = get_single_file("Select .prt file...", wx_wildcard = "PRT files (*.prt)|*.prt")
-        self.FindWindowByName("Filename").SetValue(filename)
-
 class AddAuxFrame(wx.Frame):
     def __init__(self, parent, id, db):
         wx.Frame.__init__(self, parent, id, 'Add Auxiliary File', size =(480,160), pos = (50,50))
@@ -1341,55 +1185,6 @@ class AddAuxFrame(wx.Frame):
         filename, dir = get_single_file("Select file...", wx_wildcard = "Auxiliary Files (*.ppt,*.pptx,*.xls,*.xlsx, *.py)|*.ppt;*.pptx;*.xls;*.xlsx; *.py") #xls files (*.xls,*.xlsx)|*.xls;*.xlsx'
         if filename:
             self.FindWindowByName("Filename").SetValue(filename)
-
-class AddFolderFrame(wx.Frame):
-    def __init__(self, parent, id, db):
-        wx.Frame.__init__(self, parent, id, 'Add Folder', size =(580,660), pos = (50,50))
-        panel = wx.Panel(self)
-        gbs = wx.GridBagSizer(11, 5)
-        gbs.Add( wx.StaticText(panel, -1, 'Folder', style=wx.ALIGN_RIGHT),
-                     (0, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-        gbs.Add( wx.ComboBox(panel, -1, name='Experiment', value='', choices=list(parent.db.getExperimentNames())),
-                     (0, 1), (1,8) )
-        for i,c in enumerate(['Directory', 'Title']):
-            gbs.Add( wx.StaticText(panel, -1, c, style=wx.ALIGN_RIGHT),
-                     (i+1, 0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT )
-            gbs.Add( wx.TextCtrl(panel, -1, '', name = c),
-                     (i+1, 1), (1,8))#, size=(250, 25)
-        add_files_btn = wx.Button(panel, -1, 'Add')
-        select_file_btn = wx.Button(panel, -1, 'Select folder')
-        gbs.Add( add_files_btn,
-                 (10,0) )
-        gbs.Add( select_file_btn,
-                 (11,0) )
-        add_files_btn.Bind(wx.EVT_BUTTON, self.on_click_add)
-        select_file_btn.Bind(wx.EVT_BUTTON, self.on_select_file)
-
-        box = wx.BoxSizer()
-        box.Add(gbs, 1, wx.ALL|wx.EXPAND, 10)
-        panel.SetSizerAndFit(box)
-        self.db = db
-        self.parent = parent
-        self.db.Rebuild_Order_from_tree(parent)
-        self.scan_data = None
-        self.display_range = []
-        self.mass_ranges = []
-        self.charge = 0
-
-    def on_click_add(self, event):
-        exp = self.FindWindowByName("Experiment").GetValue().strip()
-        filename = self.FindWindowByName("Directory").GetValue().strip()
-        title = self.FindWindowByName("Title").GetValue().strip()
-        self.db.addFolder(exp, title, filename)
-        self.parent.TreeRefresh()
-        self.Destroy()
-
-    def on_select_file(self, event):
-        dlg = wx.DirDialog(self, "Choose Directory")
-        if dlg.ShowModal() == wx.ID_OK:
-            dir = dlg.GetPath()
-        dlg.Destroy()
-        self.FindWindowByName("Directory").SetValue(dir)
 
 if __name__ == '__main__':
     app = wx.PySimpleApp()
