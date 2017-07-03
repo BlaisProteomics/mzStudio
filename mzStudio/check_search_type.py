@@ -22,7 +22,7 @@ def perform_check(filename):
             raise IOError, 'Report type not recognized. (Not PD file.)'
     sheets = rdr.sheet_names()
     rdr.close()
-    if "Mascot_Header" in sheets:
+    if "Mascot_Header" in sheets or 'Mascot Header' in sheets:
         search_type = 'Mascot'
     elif "XTandem_Header" in sheets:
         search_type = 'X!Tandem'
