@@ -1030,7 +1030,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
                 self.spectrum.mz, self.spectrum.b_ions, self.spectrum.y_ions = mz_core.calc_pep_mass_from_residues(sequence, j, ions=_ions, Nterm = nterm, Cterm=cterm)
                 if self.spectrum.varmod.find("Fucosylation") > -1 or self.spectrum.varmod.find("Hex") > -1 or self.spectrum.varmod.find("Xyl") > -1 or self.spectrum.varmod.find("Phospho") >-1 or self.spectrum.sequence.find("p")>-1 or self.spectrum.varmod.find("Hex") > -1:
                     self.spectrum.NL_ions = mz_core.get_fragment_neutral_losses(sequence, self.spectrum.b_ions, self.spectrum.y_ions, self.spectrum.varmod, j)
-                    self.spectrum.precNL_ions = mz_core.get_precursor_neutral_losses(self.spectrum.mz, j, self.spectrum.varmod) 
+                    self.spectrum.precNL_ions = mz_core.get_precursor_neutral_losses(self.spectrum.mz, j, self.spectrum.varmod)            
                 else:
                     self.spectrum.NL_ions = {}
                     self.spectrum.precNL_ions = {}
