@@ -16,7 +16,7 @@ class SettingsFrame(wx.Frame):
         self.page_general = Page(nb)
         nb.AddPage(self.page_general, "General")   
         self.page_thermo = Page(nb)
-        nb.AddPage(self.page_thermo, "Thermo") 
+        nb.AddPage(self.page_thermo, "Thresholds") 
         self.page_abi = Page(nb)
         nb.AddPage(self.page_abi, "ABI")   
         self.page_display = Page(nb)
@@ -26,6 +26,9 @@ class SettingsFrame(wx.Frame):
         self.createTextBoxes()
         self.createComboBoxes()
         self.createButtons()
+        #self.page_abi.Hide()
+        #self.page_display.Hide()
+        
         
     def LabelData(self):
         return (("Centroid Profile Data", (10, 10), (100,30),self.page_general),

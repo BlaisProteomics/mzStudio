@@ -24,7 +24,6 @@ from multiplierz.mzAPI.raw import mzFile
 print sys.path
 print os.path.abspath(os.getcwd())
 sys.path.append(".")
-#sys.path.append(r"\\Glu.dfci.harvard.edu\Userland\SBF\Papers\3D Phospho\Final Script Base\modules")
 
 import glob
 import sqlite3 as sql

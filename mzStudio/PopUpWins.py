@@ -140,6 +140,12 @@ import mzStudio as bb
         #evt.Skip()
 
 class TestFrame(wx.Frame):
+    '''
+    
+    This frame is used by PepCalc so that after calculating peptitide masses, XICs and MS/MS spectra can be located within rawfiles.
+    
+    
+    '''
     def __init__(self, parent, pos=(0,0)):
         wx.Frame.__init__(self, parent, -1, "Shaped Window", pos=pos,
                          style =
@@ -171,7 +177,7 @@ class TestFrame(wx.Frame):
         precbtn = wx.Button(panel, -1, "Find Precursors")
         precbtn.SetBackgroundColour("white")
         #self.tolerance = wx.TextCtrl(panel, -1, "0.01")
-        self.tolerance = cb = wx.ComboBox(panel, 501, "0.02", choices=['0.01', '0.02', '0.1', '0.2','0.5','1', '3'], style=wx.CB_DROPDOWN)
+        self.tolerance = cb = wx.ComboBox(panel, 501, "0.02", choices=['0.01', '0.02', '0.1', '0.2','0.5','1', '3', '5', '10'], style=wx.CB_DROPDOWN|wx.CB_READONLY)
         self.tolerance.SetStringSelection('0.01')
         xicbtn.Bind(wx.EVT_BUTTON, self.OnXIC)
         precbtn.Bind(wx.EVT_BUTTON, self.OnPrec)
@@ -229,7 +235,9 @@ class TestFrame(wx.Frame):
     def OnPrec(self, evt):
         fr = bb.findFrame(self.parent.parent.parent)
         fr.prec.SetValue(self.parent.FindWindowByName('precursorListBox').GetStringSelection().split('=')[1].strip())
+        
         toler = float(self.tolerance.GetStringSelection())/float(2.0)
+        
         fr.tol.SetValue(str(toler))
         fr.OnClick(None)
     
@@ -237,8 +245,8 @@ class TestFrame(wx.Frame):
     
     def SetWindowShape(self, *evt):
         # Use the bitmap's mask to determine the region
-        #r = wx.RegionFromBitmap(self.bmp)
-        r = wx.Region(self.bmp)
+        r = wx.RegionFromBitmap(self.bmp)
+        #r = wx.Region(self.bmp) ---------------This broke it!.
         self.hasShape = self.SetShape(r)
 
 

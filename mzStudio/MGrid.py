@@ -15,6 +15,13 @@ class MGrid(grid.Grid, glr.GridWithLabelRenderersMixin):
             self.SetColSize(i, setting[1])
         
 class MFrame(wx.Frame):
+    '''
+    
+    This grid allows users to enter specific scans to mark in an XIC.
+    Mouse over then reveals annotation.
+    
+    
+    '''
     def __init__(self, parent=None, currentMarks=None, currentXIC=None, index=None, dataFile=None):
         #currentMarks = {46.303022:["PEPTIDE", 9188], ...}
         self.currentMarks = currentMarks
