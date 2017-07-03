@@ -11,16 +11,18 @@ try:
     from wx.gizmos import TreeListCtrl # Version 3
 except ImportError:
     from wx.dataview import TreeListCtrl # Version 4
+    
 import SpecViewLite_build2 as svl
-import RICviewLite as rvl
+#import RICviewLite as rvl
 import RICviewLite_multi as rvl_multi
 import mzStudio
-import mz_workbench.protein_core as protein_core
+#import mz_workbench.protein_core as protein_core
 import cPickle, re
 import subprocess
-import wx.lib.agw.hypertreelist as HTL
-import wx.lib.mixins.listctrl  as  listmix
-import wx.lib.agw.hypertreelist as HTL
+import BlaisPepCalcSlim_aui2
+#import wx.lib.agw.hypertreelist as HTL
+#import wx.lib.mixins.listctrl  as  listmix
+#import wx.lib.agw.hypertreelist as HTL
 #---------------------------------------------------------------------------
 
 PPT_COM = None
@@ -141,6 +143,7 @@ class MyTreeCtrl(TreeListCtrl):#wx.TreeCtrl  #, listmix.TextEditMixin
                     node = self.AppendItem(parent, item['label'])
                 else:
                     node = self.PrependItem(parent, item['label'])
+                    
                 self.SetItemPyData(node, item['data'])
                 
                 #self.node_dict[self.idextract.match(str(node)).groups()[0]] = node
@@ -263,12 +266,13 @@ class TestTreeCtrlPanel(wx.Panel):
         #self.tree.Bind(wx.EVT_TREE_BEGIN_LABEL_EDIT, self.OnLabelEdit)
         self.tree.Bind(wx.EVT_LEFT_DCLICK, self.OnLeftDClick)
         self.tree.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
-        
+        self.tree.Bind(wx.EVT_TREE_END_LABEL_EDIT, self.OnLabelEndEdit)
         self.tree.Bind(wx.EVT_TREE_BEGIN_RDRAG, self.OnBeginRightDrag)
         self.tree.Bind(wx.EVT_TREE_BEGIN_DRAG, self.OnBeginLeftDrag)
         self.tree.Bind(wx.EVT_TREE_END_DRAG, self.OnEndDrag)
         self.parent = parentframe
-        
+        self.column_edit = None
+        self.column_text = None
     #def OnLabelEdit(self, evt):
     #    print "LAbel edit"
             
@@ -334,8 +338,8 @@ class TestTreeCtrlPanel(wx.Panel):
         # Show how to put an icon in the menu
         item = wx.MenuItem(menu, self.popupID1,"Sequence-->BPC")
         item2 = wx.MenuItem(menu, self.popupID2,"Sequence-->Clipboard")
-        item3 = wx.MenuItem(menu, self.popupID3,"Edit InfoBar")
-        item4 = wx.MenuItem(menu, self.popupID4,"Edit Description")
+        item3 = wx.MenuItem(menu, self.popupID3,"Edit Info Bar")
+        item4 = wx.MenuItem(menu, self.popupID4,"Edit Title Bar")
         #bmp = images.Smiles.GetBitmap()
         #item.SetBitmap(bmp)
         menu.AppendItem(item)
@@ -349,13 +353,6 @@ class TestTreeCtrlPanel(wx.Panel):
         self.PopupMenu(menu)
         menu.Destroy()
         
-    def OnPopupFour_evt(self, event):
-        pass
-        #print "A"
-        #Allows editing label but need to change the element!
-        #self.tree.EditLabel(self.tree.GetSelection(), 1)
-        #self.tree.GetLabel()
-
     def _OnPopupFour_evt(self, event):
         print "4"
         a = self.tree.SaveItemsToList(self.tree.GetRootItem())
@@ -404,69 +401,134 @@ class TestTreeCtrlPanel(wx.Panel):
         #self.SetScrollPos = self.sp
 
     def OnPopupOne_evt(self, event):
-        print "Pop 1"
+        if not self.parent.organizer.containsType(BlaisPepCalcSlim_aui2.MainBPC):
+            import wx.lib.agw.aui as aui
+            bpc = BlaisPepCalcSlim_aui2.MainBPC(self.parent.parent, -1, self.parent.organizer)         
+            self.parent.parent._mgr.AddPane(bpc, aui.AuiPaneInfo().Left().MaximizeButton(True).MinimizeButton(True).Caption("PepCalc"))
+            self.parent.parent._mgr.Update()            
+        else:
+            bpc = self.parent.organizer.getObjectOfType(BlaisPepCalcSlim_aui2.MainBPC)
+            
         item = self.tree.GetSelection()
-        obj = self.tree.GetPyData(item)['obj']     
-        current_sequence = obj.sequence
-        fixedmod = obj.fixedmod
-        varmod = obj.varmod  
-        if obj.sequence.find("-") > -1:
-            #H-AAVEEGIVLGGGykl-4-126CALLR-OH
-            seqstart = obj.sequence.find("-")
-            seqend = obj.sequence.rfind("-")
-            current_sequence = obj.sequence[seqstart+1:seqend]
-            #current_sequence = obj.sequence.split("-")[1]
-            if obj.sequence.split("-")[0] != "H":
-                if not fixedmod:
-                    fixedmod = "N-term: " + obj.sequence.split("-")[0]
+        data = self.tree.GetPyData(item)  
+        if 'spectrum_data' in data.keys():
+            obj = data['spectrum_data']
+            current_sequence = obj.sequence
+            fixedmod = obj.fixedmod
+            varmod = obj.varmod  
+            if obj.sequence.find("-") > -1:
+                #H-AAVEEGIVLGGGykl-4-126CALLR-OH
+                seqstart = obj.sequence.find("-")
+                seqend = obj.sequence.rfind("-")
+                current_sequence = obj.sequence[seqstart+1:seqend]
+                #current_sequence = obj.sequence.split("-")[1]
+                if obj.sequence.split("-")[0] != "H":
+                    if not fixedmod:
+                        fixedmod = "N-term: " + obj.sequence.split("-")[0]
+                    else:
+                        fixedmod += ", N-term: " + obj.sequence.split("-")[0]
                 else:
-                    fixedmod += ", N-term: " + obj.sequence.split("-")[0]
-            else:
-                self.parent.bpc.FindWindowByName("nTerm").SetValue("None")
-        self.parent.bpc.FindWindowByName("sequence").SetValue(current_sequence)
-        mod_dict = {'iTRAQ4plex': 'iTRAQ',
-                  'TMT6plex': 'TMT',
-                  'iTRAQ8plex': 'iTRAQ8plex',
-                  'HGly-HGly': 'HCGlyHCGly',
-                  'HCGly-HCGly': 'HCGlyHCGly',
-                  'HCGly-HCGly-HCGly-HCGly': 'HCGlyHCGlyHCGlyHCGly',
-                  'HNGly-HNGly': 'HNGlyHNGly',
-                  'LbA-LbA': 'LbALbA',
-                  'Acetyl':'Acetyl'}
-        for mod in fixedmod.split(","):
-            print mod
-            mod = mod.strip()
-            if mod.find("N-term") > -1:
-                print "NTERM"
-                mod = mod.split(" ")[1]
+                    bpc.b.FindWindowByName("nTerm").SetValue("None")
+            bpc.b.FindWindowByName("sequence").SetValue(current_sequence)
+            mod_dict = {'iTRAQ4plex': 'iTRAQ',
+                      'TMT6plex': 'TMT',
+                      'iTRAQ8plex': 'iTRAQ8plex',
+                      'HGly-HGly': 'HCGlyHCGly',
+                      'HCGly-HCGly': 'HCGlyHCGly',
+                      'HCGly-HCGly-HCGly-HCGly': 'HCGlyHCGlyHCGlyHCGly',
+                      'HNGly-HNGly': 'HNGlyHNGly',
+                      'LbA-LbA': 'LbALbA',
+                      'Acetyl':'Acetyl'}
+            for mod in fixedmod.split(","):
+                print mod
                 mod = mod.strip()
-                if mod in mod_dict.keys():
-                    self.parent.bpc.FindWindowByName("nTerm").SetValue(mod_dict[mod])
-                print mod_dict[mod]
-        self.parent.bpc.OnCalculate(None)
-        self.parent.bpc.Refresh()        
+                if mod.find("N-term") > -1:
+                    print "NTERM"
+                    mod = mod.split(" ")[1]
+                    mod = mod.strip()
+                    if mod in mod_dict.keys():
+                        bpc.b.FindWindowByName("nTerm").SetValue(mod_dict[mod])
+                    print mod_dict[mod]
+            bpc.b.OnCalculate(None)
+            bpc.b.Refresh()        
+        else:
+            wx.MessageBox("Not a spectrum entry.")
         
-        
+            
     def OnPopupTwo_evt(self, event):
         print "Pop 2"    
         item = self.tree.GetSelection()
         #print event.GetItem()
         #print self.tree.GetItemText(event.GetSelection())
-        obj = self.tree.GetPyData(item)['obj']     
-        print obj.sequence
-        print obj.fixedmod
-        print obj.varmod
-        if not wx.TheClipboard.IsOpened():
-            wx.TheClipboard.Open()
-        clipdata = wx.TextDataObject()
-        clipdata.SetText(obj.sequence)
-        wx.TheClipboard.SetData(clipdata)
-        wx.TheClipboard.Close()
+        data = self.tree.GetPyData(item)
+        if 'spectrum_data' in data.keys():
+            obj = data['spectrum_data']
+            if not wx.TheClipboard.IsOpened():
+                wx.TheClipboard.Open()
+            clipdata = wx.TextDataObject()
+            clipdata.SetText(obj.sequence)
+            wx.TheClipboard.SetData(clipdata)
+            wx.TheClipboard.Close()
+        else:
+            wx.MessageBox("Not a spectrum object.")
         
     def OnPopupThree_evt(self, event):
+        #--------------------------------------------------------NOTE: this just edits the label.
+        #-------You have to catch the event, and use event.GetLabel to update the actual object.
         #pos = event.GetPosition()
         #item, flags, col = self.tree.HitTest(pos)
+        self.column_edit = 0  # tell the event handler which column
         self.tree.EditLabel(self.tree.GetSelection())
+        # Edit Infobar
+        # For spectrum, this is the sequence
+        
+        
+    def OnPopupFour_evt(self, event):
+        #--------------------------------------------------------NOTE: this just edits the label.
+        #-------You have to catch the event, and use event.GetLabel to update the actual object.        
+        
+        #-----------------Original code.
+        #-----------------Problem -- after edit, the Infobar text is changed also to the title bar!!  Strange.
+        #-----------------Tried many things, could not fix.
+        #-----------------For now, we'll just prompt user with dialog.
+        #self.column_edit = 1 # tell the event handler which column.
+        #self.column_text = self.tree.GetItemText(self.tree.GetSelection(),0)
+        #self.tree.EditLabel(self.tree.GetSelection(), 1)
+        item = self.tree.GetSelection()
+        dlg = wx.TextEntryDialog(self, 'Enter New Title Bar', 'Edit Title Bar',  defaultValue=self.tree.GetItemText(item, 1))
+        
+        if dlg.ShowModal() == wx.ID_OK:
+            item = self.tree.GetSelection()
+            data = self.tree.GetPyData(item)
+            data['exp']=dlg.GetValue()
+            self.tree.SetItemText(item, dlg.GetValue(), 1)
+            
+            self.parent.TreeRefresh()            
+        dlg.Destroy()        
+        
+        
+    def OnLabelEndEdit(self, event):
+        #------------------------------Text is edited, but need to update the object.
+        if self.column_edit == 0:
+            item = self.tree.GetSelection()
+            data = self.tree.GetPyData(item)
+            if 'spectrum_data' in data.keys():
+                obj = data['spectrum_data']
+                obj.sequence = event.GetLabel()  #self.tree.GetItemText(item, 0)
+            if 'xic_data' in data.keys():
+                obj = data['xic_data']
+                obj.title = event.GetLabel()  #self.tree.GetItemText(item, 0)            
+            self.parent.TreeRefresh()            
+        #--------------------------------For editing Title bar; strange error so this is not used now (see above).
+        if self.column_edit == 1:
+            item = self.tree.GetSelection()
+            data = self.tree.GetPyData(item)
+            data['exp']=event.GetLabel() #self.tree.GetItemText(item, 1)
+            self.tree.SetItemText(item, self.column_text, 0)
+            #self.tree.Refresh()
+            self.parent.TreeRefresh()
+        event.Skip()
+        
         
     def OnEditItem(self, event):
         print "EDIT"
