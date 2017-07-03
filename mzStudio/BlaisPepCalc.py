@@ -39,7 +39,6 @@ import mz_workbench.mz_masses as mz_masses
 print sys.path
 print os.path.abspath(os.getcwd())
 sys.path.append(".")
-#sys.path.append(r"\\Glu.dfci.harvard.edu\Userland\SBF\Papers\3D Phospho\Final Script Base\modules")
 
 import glob
 import sqlite3 as sql
@@ -317,7 +316,6 @@ class ListBank(wx.Frame):
         file_w.close()
 
     def OnLoad(self, event):
-        #defaultDir = r'\\glu.dfci.harvard.edu\userland\sbf'
         dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.OPEN, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
@@ -402,7 +400,6 @@ class MemoryBank(wx.Frame):
         file_r.close()        
 
     def OnSave(self, event):
-        r'\\glu.dfci.harvard.edu\userland\sbf'
         dlg = wx.FileDialog(None, "Save as..", pos = (2,2), style = wx.SAVE, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
@@ -423,7 +420,6 @@ class MemoryBank(wx.Frame):
         file_w.close()
 
     def OnLoad(self, event):
-        #defaultDir = r'\\glu.dfci.harvard.edu\userland\sbf'
         dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.OPEN, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
@@ -613,7 +609,6 @@ class BlaisPepCalc(wx.Frame):
 
     def OnHelp(self, panel):
         word = win32com.client.Dispatch('Word.Application')
-        #word.Documents.Open(r"\\Glu.dfci.harvard.edu\Userland\SBF\Papers\3D Phospho\Final Script Base\pyDataManager\Codebase\Data Manager.doc")
         word.Documents.Open(r"\Data Manager.doc")
 
         #subprocess.Popen()

@@ -34,7 +34,6 @@ import mz_workbench.mz_masses as mz_masses
 print sys.path
 print os.path.abspath(os.getcwd())
 sys.path.append(".")
-#sys.path.append(r"\\Glu.dfci.harvard.edu\Userland\SBF\Papers\3D Phospho\Final Script Base\modules")
 
 import glob
 import sqlite3 as sql
@@ -48,7 +47,8 @@ import cPickle
 import multiplierz.mzGUI_standalone as mzGUI
 import os
 import mzStudio as bb
-import wx.lib.agw.flatmenu as FM
+#import wx.lib.agw.flatmenu as FM
+import flatmenu_patched as FM
 from wx.lib.agw.artmanager import ArtManager, RendererBase, DCSaver
 from wx.lib.agw.fmresources import ControlFocus, ControlPressed
 from wx.lib.agw.fmresources import FM_OPT_SHOW_CUSTOMIZE, FM_OPT_SHOW_TOOLBAR, FM_OPT_MINIBAR
@@ -102,7 +102,6 @@ for line in mod_file:
     mass = chemicalDataMass(fla)
     if mass and hkey in AminoAcidMasses:
         mod_lookup_table[lkey, hkey] = mass - AminoAcidMasses[hkey][0]
-
 
 class PageOne(wx.Panel):
     def __init__(self, parent):
@@ -383,7 +382,6 @@ class BlaisPepCalc(wx.Panel):
 
     def OnHelp(self, panel):
         word = win32com.client.Dispatch('Word.Application')
-        #word.Documents.Open(r"\\Glu.dfci.harvard.edu\Userland\SBF\Papers\3D Phospho\Final Script Base\pyDataManager\Codebase\Data Manager.doc")
         word.Documents.Open(r"\Data Manager.doc")
 
         #subprocess.Popen()
@@ -612,17 +610,26 @@ class BlaisPepCalc(wx.Panel):
             elif _ions == "b/y - 4 phos":
                 _sub = (4*(3* mz_masses.mass_dict[calcType]['H'] + mz_masses.mass_dict[calcType]['P'] + 4* mz_masses.mass_dict[calcType]['O']))/float(int(cg_by))
             _ions = 'b/y'
+            
         if nterm == "None":
             nterm = ''
         if cterm == "None":
             cterm = ''        
         
-        pa = re.compile('([a-z0-9.\]\[]*[A-Z]+?)')        
+        aminos = ''.join([x for x in list(seq) if x.isupper()])        
         
-        
-        aminos = ''.join([x for x in list(seq) if x.isupper()])
-        modtokens = pa.findall(seq)
         mods = []
+        if nterm:
+            nmod = mz_masses.calc_mass(mz_masses.Nterm_dict[nterm])
+            mods.append((1, nmod))
+            #nmodstr = ['%s1: %.5f' % (aminos[0], nmod)]
+        if cterm:
+            cmod = mz_masses.calc_mass(mz_masses.Cterm_dict[cterm])
+            mods.append((len(aminos), cmod))
+            #cmodstr = ['%s%d: %.5f' % (aminos[-1], len(aminos), cmod)]
+        
+        pa = re.compile('([a-z0-9.\]\[]*[A-Z]+?)')        
+        modtokens = pa.findall(seq)
         for pos, segment in enumerate(modtokens, start = 1):
             if all(x.isalpha() for x in segment) and any(x for x in segment if x.islower()):
                 #token = ''.join(x for x in segment if x.islower())
@@ -658,17 +665,21 @@ class BlaisPepCalc(wx.Panel):
         for k, v in chgfrags.items():
             frags[k.strip('+')] = v
         
-        if _ions == 'b/y':
-            b_ions = sorted(zip(*frags['b'])[1]) + [chgmass]
-            y_ions = sorted(zip(*frags['y'])[1]) + [chgmass]
-        elif _ions == 'c/z':
-            b_ions = sorted(zip(*frags['c'])[1]) + [chgmass]
-            y_ions = sorted(zip(*frags['z'])[1]) + [chgmass]            
-            # Assuming that the replacement is implicit, since there's not a
-            # set of c_ions and z_ions variables in the rest of the code.
+        if any(frags.values()):
+            if _ions == 'b/y':
+                b_ions = sorted(zip(*frags['b'])[1]) + [chgmass]
+                y_ions = sorted(zip(*frags['y'])[1]) + [chgmass]
+            elif _ions == 'c/z':
+                b_ions = sorted(zip(*frags['c'])[1]) + [chgmass]
+                y_ions = sorted(zip(*frags['z'])[1]) + [chgmass]            
+                # Assuming that the replacement is implicit, since there's not a
+                # set of c_ions and z_ions variables in the rest of the code.
+            else:
+                raise Exception
         else:
-            raise Exception
-        
+            b_ions = []
+            y_ions = []
+                
         charge_states = [precmass] + [(precmass + (protonMass*c))/c for c in range(1, 7)]
         
         

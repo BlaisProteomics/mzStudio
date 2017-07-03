@@ -30,7 +30,6 @@ import mz_workbench.mz_masses as mz_masses
 print sys.path
 print os.path.abspath(os.getcwd())
 sys.path.append(".")
-#sys.path.append(r"\\Glu.dfci.harvard.edu\Userland\SBF\Papers\3D Phospho\Final Script Base\modules")
 
 import glob
 import sqlite3 as sql
@@ -296,7 +295,6 @@ class BlaisPepCalc(wx.Panel):
 
     def OnHelp(self, panel):
         word = win32com.client.Dispatch('Word.Application')
-        #word.Documents.Open(r"\\Glu.dfci.harvard.edu\Userland\SBF\Papers\3D Phospho\Final Script Base\pyDataManager\Codebase\Data Manager.doc")
         word.Documents.Open(r"\Data Manager.doc")
 
         #subprocess.Popen()
