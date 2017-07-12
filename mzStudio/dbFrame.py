@@ -25,7 +25,7 @@ from autocomplete import AutocompleteTextCtrl, list_completer
 class dbGrid(wx.grid.Grid):
     def __init__(self, parent, rows):
         self.parent = parent
-        wx.grid.Grid.__init__(self, parent, -1, pos=(0,40), size =(1200, 350))#
+        wx.grid.Grid.__init__(self, parent, -1, pos=(0,40), size =(1200, 550))#
         self.CreateGrid(rows,len(self.parent.cols))
         for i, col in enumerate(self.parent.cols):
             self.SetColLabelValue(i, col)
@@ -56,7 +56,7 @@ class dbFrame(wx.Panel):
         self.ActiveFileNumber = self.currentPage.msdb.active_file
         self.fileName = self.currentPage.msdb.Display_ID[self.ActiveFileNumber]
         self.parent = parent #THIS IS AUI FRAME OBJECT
-        
+        self.parentFileName = self.currentFile['FileAbs']
         self.bpc = bpc
         
         #------------------------GET DATA FOR GRID
@@ -74,7 +74,7 @@ class dbFrame(wx.Panel):
                 
         autoTerms = self.currentFile["mzSheetcols"] + ['SELECT', 'FROM', 'peptides', 'WHERE', 'DISTINCT']
         self.query = AutocompleteTextCtrl(self, completer = list_completer(autoTerms))
-        self.query.SetValue("select * from peptides;")
+        self.query.SetValue("select * from peptides")
         
         self.btn = wx.Button(self, -1, "Submit", pos = (40, 20), size= (60,23))
         #self.builder = wx.Button(self, -1, "B", pos = (20, 20), size= (20,20))
@@ -132,7 +132,7 @@ class dbFrame(wx.Panel):
         #------------------------------Are there additional files to load?
         if "File" in self.currentFile["mzSheetcols"]:
             file_set = set()
-            if self.currentFile['multiFileOption'] == 'LOAD ALL':
+            if self.currentFile['settings']['multiFileOption'] == 'LOAD ALL':
                 for row in self.currentFile["rows"]:
                     file_set.add((self.curdir + '\\' + re.compile('(\S+?.raw)').match(os.path.basename(row['File'])).groups()[0]).lower())
                 for name in list(file_set):
@@ -167,6 +167,42 @@ class dbFrame(wx.Panel):
                        '[lk]':'like "%%"', '[pdesc]':'"Protein Description"',
                        '[set1]':'"Accession Number", "Protein Description", "Peptide Sequence", "Variable Modifications", "Experimental mz", "Charge", "Predicted mr", "Delta", "Peptide Score", "Spectrum Description", "Scan", "GeneName"',
                        '~VM':'"Variable Modifications"', '~lk':'like "%%"', '~pepd':'order by "Peptide Score" desc', '~gn':'"GeneName"', '~var':'"Variable Modifications"'}
+
+    def OnClose(self, event):
+        if self.aui_pane.name != event.pane.name:
+            print "%s got event but isn't being closed." % self.aui_pane.name
+            event.Skip()
+            return 
+    
+        #self.currentFile["xlsSource"]=''
+        #self.currentFile['SearchType'] = None  
+        #self.currentFile["database"] = None
+        
+        
+        #self.currentFile["rows"], self.currentFile["mzSheetcols"] = [], []
+        #self.currentFile['header']={}
+        
+        #self.currentFile['fixedmod']=""
+        #self.currentFile['varmod']=""
+        #self.currentFile['ID_Dict']={}
+        
+        #self.currentFile["mascot_ID"] = {}
+        
+        
+        #self.currentFile["SILAC"]={"mode":False, "peaks":(), "method":None} 
+        
+        #self.currentFile["datLink"] = False
+        #self.currentFile["viewMascot"] = False
+        #self.currentFile['ID']=False
+        #self.currentFile['label_dict']={}
+        #currentPage = self.parent.ctrl.GetPage(self.parent.ctrl.GetSelection())
+        #currentPage.Window.UpdateDrawing()        
+        
+        self.parent.parentFrame.ObjectOrganizer.removeObject(self)
+                
+        
+        print "Cleanup goes here!"
+
 
     def SizeFrame(self):
         topSizer = wx.BoxSizer(wx.VERTICAL)        

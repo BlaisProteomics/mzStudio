@@ -10,7 +10,7 @@ class ObjectOrganizer(object):
     def __init__(self):
         self.ActiveObjects={}
     
-    def addObject(self, obj, nah = None):
+    def addObject(self, obj):
         objType = type(obj)
         assert objType not in self.ActiveObjects
         self.ActiveObjects[objType] = obj

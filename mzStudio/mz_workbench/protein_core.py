@@ -756,8 +756,7 @@ def create_report(filename, peptide_stringency, organism = "HUMAN"):
     rdr.close()
     wtr = mzReport.writer(filename, columns =['accession', 'geneID', 'geneName', 'Description', 'Peptides', 'Number of Peptides'], sheet_name = "Protein Report-Inclusive")
     row = {}
-    #conn = sql.connect(r'C:\Documents and Settings\Scott\gene_database.db')
-    #c = conn.cursor()
+
     for gi in inclusive_gi2pep.keys():
         if len(inclusive_gi2pep[gi]) >= peptide_stringency: #At least 2 peptides
             row['accession'] = gi
@@ -781,8 +780,7 @@ def create_report(filename, peptide_stringency, organism = "HUMAN"):
     wtr.close()
     wtr = mzReport.writer(filename, columns =['accession', 'geneID', 'geneName', 'Description', 'Peptides', 'Number of Peptides'], sheet_name = "Protein Report-Stringent")
     row = {}
-    #conn = sql.connect(r'C:\Documents and Settings\Scott\gene_database.db')
-    #c = conn.cursor()
+
     for gi in stringent_gi2pep.keys():
         if len(stringent_gi2pep[gi]) >= peptide_stringency: #At least 2 peptides
             row['accession'] = gi
@@ -1310,7 +1308,7 @@ def make_phospho_sheet(filename, sheetname = "Data"):
     rdr.close()
     wtr.close()
 
-def make_gene_sheet(filename, sheetname = "Data", gene="CDK7", newSheetName=''):
+def make_gene_sheet(filename, sheetname = "Data", gene="", newSheetName=''):
     '''
     
     Makes sub worksheet in xls for any entry with specified gene name.
@@ -1335,7 +1333,7 @@ def make_gene_sheet(filename, sheetname = "Data", gene="CDK7", newSheetName=''):
     rdr.close()
     wtr.close()
     
-def make_genes_sheet(filename, sheetname = "Data", targetGenes=["CDK7"], newSheetName='Targets'):
+def make_genes_sheet(filename, sheetname = "Data", targetGenes=[""], newSheetName='Targets'):
     '''
     2014-05-11
     Makes sub worksheet in xls for any entry with a gene in the specified list.
@@ -3589,7 +3587,7 @@ def compare_quants(filenames, sheetname, use_cg=False, outputfilename='Quant_Com
             else:
                 output += [0]
         wtr.writerow(output)
-   
+
 
 def extract_gene_name_from_uniprot_entry(filename, sheetname='Data'):
     '''

@@ -83,17 +83,17 @@ class ListBank(wx.Frame):
         self.listb.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelected)
         self.listb.editable=False
        
-        self.Save = wx.Button(self.panel, -1, "Save", pos=(0,2), size=(25,25))
+        self.Save = wx.Button(self.panel, -1, "Save", pos=(0,2), size=(40,25))
         self.Bind(wx.EVT_BUTTON, self.OnSave, self.Save)
-        self.Load = wx.Button(self.panel, -1, "Load", pos=(30,2), size=(25,25))
+        self.Load = wx.Button(self.panel, -1, "Load", pos=(45,2), size=(40,25))
         self.Bind(wx.EVT_BUTTON, self.OnLoad, self.Load)
-        self.Delete = wx.Button(self.panel, -1, "Delete", pos=(60,2), size=(25,25))
+        self.Delete = wx.Button(self.panel, -1, "Delete", pos=(90,2), size=(40,25))
         self.Bind(wx.EVT_BUTTON, self.OnDelete, self.Delete)
-        self.Clear = wx.Button(self.panel, -1, "Clear", pos=(90,2), size=(25,25))
+        self.Clear = wx.Button(self.panel, -1, "Clear", pos=(135,2), size=(40,25))
         self.Bind(wx.EVT_BUTTON, self.OnClear, self.Clear)
-        self.Stds = wx.Button(self.panel, -1, "Standards", pos=(150,2), size=(60,25))
+        self.Stds = wx.Button(self.panel, -1, "Standards", pos=(225,2), size=(60,25))
         self.Bind(wx.EVT_BUTTON, self.OnStds, self.Stds)     
-        ebutton = wx.Button(self.panel, -1, "Edit", (120, 2), (25,25))
+        ebutton = wx.Button(self.panel, -1, "Edit", (180, 2), (40,25))
         self.Bind(wx.EVT_BUTTON, self.OnEdit, ebutton)        
         self.panel.Bind(wx.EVT_RIGHT_UP, self.OnRightUp)
         self.listb.Bind(wx.EVT_RIGHT_DOWN, self.OnRightUp)
@@ -102,7 +102,7 @@ class ListBank(wx.Frame):
         user_defined = glob.glob(os.path.join(install_dir, r'settings\*_bpc.txt'))
         
         self.user_dict = {}
-        pos = 230
+        pos = 305
         for i, file_name in enumerate(user_defined):
             id = wx.NewId()
             btn = wx.Button(self.panel, id, os.path.basename(file_name).split('_bpc')[0][:3], pos=(pos + (30 * i),2), size=(25,25))

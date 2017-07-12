@@ -1,6 +1,6 @@
 __author__ = 'Scott'
 __lastRevision__ = '2016-12-24'
-__version__ = "0.3.2-mzBrowser"
+__version__ = "0.3.2-mzStudio"
 
 import pylab
 import sys
@@ -24,20 +24,20 @@ import multiplierz.mzSearch.mascot as mascot
 from collections import defaultdict
 
 Ntranslate = {'iTRAQ4plex (N-term)': 'iTRAQ',
-              'TMT6plex (N-term)': 'TMT',
-              'TMT (N-term)': 'cTMT',
-              'Propionyl (N-term)': 'Propionyl',
-              'iTRAQ8plex (N-term)': 'iTRAQ8plex',
-              'iTRAQ8plex@N-term': 'iTRAQ8plex',
-              'HGly-HGly (N-term)':'HCGlyHCGly',
-              'HCGly-HCGly (N-term)':'HCGlyHCGly',
-              'HNGly-HNGly (N-term)':'HNGlyHNGly',
-              'LbA-LbA (N-term)':'LbALbA',
-              'LbA-HbA (N-term)':'LbAHbA',
-              'HbA-HbA (N-term)':'HbAHbA',
-              'HCGly-HCGly-HCGly-HCGly (N-term)':'HCGlyHCGlyHCGlyHCGly',
-              'HNGly-HNGly-HNGly-HNGly (N-term)':'HNGlyHNGlyHNGlyHNGly',
-              'Phenylisocyanate (N-term)':'Phenylisocyanate'}
+                      'TMT6plex (N-term)': 'TMT',
+                      'TMT (N-term)': 'cTMT',
+                      'Propionyl (N-term)': 'Propionyl',
+                      'iTRAQ8plex (N-term)': 'iTRAQ8plex',
+                      'iTRAQ8plex@N-term': 'iTRAQ8plex',
+                      'HGly-HGly (N-term)':'HCGlyHCGly',
+                      'HCGly-HCGly (N-term)':'HCGlyHCGly',
+                      'HNGly-HNGly (N-term)':'HNGlyHNGly',
+                      'LbA-LbA (N-term)':'LbALbA',
+                      'LbA-HbA (N-term)':'LbAHbA',
+                      'HbA-HbA (N-term)':'HbAHbA',
+                      'HCGly-HCGly-HCGly-HCGly (N-term)':'HCGlyHCGlyHCGlyHCGly',
+                      'HNGly-HNGly-HNGly-HNGly (N-term)':'HNGlyHNGlyHNGlyHNGly',
+                      'Phenylisocyanate (N-term)':'Phenylisocyanate'}
 NvTranslate = {'N-term: Acetyl': 'Acetyl',
                'N-term: Propionyl': 'Propionyl',
                'iTRAQ8plex@N-term': 'iTRAQ8plex',
@@ -52,11 +52,6 @@ NvTranslate = {'N-term: Acetyl': 'Acetyl',
                'N-term: TMT6plex': 'TMT'}
 Ctranslate = {}
 
-
-#Don't need for mzBrowser
-#import mz_data_manager.extraction.orbihcd2mgf_real_time_cal_with_decal as orbihcd2mgf
-
-print "Powered by mzCore! v" + __version__ + ' last update: ' + __lastRevision__
 
 def get_single_file(caption='Select File...', wx_wildcard = "XLS files (*.xls)|*.xls"):
     app = wx.PySimpleApp()
@@ -353,7 +348,7 @@ def create_dicts(m, start=0, stop=99999, check_corrupted_scans= False):
     rt2scan [retention time] = scan 
     Thermo (raw: Orbitrap XL, Velos, Fusion) and ABSciex (wiff: Elite, 5600, QTRAP) have been tested
     """
-    print "mz_core: Building scan dictionaries..."
+    print "mz_core: Building scan dictionaries...;---"
     B = m.scan_info()
     C = m.filters() # WIFF FORMAT: (0.019966666666666667, u'Precursor + p NSI Full ms [410-1000]')
     scan_dict = {}
@@ -582,48 +577,13 @@ def read_new_mass_def():
 new_mass_dict = read_new_mass_def()
 
 
-def read_residues():
-    '''
-    version 0.1
-    DEPRECATED
-    Reads old style residue list and returns dictionary: 'L': [6, 11, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    Old style residue list is
-    "A"
-    "Alanine"
-    3
-    5
-    1
-    ...
-    Making it difficult to add new mods
-    
-    '''
-    
-    residues = {}
-    try:
-        dir = os.getcwd()
-        file = open(dir + r'\Residues.txt', 'r')
-    except:
-        file = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\Residues.txt", 'r')
-    res = file.readlines()
-    file.close()
-
-    for i in range(0, len(res), 16):
-        residue = []
-        for j in range(0, 14):
-            residue.append(int(res[i + j + 2].replace('"', '').strip()))
-        residues[res[i].replace('"', '').strip()] = residue
-    #print residues
-    return residues
 
 def read_Nterm_mod_return_dict():
     Nterm = {}
     Nterm_dict = defaultdict(dict)
     res_convert = ['C', 'H', 'N', 'O', 'P', 'S', 'F', 'D', 'C13', 'N15', 'S35', 'O18']
-    try:
-        dir = os.getcwd()
-        file = open(dir + r'\Residues.txt', 'r')
-    except:
-        file = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\NTermMod.txt", 'r')
+    dir = os.getcwd()
+    file = open(dir + r'\Residues.txt', 'r')
     res = file.readlines()
     file.close()
 
@@ -637,147 +597,13 @@ def read_Nterm_mod_return_dict():
 
     return Nterm_dict
 
-def dump_Nterm_dict():
-    '''
-    
-    Read old style residue list, create dictionary, dump dictionary to new style residue list
-    
-    '''
-    Nterm = {}
-    Nterm_dict = defaultdict(dict)
-    res_convert = ['C', 'H', 'N', 'O', 'P', 'S', 'F', 'D', 'C13', 'N15', 'S35', 'O18']
-    try:
-        dir = os.getcwd()
-        file = open(dir + r'\Residues.txt', 'r')
-    except:
-        file = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\NTermMod.txt", 'r')
-    res = file.readlines()
-    file.close()
 
-    for i in range(0, len(res), 13):
-        residue = []
-        for j in range(0, 12):
-            residue.append(int(res[i + j + 1].replace('"', '').strip()))
-        residues[res[i].replace('"', '').strip()] = residue
-        for k, member in enumerate(residue):
-            Nterm_dict[res[i].replace('"', '').strip()][res_convert[k]] = residue[k]
-    file_w = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\new_NTermMod.txt", 'w')
-    for member in Nterm_dict.keys():
-        line = ''
-        line = member + '| |' + '|'.join([', '.join([key + ':' + str(Nterm_dict[member][key]) for key in Nterm_dict[member].keys()])])
-        file_w.write(line + '\n')
-    file_w.close()
 
-def read_Cterm_mod_return_dict():
-    Cterm = {}
-    Cterm_dict = defaultdict(dict)
-    res_convert = ['C', 'H', 'N', 'O', 'P', 'S', 'F', 'D', 'C13', 'N15', 'S35', 'O18', 'Br']
-    try:
-        dir = os.getcwd()
-        file = open(dir + r'\Residues.txt', 'r')
-    except:
-        file = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\CTermMod.txt", 'r')
-    res = file.readlines()
-    file.close()
 
-    for i in range(0, len(res), 14):
-        residue = []
-        for j in range(0, 13):
-            residue.append(int(res[i + j + 1].replace('"', '').strip()))
-        residues[res[i].replace('"', '').strip()] = residue
-        for k, member in enumerate(residue):
-            Cterm_dict[res[i].replace('"', '').strip()][res_convert[k]] = residue[k]
 
-    return Cterm_dict
 
-def dump_Cterm_dict():
-    '''
-    
-    Read old style residue list, create dictionary, dump dictionary to new style residue list
-    
-    '''
-    Cterm = {}
-    Cterm_dict = defaultdict(dict)
-    res_convert = ['C', 'H', 'N', 'O', 'P', 'S', 'F', 'D', 'C13', 'N15', 'S35', 'O18', 'Br']
-    
-    try:
-        dir = os.getcwd()
-        file = open(dir + r'\Residues.txt', 'r')
-    except:
-        file = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\CTermMod.txt", 'r')
-    res = file.readlines()
-    file.close()
 
-    for i in range(0, len(res), 14):
-        residue = []
-        for j in range(0, 13):
-            residue.append(int(res[i + j + 1].replace('"', '').strip()))
-        residues[res[i].replace('"', '').strip()] = residue
-        for k, member in enumerate(residue):
-            Cterm_dict[res[i].replace('"', '').strip()][res_convert[k]] = residue[k]    
-    
-    file_w = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\new_CTermMod.txt", 'w')
-    for member in Cterm_dict.keys():
-        line = ''
-        line = member + '| |' + '|'.join([', '.join([key + ':' + str(Cterm_dict[member][key]) for key in Cterm_dict[member].keys()])])
-        file_w.write(line + '\n')
-    file_w.close()
 
-def read_residues_return_dict():
-    residues = {}
-    res_dict = defaultdict(dict)
-    res_convert = ['C', 'H', 'N', 'O', 'P', 'S', 'F', 'D', 'C13', 'N15', 'S35', 'O18', 'Cl', 'Br']
-    try:
-        dir = os.getcwd()
-        file = open(dir + r'\Residues.txt', 'r')
-    except:
-        file = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\Residues.txt", 'r')
-    res = file.readlines()
-    file.close()
-
-    for i in range(0, len(res), 16):
-        residue = []
-        for j in range(0, 14):
-            residue.append(int(res[i + j + 2].replace('"', '').strip()))
-        residues[res[i].replace('"', '').strip()] = residue
-        for k, member in enumerate(residue):
-            res_dict[res[i].replace('"', '').strip()][res_convert[k]] = residue[k]
-
-    return res_dict
-
-def dump_res_dict():
-    '''
-    
-    Read old style residue list, create dictionary, dump dictionary to new style residue list
-    
-    '''
-    residues = {}
-    res_dict = defaultdict(dict)
-    name_dict = {}
-    res_convert = ['C', 'H', 'N', 'O', 'P', 'S', 'F', 'D', 'C13', 'N15', 'S35', 'O18', 'Cl', 'Br']
-    try:
-        dir = os.getcwd()
-        file = open(dir + r'\Residues.txt', 'r')
-    except:
-        file = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\Residues.txt", 'r')
-    res = file.readlines()
-    file.close()
-    file_w = open(r"\\glu\MS_Data_02\SBF_Programming\SouthStation\modules\new_res_list.txt", 'w')
-    for i in range(0, len(res), 16):
-        residue = []
-        for j in range(0, 14):
-            residue.append(int(res[i + j + 2].replace('"', '').strip()))
-        residues[res[i].replace('"', '').strip()] = residue
-        name_dict[res[i].replace('"', '').strip()] = res[i+1].replace('"', '').strip()
-        for k, member in enumerate(residue):
-            res_dict[res[i].replace('"', '').strip()][res_convert[k]] = residue[k]
-    for member in res_dict.keys():
-        line = ''
-        line = member + '|' + name_dict[member] + '|' + '|'.join([', '.join([key + ':' + str(res_dict[member][key]) for key in res_dict[member].keys()])])
-        file_w.write(line + '\n')
-    file_w.close()
-
-#dump_res_dict()
 def read_new_res_dict():
     file_r = open(os.path.join(FILES_DIR, r"new_res_list.txt"), 'r')
     data = file_r.readlines()
@@ -1164,10 +990,7 @@ def CHNOPS2dict(CHNOPS):
 
 def get_precursor_neutral_losses(mz, cg, varmod):
     NL_bank = [] # This keeps a running total of losses to occur from the ion {97.98:'Phospho'}
-    NL_dict = {'Fringe':{'C':14, 'H':23,'N':1,'O':9},
-               'Phospho':{'H':3, 'P':1, 'O':4}, 'SML':{'C':10, 'H':15, 'N':5, 'O':11, 'P':2},
-               'Fucosylation':{'C':6, 'H':10, 'O':4}, 'Hex':{'C':6, 'H':10, 'O':5}, 
-               'HexNAc':{'C':8, 'H':13, 'O':5, 'N':1}, 'XylXylGal':{'C':16, 'H':26, 'O':13}}
+    NL_dict = {'Fringe':{'C':14, 'H':23,'N':1,'O':9}, 'Phospho':{'H':3, 'P':1, 'O':4}, 'SML':{'C':10, 'H':15, 'N':5, 'O':11, 'P':2},'Fucosylation':{'C':6, 'H':10, 'O':4}, 'Hex':{'C':6, 'H':10, 'O':5}, 'HexNAc':{'C':8, 'H':13, 'O':5, 'N':1}, 'XylXylGal':{'C':16, 'H':26, 'O':13}}
     NL_ions = {} #This is the list that gets returned {544.2:'[M+2H]2+ dP'}
     NL_masses={}
     mods = varmod.split(';')
@@ -1186,7 +1009,7 @@ def get_fragment_neutral_losses(sequence, b_ions, y_ions, varmod, cg):
     '''
     Neutral losses are derived from varmods like phosphorylation
     '''
-    NL_residues = {'gfS':'Fringe', 'gfT':'Fringe' ,'pS':'Phospho', 'pT':'Phospho', 'fucS':'Fucose', 'fucT':'Fucose', 'galS':'Hexose', 'galT':'Hexose', 'gS':'HexNAc', 'gT':'HexNAc', 'xxgS':'XylXylGal', 'xxgT':'XylXylGal', 'smlC':'SML',}
+    NL_residues = {'gfS':'Fringe', 'gfT':'Fringe' ,'pS':'Phospho', 'pT':'Phospho', 'fucS':'Fucose', 'fucT':'Fucose', 'galS':'Hexose', 'galT':'Hexose', 'gS':'HexNAc', 'gT':'HexNAc', 'xxgS':'XylXylGal', 'xxgT':'XylXylGal', 'smlC':'SML'}
     NL_dict = {'Fringe':{'C':14, 'H':23,'N':1,'O':9}, 'Phospho':{'H':3, 'P':1, 'O':4}, 'Fucose':{'C':6, 'H':10, 'O':4}, 'Hexose':{'C':6, 'H':10, 'O':5}, 'HexNAc':{'C':8, 'H':13, 'O':5, 'N':1}, 'XylXylGal':{'C':16, 'H':26, 'O':13}, 'SML':{'C':10, 'H':15, 'N':5, 'O':11, 'P':2}}
     pep = create_peptide_container(sequence, varmod, '')
     NL_bank = [] # This keeps a running total of losses to occur from the ion {97.98:'Phospho'}
@@ -1346,8 +1169,6 @@ def calc_pep_mass_from_residues(sequence, cg = 1, varmod = '', fixedmod = '', Nt
 
 
 mass_dict = read_mass_def()
-#residues = read_residues()
-#res_dict = read_residues_return_dict()
 res_dict = read_new_res_dict()
 #Nterm_dict = read_Nterm_mod_return_dict()
 Nterm_dict = read_new_Nterm_dict()
@@ -1560,14 +1381,17 @@ def pull_mods_from_mascot_header(filename):
     This is a bit slow.  Consider making into a csv file or using xlrd for faster access.
     
     '''
-    
-    rdr = mzR.reader(filename, sheet_name = "Mascot_Header")
-    header = {}
-    for row in rdr:
-        header[row['Header']] = row['--------------------------------------------------']
-    
-    rdr.close()
-    return header
+    try:
+        rdr = mzR.reader(filename, sheet_name = "Mascot_Header")
+        header = {}
+        for row in rdr:
+            header[row['Header']] = row['--------------------------------------------------']
+        
+        rdr.close()
+        return header
+    except:
+        import wx
+        wx.MessageBox('Could not load header info.\nDoes this file have a Mascot_Header sheet?')
     
 
 def pull_mods_from_comet_header(filename):
@@ -2286,15 +2110,6 @@ def raw_to_sql(filename):
     line = 'create index ind1 on mz(scan)'
     c.execute(line)
 
-def db_tic():
-    db = r'\\Glu\Userland\SBF\DataMain\Collaborations\Gray\Wooyoung\2012-04-19-mTorr-igd\2012-04-19-mTorr-9081.db'
-    conn = sql.connect(db)
-    c = conn.cursor()
-    line = 'SELECT sum(intensity) as Total from mz where mz > 534 and mz < 535 group by scan;'
-    c.execute(line)
-    a = c.fetchall()
-    print a
-    conn.close()
     
 def protein_deconvolute():
     #Needs tweaking.  Meant to deconvolute protein MW (simple algorithm)
@@ -2527,8 +2342,7 @@ def recalibrate_spectrum_from_text(filename, slope, intercept):
         file_w.write(generate_write_string(entry)) 
     file_w.close()
 
-#recalibrate_spectrum_from_text(r'\\glu.dfci.harvard.edu\Marto_Lab\Marto Lab Manuscripts\Jak-Eck Lab\J2PK WT exp.txt', 0.00053, -.21519)
-#recalibrate_spectrum_from_text(r'\\glu.dfci.harvard.edu\Marto_Lab\Marto Lab Manuscripts\Jak-Eck Lab\J2PK WT exp.txt', 0.000545, -.23084)
+
 
 def add_ppm_error_to_multiplierz_sheet(filename):
     '''
@@ -2580,7 +2394,7 @@ def add_quant_flag_to_xls(filename):
 
     Input = multiplierz xls sheet
     Adds 'Quant' column
-    Needs spectrum desc with original quant data:
+    Needs spectrum desc with original quant data,
     
     '''    
     counter = 0

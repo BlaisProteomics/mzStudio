@@ -1,4 +1,4 @@
-__author__ = 'Scott Ficarro'
+__author__ = 'Scott Ficarro, William Max Alexander'
 __version__ = '1.0'
 
 
@@ -41,6 +41,16 @@ def Onpa(filter_dict, id):
     filter_dict["analyzer"]=id.groups()[0]
     filter_dict["data"]= "+cent" if id.groups()[1]== "c" else "+prof"
     filter_dict["mr"]='[' + id.groups()[5]+'-'+id.groups()[6]+']'
+    filter_dict["precursor"]=id.groups()[2]
+    filter_dict["reaction"]=id.groups()[3]
+    filter_dict["energy"]=id.groups()[4] + '% NCE'
+    return filter_dict
+
+def OnSRM(filter_dict, id):
+    filter_dict["mode"]="ms2"
+    filter_dict["analyzer"]=id.groups()[0]
+    filter_dict["data"]= "+cent" if id.groups()[1]== "c" else "+prof"
+    filter_dict["mr"]='[' + id.groups()[5]+'-'+id.groups()[8]+']'
     filter_dict["precursor"]=id.groups()[2]
     filter_dict["reaction"]=id.groups()[3]
     filter_dict["energy"]=id.groups()[4] + '% NCE'
@@ -104,11 +114,27 @@ def OnDms(filter_dict, id):
     filter_dict['mode'] = id.groups()[1].upper()
     filter_dict['analyzer'] = id.groups()[0] # That's what that is, right?
     filter_dict['data'] = 'cent'
-    filter_dict['mr'] = '[%s.0-%s.0]' % id.groups()[-2:]
+    filter_dict['mr'] = '[%s-%s]' % id.groups()[-2:]
     filter_dict["precursor"]= id.groups()[3]
     filter_dict["reaction"]='CAD'
     filter_dict["energy"]=''
     return filter_dict
+
+def OnSRM(filter_dict, id):
+    filt = id.groups()[0]
+    words = filt.split()
+    filter_dict['mode'] = words[0]
+    filter_dict['analyzer'] = words[2]
+    filter_dict['data'] = words[1]
+    filter_dict['precursor'] = words[6]
+    filter_dict['reaction'] = 'SRM'
+    filter_dict['energy'] = words[3].replace('sid=', '')
+    
+    ranges = [x.strip('[], ').split('-') for x in words[7:]]
+    filter_dict['mr'] = '[%s-%s]' % (ranges[0][0], ranges[-1][1])
+    
+    return filter_dict
+    
 
 def OnTOFms2(filter_dict, id):
     filter_dict['mode'] = 'ms2'

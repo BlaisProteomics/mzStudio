@@ -215,7 +215,7 @@ class MainBPC(wx.Panel):
         #control = wx.Choice(self.menubar, -1, choices=["Add Labels", "Replace Lables"])
         #self.menubar.AddControl(control)
         #------------------------------------
-        self.menubar.AddCheckTool(70, "Clear and Replace Labels", repl)
+        #self.menubar.AddCheckTool(70, "Clear and Replace Labels", repl)
         
         self.menubar.AddTool(10, "Clear Sequence", clr)
         self.menubar.AddTool(20, "Open Memory Bank", open)

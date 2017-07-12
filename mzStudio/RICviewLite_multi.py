@@ -5,7 +5,7 @@ __version__ = '1.0'
 import wx
 import mz_workbench.mz_core as mz_core
 import  wx.lib.editor    as  editor
-import os, sys
+import os, sys, math
 from collections import defaultdict
 
 USE_BUFFERED_DC = True
@@ -236,19 +236,29 @@ class RICviewLitePanel(wx.Frame):
     def __init__(self, parent, xic):
         wx.Frame.__init__(self, parent, -1, title="RICview Lite", size=(800, 800))
         sty = wx.BORDER_SUNKEN
-        self.sp = wx.SplitterWindow(self)
+        
+        self.sp = wx.SplitterWindow(self, size=(700, 750))
         self.p1 = wx.Panel(self.sp, style=sty)
         self.p2 = wx.Panel(self.sp, style=sty)
         self.p1.SetBackgroundColour("white")
         #wx.StaticText(self.p1, -1, "", (5,5))
 
-        self.p2.SetBackgroundColour("sky blue")
+        self.p2.SetBackgroundColour("white")
+        
+        #This sizer is for panel 2, such that the text control can expand to fill the lower splitter window.
+        p2Sizer = wx.GridSizer(rows=1, cols=1, hgap=1, vgap=1)        
+        
         #wx.StaticText(self.p2, -1, "Panel Two", (5,5))
         self.xic = xic
         self.sp.SetMinimumPaneSize(20)
-        self.sp.SplitHorizontally(self.p1, self.p2, -125)
-        self.t4 = wx.TextCtrl(self.p2, -1, xic.notes,
-                        size=(800, 200), style=wx.TE_MULTILINE|wx.TE_RICH2)
+        self.sp.SplitHorizontally(self.p1, self.p2, -75)
+        self.t4 = wx.TextCtrl(self.p2, -1, xic.notes, size=(800, 200), style=wx.TE_MULTILINE|wx.TE_RICH2)
+        
+        #Add the text control to the Sizer.
+        p2Sizer.Add(self.t4, 0, wx.EXPAND)
+        self.p2.SetSizer(p2Sizer)
+        self.p2.Fit()        
+        
         tb = self.CreateToolBar( TBFLAGS )
         dir = os.path.join(os.path.dirname(__file__), 'image')
         
@@ -257,6 +267,31 @@ class RICviewLitePanel(wx.Frame):
         
         self.SetToolBar(tb)
         self.XICWindow = RICWindow(self.p1, -1, xic, parent_window=self)
+        
+        #This sizer is for the entire splitter window, so it can fill the available space.
+        sizer = wx.GridSizer(rows=1, cols=1, hgap=1, vgap=1)
+        sizer.Add(self.sp, 0, wx.EXPAND)
+        self.SetSizer(sizer)
+        self.Fit()        
+        
+        #On Sizing event, call Update Drawing
+        self.p1.Bind(wx.EVT_SIZE, self.OnSize)
+        
+        #Size to window
+        self.XICWindow.set_axes()
+        self.XICWindow.UpdateDrawing()
+        
+        self.p1.SetMaxSize((1000, 800))
+        self.SetMaxSize((1000,900))
+        self.p1.SetMinSize((400, 400))
+        self.SetMinSize((400,400))       
+        
+    def OnSize(self, event):
+        # Size event from SpecViewLite Panel
+        self.XICWindow.set_axes()
+        self.XICWindow.UpdateDrawing()
+        
+        event.Skip()
 
     def AddToolBarItems(self, tb):
         tsize = (24,24)
@@ -373,7 +408,7 @@ class RICWindow(BufferedWindow):
         except:
             pass                
         self.set_axes()
-        BufferedWindow.__init__(self, parent, parent, size=(600,700))
+        BufferedWindow.__init__(self, parent, parent, size=(1000,1000))
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
@@ -970,6 +1005,9 @@ class RICWindow(BufferedWindow):
         return int(base*round(float(x)/base))
 
     def set_axes(self):
+        
+        sz = self.parent_window.p1.GetClientSize()
+        
         space = 40
         y_marg = 25
         indent = 50
@@ -977,10 +1015,14 @@ class RICWindow(BufferedWindow):
         xic_total_height = 0
         number_xics = len(self.xic.data)
         self.xic_axco = []
-        height = (float(550)/float(number_xics))-(5*number_xics)
+        g = {0:10, 1:10, 2:10, 3:10, 4:8, 5:7, 6:6, 7:5, 8:4.5, 9:4.5, 10:4.5}
+        height =  (float(sz[1]-100)/float(number_xics))-(g[number_xics]*number_xics)
+        #height =  (float(sz[1]-100)/float(num_rawFiles)/float(number_xics))-(g[number_xics]*number_xics)
         for k in range(0, number_xics):
             yco = y_marg+(space*k)+(height*k)+(xic_total_height)
-            self.xic_axco.append(((indent,yco+height,indent + width,yco+height),(indent,yco,indent,yco+height)))
+            self.xic_axco.append(((indent,yco+height,indent + (float(sz[0])/float(1.05))-50,yco+height),(indent,yco,indent,yco+height)))
+            
+            #s.append(((_set['y_marg'],yco+height,(float(sz[0])/float(2))-50,yco+height),(_set['y_marg'],yco,_set['y_marg'],yco+height)))
             #self.xic_axco.append(((50,yco+height,500,yco+height),(50,yco,50,yco+height)))
         print self.xic_axco
 
@@ -1087,23 +1129,29 @@ class RICWindow(BufferedWindow):
                 self.svg["pointLists"].append(points)
         
                 xticks = []
+                
                 if tr >= 0.5:
-                    if tr >= 100:
-                        scale = 20
-                    if tr >= 50 and tr < 100:
-                        scale = 10
-                    if tr >= 20 and tr < 50:
-                        scale = 5
-                    if tr >= 5 and tr < 20:
-                        scale = 2
-                    if tr >= 0 and tr < 5:
-                        scale = 0.5
+                    if tr > 500:
+                        scale = int(round(round(tr, -1 * int(math.floor(math.log10(tr)))) / 5))
+                    elif tr > 10:
+                        scale = int(round(round(tr, -1 * int(math.floor(math.log10(tr)))) / 10))
+                        assert scale
+                    else:
+                        scale = tr/10
+
+                    if self.GetClientSize()[0] < 600:
+                        scale = scale * 3
+                    elif self.GetClientSize()[0] < 800:
+                        scale = scale * 2                    
                     if scale >= 1:
                         firstlabel = self.myRound(startTime, scale)
                         lastlabel = self.myRound(stopTime, scale)
                     if scale >= 0.1:
                         firstlabel = float(self.myRound(startTime*10, scale*10))/float(10)
                         lastlabel = float(self.myRound(stopTime*10, scale*10))/float(10)
+                    else:
+                        return # Has MS technology reached the sub-second-sampling level yet?
+                
                     if firstlabel < startTime:
                         firstlabel += scale
                     if lastlabel > stopTime:

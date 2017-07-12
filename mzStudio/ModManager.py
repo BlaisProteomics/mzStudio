@@ -89,7 +89,7 @@ class TestListCtrl(wx.ListCtrl,
         return compstring
     
     def convertFromComp(self, comp):
-        return comp.replace('(', ':').replace(')',',')[:-1]
+        return comp.replace('(', ':').replace(')',',').strip()[:-1]
 
     def GetListCtrl(self):
         return self
@@ -138,11 +138,11 @@ class ModBank(wx.Frame):
         self.listb.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelected)
         #self.listb.editable=False
        
-        self.Save = wx.Button(self.panel, -1, "S", pos=(0,2), size=(25,25))
+        self.Save = wx.Button(self.panel, -1, "Save", pos=(0,2), size=(40,25))
         self.Bind(wx.EVT_BUTTON, self.OnSave, self.Save)
-        self.Load = wx.Button(self.panel, -1, "L", pos=(30,2), size=(25,25))
-        self.Bind(wx.EVT_BUTTON, self.OnLoad, self.Load)
-        self.Delete = wx.Button(self.panel, -1, "D", pos=(60,2), size=(25,25))
+        #self.Load = wx.Button(self.panel, -1, "L", pos=(30,2), size=(25,25))
+        #self.Bind(wx.EVT_BUTTON, self.OnLoad, self.Load)
+        self.Delete = wx.Button(self.panel, -1, "Delete", pos=(45,2), size=(40,25))
         self.Bind(wx.EVT_BUTTON, self.OnDelete, self.Delete)
         #self.Clear = wx.Button(self.panel, -1, "C", pos=(90,2), size=(25,25))
         #self.Bind(wx.EVT_BUTTON, self.OnClear, self.Clear)
@@ -153,7 +153,7 @@ class ModBank(wx.Frame):
         
         #ebutton = wx.Button(self.panel, -1, "E", (120, 2), (25,25))
         #self.Bind(wx.EVT_BUTTON, self.OnEdit, ebutton)        
-        self.NewEntry = wx.Button(self.panel, -1, "N", pos=(220,2), size=(25,25))
+        self.NewEntry = wx.Button(self.panel, -1, "New", pos=(90,2), size=(40,25))
         self.Bind(wx.EVT_BUTTON, self.OnNew, self.NewEntry)        
         self.panel.Bind(wx.EVT_RIGHT_UP, self.OnRightUp)
         self.listb.Bind(wx.EVT_RIGHT_DOWN, self.OnRightUp)
@@ -373,8 +373,8 @@ class ModBank(wx.Frame):
         self._mtb.AddTool(toolId=2120, label="Mem", bitmap1=bankBmp, bitmap2=wx.NullBitmap, shortHelp="Open Memory Bank", longHelp="Open Memory Bank")       
         
     def OnSelected(self, event):
-        #item = event.GetItem()
-        #self.selected=item.GetId() #-------Id is the index within the list.  Keep track of this for other commands
+        item = event.GetItem()
+        self.selected=item.GetId() #-------Id is the index within the list.  Keep track of this for other commands
         #data = item.GetText().split('-')
         #nterm = data[0]
         #seq = data[1]
@@ -392,21 +392,32 @@ class ModBank(wx.Frame):
     def RadioBoxData(self):
         return (("Masses", ['monoisotopic', 'average'], 'masses', (10, 190), wx.DefaultSize),) #, 'average'         
 
+    def ValidateList(self):
+        file_w = open(os.path.join(os.path.dirname(__file__), r'mz_workbench\files\temp_list.txt'), 'w')
+        for key in [x for x in self.data_dict.keys() if x]:
+            entry = self.data_dict[key]
+            line = key + '|' + entry['title'] + '|' + entry['comp'] + '|' + entry['group'] + '\n'
+            file_w.write(line)
+        file_w.close()        
+
     def OnSave(self, event):
-            dlg = wx.FileDialog(None, "Save as..", pos = (2,2), style = wx.SAVE, wildcard = "text files (*.txt)|")
-            if dlg.ShowModal() == wx.ID_OK:
-                filename=dlg.GetFilename()
-                dir = dlg.GetDirectory()
-                os.chdir(dir)
-            dlg.Destroy()
-            self.savedir = dir
-            self.savefilename = filename
-            print dir
-            print filename
-            if filename.find(".txt") == -1:
-                filename += ".txt"
-                self.savefilename = filename
-            file_w = open(dir + '\\' + filename, 'w')
+            #dlg = wx.FileDialog(None, "Save as..", pos = (2,2), style = wx.SAVE, wildcard = "text files (*.txt)|")
+            #if dlg.ShowModal() == wx.ID_OK:
+                #filename=dlg.GetFilename()
+                #dir = dlg.GetDirectory()
+                #os.chdir(dir)
+            #dlg.Destroy()
+            #self.savedir = dir
+            #self.savefilename = filename
+            #print dir
+            #print filename
+            #if filename.find(".txt") == -1:
+                #filename += ".txt"
+                #self.savefilename = filename
+                
+            file_w = open(os.path.join(os.path.dirname(__file__), r'mz_workbench\files\new_res_list.txt'), 'w')
+                
+            #file_w = open(dir + '\\' + filename, 'w')
             
             for key in [x for x in self.data_dict.keys() if x]:
                 entry = self.data_dict[key]
@@ -461,8 +472,11 @@ class ModBank(wx.Frame):
         file_r.close()
 
     def OnDelete(self, event):
-        self.listb.DeleteItem(self.selected)
-        self.selected=None
+        if self.selected:
+            self.listb.DeleteItem(self.selected)
+            self.selected=None
+        else:
+            wx.MessageBox("Select a row to delete.\nEntire row should be highlighted.")
 
     def OnClear(self, event):
         self.listb.DeleteAllItems()
