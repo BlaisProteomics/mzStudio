@@ -213,7 +213,12 @@ class BufferedWindow(wx.Window):
         # current drawing in it, so it can be used to save the image to
         # a file, or whatever.
         self._Buffer = wx.EmptyBitmap(*Size)
+        self.set_axes()
         self.UpdateDrawing()
+        #self.Refresh()
+        if event:
+            event.Skip()
+        
 
     def SaveToFile(self, FileName, FileType=wx.BITMAP_TYPE_PNG):
         ## This will save the contents of the buffer
@@ -240,23 +245,34 @@ class BufferedWindow(wx.Window):
 
 class SpecViewLitePanel(wx.Frame):
     def __init__(self, parent, spectrum):
-        wx.Frame.__init__(self, parent, -1, title="SpecView Lite", size=(800, 850))
+        wx.Frame.__init__(self, parent, -1, title="SpecView Lite", size=(1000, 1000))
         
+       
         sty = wx.BORDER_SUNKEN
-        self.sp = wx.SplitterWindow(self)
+        self.sp = wx.SplitterWindow(self, size=(700, 750))
+        
         self.p1 = wx.Panel(self.sp, style=sty)
         self.p2 = wx.Panel(self.sp, style=sty)
         self.p1.SetBackgroundColour("white")
         wx.StaticText(self.p1, -1, "", (5,5))
 
-        self.p2.SetBackgroundColour("sky blue")
+        self.p2.SetBackgroundColour("white")
         wx.StaticText(self.p2, -1, "Panel Two", (5,5))
+        
+        #This sizer is for panel 2, such that the text control can expand to fill the lower splitter window.
+        p2Sizer = wx.GridSizer(rows=1, cols=1, hgap=1, vgap=1)
+        
+        
         self.spectrum = spectrum
         self.sp.SetMinimumPaneSize(20)
-        self.sp.SplitHorizontally(self.p1, self.p2, -125)
+        self.sp.SplitHorizontally(self.p1, self.p2, -75)
     
-        self.t4 = wx.TextCtrl(self.p2, -1, spectrum.notes,
-                        size=(800, 200), style=wx.TE_MULTILINE|wx.TE_RICH2)
+        self.t4 = wx.TextCtrl(self.p2, -1, spectrum.notes, size=(800, 200), style=wx.TE_MULTILINE|wx.TE_RICH2)
+        
+        #Add the text control to the Sizer.
+        p2Sizer.Add(self.t4, 0, wx.EXPAND)
+        self.p2.SetSizer(p2Sizer)
+        self.p2.Fit()
         
         tb = self.CreateToolBar( TBFLAGS )
         
@@ -272,6 +288,31 @@ class SpecViewLitePanel(wx.Frame):
         
         self.SetToolBar(tb)
         self.SpecWindow = SpecWindow(self.p1, -1, spectrum, parent_window=self)
+        
+        #This sizer is for the entire splitter window, so it can fill the available space.
+        sizer = wx.GridSizer(rows=1, cols=1, hgap=1, vgap=1)
+        sizer.Add(self.sp, 0, wx.EXPAND)
+        self.SetSizer(sizer)
+        self.Fit()
+        
+        #On Sizing event, call Update Drawing
+        self.p1.Bind(wx.EVT_SIZE, self.OnSize)
+        
+        #Size to window
+        self.SpecWindow.set_axes()
+        self.SpecWindow.UpdateDrawing()
+        
+        self.p1.SetMaxSize((1000, 800))
+        self.SetMaxSize((1000,900))
+        self.p1.SetMinSize((400, 400))
+        self.SetMinSize((400,400))
+        
+    def OnSize(self, event):
+        # Size event from SpecViewLite Panel
+        self.SpecWindow.set_axes()
+        self.SpecWindow.UpdateDrawing()
+        
+        event.Skip()
 
     def AddToolBarItems(self, tb):
         tsize = (24,24)
@@ -331,7 +372,7 @@ class SpecViewLitePanel(wx.Frame):
 
     def OnPdf(self, evt):
         self.tb.ToggleTool(90, False)
-        pass
+        self.SpecWindow.OnSavePDF(None)
     
     def OnSetLabelThreshold(self, evt):
         self.tb.ToggleTool(80, False)
@@ -368,6 +409,7 @@ class SpecViewLitePanel(wx.Frame):
         self.SpecWindow.OnSaveSVG(None)
     def OnSavePNG(self, event):
         self.SpecWindow.OnSavePNG(None)
+        
         
     def OnKeyDown(self,event):
         print"key"
@@ -458,13 +500,15 @@ class SpecWindow(BufferedWindow):  #wx.Window
                               "ABI_ms1":[self.qms1, 2,3],
                               "Thermo_etd":[self.etd, 6,7]} 
         self._buffer = wx.EmptyBitmap(900,900)
-        BufferedWindow.__init__(self, parent, parent, size=(750,700))
+        BufferedWindow.__init__(self, parent, parent, size=(1000,1000))
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         self.Bind(wx.EVT_RIGHT_UP, self.OnRightUp)
-        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)                  
+        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        
+        self.right_down_pos = None
 
     def Draw(self, dc):
         self.OnDraw(dc)           
@@ -827,19 +871,25 @@ class SpecWindow(BufferedWindow):  #wx.Window
         self.spectrum.mass_ranges=[(float(low_mass), float(hi_mass))]   
 
     def set_axes(self):
+       
+        sz = self.parent_window.p1.GetClientSize()
+        
         space = 40
         y_marg =20
         indent = 0
         num_axes = self.spectrum.axes
+        
         spec_total_height = 0 #float(550)
-        height = float(550)/float(num_axes)
+        height = (float(sz[1])-100)/float(num_axes)
+        
         if num_axes == 2:
             height -= num_axes*20
         if num_axes == 3:
             height -= num_axes*15
+        
         space = 60
         indent = 50
-        width = 600
+        width = (float(sz[0])/float(1.05))-100
         self.spectrum.axco = []
         mr = self.spectrum.mass_ranges
         fm = mr[0][0]
@@ -908,18 +958,27 @@ class SpecWindow(BufferedWindow):  #wx.Window
 
     def OnSavePNG(self, event):
         pngfile, dir = self.get_single_file("Select image file...", "PNG files (*.png)|*.png")
-        self.img.SaveFile(pngfile,wx.BITMAP_TYPE_PNG)  
+        if pngfile:
+            self.img.SaveFile(pngfile,wx.BITMAP_TYPE_PNG)  
     
-    def OnSavePNG(self, event):
+    def OnSavePDF(self, event):
         pdffile, dir = self.get_single_file("Select image file...", "PDF files (*.pdf)|*.pdf")
-        self.img.SaveFile(pngfile,wx.PDF)      
-
-    def OnSaveSVG(self, event):
-        svgfile, dir = self.get_single_file("Select image file...", "SVG files (*.svg)|*.svg")
+        if not pdffile:
+            return        
+        
+        tempsvg = pdffile + 'TEMP.svg'        
+        
+        try:
+            from svglib.svglib import svg2rlg
+            from reportlab.graphics import renderPDF
+        except ImportError:
+            wx.MessageBox("PDF creation requires ReportLab and svglib to be installed.")
+            return
+        
         busy = PBI.PyBusyInfo("Saving SVG, please wait...", parent=None, title="Processing...")
         wx.Yield()
-        self.svgDC = wx.SVGFileDC(svgfile)
-        #currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
+        self.svgDC = wx.SVGFileDC(tempsvg)
+        
         print "SAVING...(lines)"
         for line in self.svg["lines"]:
             if len(line)==4:
@@ -940,7 +999,43 @@ class SpecWindow(BufferedWindow):  #wx.Window
             self.svgDC.DrawLines(pointList)  #.DrawLine(*line)
         print "DONE."
         self.svgDC.Destroy()
-        del busy
+        
+        svgdata = svg2rlg(tempsvg)
+        renderPDF.drawToFile(svgdata, pdffile)
+        os.remove(tempsvg)      
+        
+        del busy        
+    
+                       
+
+    def OnSaveSVG(self, event):
+        svgfile, dir = self.get_single_file("Select image file...", "SVG files (*.svg)|*.svg")
+        if svgfile:
+            busy = PBI.PyBusyInfo("Saving SVG, please wait...", parent=None, title="Processing...")
+            wx.Yield()
+            self.svgDC = wx.SVGFileDC(svgfile)
+            #currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
+            print "SAVING...(lines)"
+            for line in self.svg["lines"]:
+                if len(line)==4:
+                    self.svgDC.DrawLine(*line)
+                else:
+                    self.svgDC.SetPen(line[4])
+                    self.svgDC.DrawLine(line[0], line[1], line[2], line[3])
+            print "SAVING...(text)"
+            for text in self.svg["text"]:
+                if len(text)==4:
+                    self.svgDC.DrawRotatedText(*text)
+                else:
+                    self.svgDC.SetTextForeground(text[4])
+                    self.svgDC.SetFont(text[5])
+                    self.svgDC.DrawRotatedText(text[0],text[1],text[2],text[3])
+            print "Saving drawlines..."
+            for pointList in self.svg["pointLists"]:
+                self.svgDC.DrawLines(pointList)  #.DrawLine(*line)
+            print "DONE."
+            self.svgDC.Destroy()
+            del busy
 
     def GetMaxInt(self, fm, lm):
         
@@ -1108,6 +1203,11 @@ class SpecWindow(BufferedWindow):  #wx.Window
                 dc.DrawCircle(self.lines[cur[1]][6], self.lines[cur[1]][7], 3)            
                 
     def AnnotateText(self, dc, key):
+        '''
+        
+        Draws user specified text.
+                
+        '''
         firstMass = self.spectrum.mass_ranges[key][0]
         lastMass = self.spectrum.mass_ranges[key][1]
         xaxis = self.spectrum.axco[key][0]
