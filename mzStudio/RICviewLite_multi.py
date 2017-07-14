@@ -331,10 +331,12 @@ class RICviewLitePanel(wx.Frame):
         if event.GetId() == 60:
             self.OnSavePNG(None) 
         if event.GetId() == 70:
-            self.OnSavePdf(None) 
+            self.OnPdf(None) 
             
-    def OnSavePdf(self, evt):
-        self.tb.ToggleTool(70, False)
+    
+        
+        
+        
 
     def ToolBarData(self):
         return ((10, "Select", self.bmp[0], "Select", "Long help for 'Open'", 10),
@@ -351,6 +353,10 @@ class RICviewLitePanel(wx.Frame):
         self.xic.lines = self.XICWindow.lines
         self.xic.text = self.XICWindow.text
         self.tb.ToggleTool(50, False)
+
+    def OnPdf(self, evt):
+        self.tb.ToggleTool(70, False)    
+        self.XICWindow.OnSavePdf(None)
 
     def OnSVG(self,event):
         self.XICWindow.OnSaveSVG(None)    
@@ -960,6 +966,50 @@ class RICWindow(BufferedWindow):
         pngfile, dir = self.get_single_file("Select image file...", "PNG files (*.png)|*.png")
         if pngfile:
             self.img.SaveFile(pngfile,wx.BITMAP_TYPE_PNG)          
+
+    def OnSavePdf(self, evt):
+        
+        pdffile, dir = self.get_single_file("Select image file...", "PDF files (*.pdf)|*.pdf")
+        if not pdffile:
+            return        
+        
+        tempsvg = pdffile + 'TEMP.svg'        
+        
+        try:
+            from svglib.svglib import svg2rlg
+            from reportlab.graphics import renderPDF
+        except ImportError:
+            wx.MessageBox("PDF creation requires ReportLab and svglib to be installed.")
+            return
+        
+        busy = PBI.PyBusyInfo("Saving PDF, please wait...", parent=None, title="Processing...")
+        wx.Yield()
+        self.svgDC = wx.SVGFileDC(tempsvg)
+        
+        print "SAVING...(lines)"
+        for line in self.svg["lines"]:
+            if len(line)==4:
+                self.svgDC.DrawLine(*line)
+            else:
+                self.svgDC.SetPen(line[4])
+                self.svgDC.DrawLine(line[0], line[1], line[2], line[3])
+        print "SAVING...(text)"
+        for text in self.svg["text"]:
+            if len(text)==4:
+                self.svgDC.DrawRotatedText(*text)
+            else:
+                self.svgDC.SetTextForeground(text[4])
+                self.svgDC.SetFont(text[5])
+                self.svgDC.DrawRotatedText(text[0],text[1],text[2],text[3])
+        print "Saving drawlines..."
+        for pointList in self.svg["pointLists"]:
+            self.svgDC.DrawLines(pointList)  #.DrawLine(*line)
+        print "DONE."
+        self.svgDC.Destroy()
+        
+        svgdata = svg2rlg(tempsvg)
+        renderPDF.drawToFile(svgdata, pdffile)
+        os.remove(tempsvg)    
 
     def OnSaveSVG(self, event):
         svgfile, dir = self.get_single_file("Select image file...", "SVG files (*.svg)|*.svg")
