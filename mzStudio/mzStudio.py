@@ -454,6 +454,7 @@ class MS_Data_Manager():
                               "ABI_pi":[self.pi, 2, 3],
                               "ABI_ms2":[self.tofms2, 5,6],
                               "ABI_ms1":[self.qms1, 2,3],
+                              "ABI_q1ms":[self.q1ms, 2, 3],
                               "ABI_q3ms":[self.q3ms, 2,3],
                               "ABI_ems":[self.ems, 2,3],
                               "ABI_precursor":[self.precursor, 2,3],
@@ -1374,13 +1375,7 @@ class MS_Data_Manager():
             self.files[filename]["targ_check"] = False
             self.files[filename]["targ_filt"] = []
             
-            #-----------------------------TIMING TEST CODE.  Make sure to comment out when done.
-            t3=time.time()
-            filew = open(r'D:\SBF\mzStudio\timingTests\times.txt','a')
-            filew.write(filename + '\t' + str(t2-t1) + '\n')
-            filew.write(filename + '\t' + str(t3-t2) + '\n')
-            filew.write(filename + '\t' + str(t3-t1) + '\n')
-            filew.close()
+
             
     def make_xic_dict(self, xic):
         #start = time.time()
