@@ -61,29 +61,31 @@ class dbFrame(wx.Panel):
         
         #------------------------GET DATA FOR GRID
         
-        self.rows, self.cols = db.pull_data_dict(self.currentFile["database"], "select * from peptides;")
+        self.rows, self.cols = db.pull_data_dict(self.currentFile["database"], 'select * from "peptides"')
         
        
         
-        #-----------------------CREATE GRID
-        self.grid = dbGrid(self, len(self.rows))        
+            
         
         #-----------------------BUTTONS AND TEXT CONTROLS
-        self.current_cell = wx.TextCtrl(self, -1, self.grid.GetCellValue(0,0), pos=(0,0))#, size=(1120,20)
+        
         #self.query = wx.TextCtrl(self, -1, "select * from peptides;", pos=(60,20)) #, size=(1120,20)
                 
         autoTerms = self.currentFile["mzSheetcols"] + ['SELECT', 'FROM', 'peptides', 'WHERE', 'DISTINCT']
         self.query = AutocompleteTextCtrl(self, completer = list_completer(autoTerms))
-        self.query.SetValue("select * from peptides")
+        self.query.SetValue('select * from "peptides"')
         
         self.btn = wx.Button(self, -1, "Submit", pos = (40, 20), size= (60,23))
         #self.builder = wx.Button(self, -1, "B", pos = (20, 20), size= (20,20))
         
-
+        #-----------------------CREATE GRID
+        self.grid = dbGrid(self, len(self.rows))            
+        self.current_cell = wx.TextCtrl(self, -1, self.grid.GetCellValue(0,0), pos=(0,0))#, size=(1120,20)
         #----------------------EVENTS IN DB FRAME
         self.grid.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.OnSelect)
         self.grid.Bind(wx.grid.EVT_GRID_LABEL_LEFT_CLICK, self.OnLabelClick)        
         self.Bind(wx.EVT_BUTTON, self.OnClick, self.btn)
+        self.grid.EnableEditing(False) #Turn off cell editing so cells cannot be overwritten.
         #self.Bind(wx.EVT_BUTTON, self.OnBuilder, self.builder)
         #------------------------------------------------------------Peptigram not yet ready for release.
         #self.peptigram = wx.Button(self, -1, "Peptogram", pos = (0, 20), size= (75,23))
@@ -166,7 +168,8 @@ class dbFrame(wx.Panel):
         self.qtrans = {'[var]':'"Variable Modifications"', '[scr]':'"Peptide Score"',
                        '[lk]':'like "%%"', '[pdesc]':'"Protein Description"',
                        '[set1]':'"Accession Number", "Protein Description", "Peptide Sequence", "Variable Modifications", "Experimental mz", "Charge", "Predicted mr", "Delta", "Peptide Score", "Spectrum Description", "Scan", "GeneName"',
-                       '~VM':'"Variable Modifications"', '~lk':'like "%%"', '~pepd':'order by "Peptide Score" desc', '~gn':'"GeneName"', '~var':'"Variable Modifications"'}
+                       '~vm':'"Variable Modifications"', '~lk':'like "%%"', '~pepd':'order by "Peptide Score" desc', '~gn':'"GeneName"', '~var':'"Variable Modifications"',
+                       '~xc':'"Cross-Correlation"', '~sc':'"Peptide Score"', '~ex':'"Expect"', '~ac':'"Accession"', '~de':'"Protein Description"',}
 
     def OnClose(self, event):
         if self.aui_pane.name != event.pane.name:
@@ -174,29 +177,29 @@ class dbFrame(wx.Panel):
             event.Skip()
             return 
     
-        #self.currentFile["xlsSource"]=''
-        #self.currentFile['SearchType'] = None  
-        #self.currentFile["database"] = None
+        self.currentFile["xlsSource"]=''
+        self.currentFile['SearchType'] = None  
+        self.currentFile["database"] = None
         
         
-        #self.currentFile["rows"], self.currentFile["mzSheetcols"] = [], []
-        #self.currentFile['header']={}
+        self.currentFile["rows"], self.currentFile["mzSheetcols"] = [], []
+        self.currentFile['header']={}
         
-        #self.currentFile['fixedmod']=""
-        #self.currentFile['varmod']=""
-        #self.currentFile['ID_Dict']={}
+        self.currentFile['fixedmod']=""
+        self.currentFile['varmod']=""
+        self.currentFile['ID_Dict']={}
         
-        #self.currentFile["mascot_ID"] = {}
+        self.currentFile["mascot_ID"] = {}
         
         
-        #self.currentFile["SILAC"]={"mode":False, "peaks":(), "method":None} 
+        self.currentFile["SILAC"]={"mode":False, "peaks":(), "method":None} 
         
-        #self.currentFile["datLink"] = False
-        #self.currentFile["viewMascot"] = False
-        #self.currentFile['ID']=False
-        #self.currentFile['label_dict']={}
-        #currentPage = self.parent.ctrl.GetPage(self.parent.ctrl.GetSelection())
-        #currentPage.Window.UpdateDrawing()        
+        self.currentFile["datLink"] = False
+        self.currentFile["viewMascot"] = False
+        self.currentFile['ID']=False
+        self.currentFile['label_dict']={}
+        currentPage = self.parent.ctrl.GetPage(self.parent.ctrl.GetSelection())
+        currentPage.Window.UpdateDrawing()        
         
         self.parent.parentFrame.ObjectOrganizer.removeObject(self)
                 
@@ -360,8 +363,15 @@ class dbFrame(wx.Panel):
         
         #self.cols = db.get_columns(self.currentFile["database"], table='peptides' if self.currentFile["SearchType"]=='Mascot' else 'fdr')
         #if self.currentFile["SearchType"]=="Mascot":
-        self.rows, self.cols = db.pull_data_dict(self.currentFile["database"], query)
-        self.currentFile["mzSheetcols"] = self.cols
+        try:
+            self.rows, self.cols = db.pull_data_dict(self.currentFile["database"], query)
+            self.currentFile["mzSheetcols"] = self.cols
+        except:
+            wx.MessageBox("There was an error processing\nthe query!")
+            return
+        
+        if len(self.rows)==0:
+            wx.MessageBox("Query returned no results.")
         #if self.currentFile["SearchType"]=="Pilot":
         #    self.rows = db.pull_data_dict(self.currentFile["database"], "select * from fdr;", table='fdr')        
         
@@ -493,7 +503,11 @@ class dbFrame(wx.Panel):
             #--------------LOOK UP SCAN NUMBER    
             if self.currentFile['vendor']=='Thermo':
                 if self.currentFile['SearchType'] in ['Mascot', 'X!Tandem', 'COMET']:
-                    desc = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Spectrum Description"))
+                    if "Spectrum Description" in self.currentFile['mzSheetcols']:
+                        desc = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Spectrum Description"))
+                    else:
+                        wx.MessageBox("No spectrum description column!\nCan't get scan number!", "mzStudio")
+                        return
                     if 'MultiplierzMGF' in desc:
                         scan = int(standard_title_parse(desc)['scan'])
                     elif 'Locus' in desc:
