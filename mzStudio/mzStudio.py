@@ -518,7 +518,7 @@ class MS_Data_Manager():
                 filter_dict["energy"]="TOF-TOF"
             print filter_dict
         
-        assert filter_dict
+        assert filter_dict, filt
         return filter_dict
 
     def getFileNum(self):
@@ -6661,7 +6661,6 @@ class TopLevelFrame(wx.Frame):
         #self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_SIZE, self.OnSize)
 
-        print 'OnSash and OnPersp ARE NOT BOUND.  BIND TO RESIZE EVENT?'
         self.Bind(aui.EVT_AUI_PANE_DOCKED, self.OnSash)
         self.Bind(aui.EVT_AUI_PERSPECTIVE_CHANGED, self.OnPersp)
 
