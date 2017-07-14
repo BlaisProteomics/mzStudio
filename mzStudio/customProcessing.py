@@ -108,7 +108,7 @@ class ProcessorDialog(wx.Dialog):
             
         except AssertionError as err:
             messdog = wx.MessageDialog(self,
-                                       'Custom function check failed:\n\n' + repr(str),
+                                       'Custom function check failed:\n\n' + repr(err),
                                        'Could not load custom processor function.',
                                        style = wx.OK)
             self.success = False
