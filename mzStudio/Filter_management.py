@@ -157,6 +157,19 @@ def Onqms1(filter_dict, id):
     filter_dict["mr"]='[' + id.groups()[2]+'-'+id.groups()[3]+']'
     return filter_dict
 
+def Onqms2(filter_dict, id):
+    filter_dict["mode"]="ms2"
+    filter_dict["analyzer"]=id.groups()[0]
+    filter_dict["data"]= "+cent" if id.groups()[1]== "c" else "+prof"
+    filter_dict["mr"]='[' + id.groups()[-2]+'-'+id.groups()[-1]+']'
+    
+    
+    filter_dict["precursor"]=id.groups()[2]
+    filter_dict["reaction"]='NA'
+    filter_dict["energy"]='NA'    
+    
+    return filter_dict    
+
 def Onpi(filter_dict, id):
     filter_dict["mode"]="ms2"
     filter_dict["analyzer"]=id.groups()[0]

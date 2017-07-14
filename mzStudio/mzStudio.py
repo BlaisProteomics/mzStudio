@@ -334,24 +334,7 @@ class XICThread:
         print "Done"
         self.running = False
 
-#class ProcFrame(wx.Frame):
-    #'''
-    
-    #Not used ay more.  Instead, progress bars are used.
-    
-    #'''
-    #def __init__(self, parent):
-        #try:
-            #images = [wx.Image(r'C:\Python26\Lib\site-packages\BlaisBrowser\image' + '\\' + str(x) + '.PNG').Scale(50,50).ConvertToBitmap() for x in range(1,10)]
-        #except:
-            #images = [wx.Image(r'C:\Python26\PYTHON_PROJECTS\BlaisBrowser\BlaisBrowser\image' + '\\' + str(x) + '.PNG').Scale(50,50).ConvertToBitmap() for x in range(1,10)]
-        #wx.Frame.__init__(self, None, title="BlaisBrowser", size=(10,125),style=wx.CAPTION, pos=(250,300))
-        #wx.Frame.CenterOnScreen(self)
-        #self.SetBackgroundColour("White")
-        #panel = wx.Panel(self, -1, size=(150,150))
-        #self.throbber = throb.Throbber(self, -1, images, size=(100, 100),frameDelay = 0.05, pos=(5,25))
-        #self.throbber.Start()
-        #txt1 = wx.StaticText(panel, -1, "Processing...", size=(200, 250))
+
 
 class MS_Data_Manager():
     
@@ -401,6 +384,7 @@ class MS_Data_Manager():
         self.sim_ms1 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI d SIM ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #TOF MS + p NSI Full ms [350-1500] TOF MS + p NSI Full ms [10-600]
         self.qms1 = re.compile('.*?(TOF MS) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
+        self.qms2 = re.compile('.*?(TOF MS|TOF PI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         #EPI + p NSI Full ms2 584.70423947@33.622501373291[100-1000][478:3]
         self.epi = re.compile('.*?(EPI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')#\[(\d+?):(\d+?)\]')
         self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI Full ms2 \d+?.\d+?@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
@@ -436,7 +420,8 @@ class MS_Data_Manager():
                                [self.srm, fm.OnSRM]]
         
         
-        self.abi_filters = [[self.qms1, fm.Onqms1], [self.pi, fm.Onpi], [self.tofms2, fm.Ontofms2], [self.erms, fm.Onerms],
+        self.abi_filters = [[self.qms1, fm.Onqms1], [self.qms2, fm.Onqms2],
+                            [self.pi, fm.Onpi], [self.tofms2, fm.Ontofms2], [self.erms, fm.Onerms],
                             [self.precursor, fm.Onprecursor], [self.precursor1, fm.Onprecursor],
                             [self.epi, fm.Onepi], [self.q3ms, fm.Onq3ms], [self.q1ms, fm.Onq3ms],
                             [self.ems, fm.Onems]]
@@ -453,6 +438,7 @@ class MS_Data_Manager():
                               "MGF_ms2":[self.mgf, 1, 2],
                               "ABI_pi":[self.pi, 2, 3],
                               "ABI_ms2":[self.tofms2, 5,6],
+                              "ABI_qms2":[self.qms2, 3, 4],
                               "ABI_ms1":[self.qms1, 2,3],
                               "ABI_q1ms":[self.q1ms, 2, 3],
                               "ABI_q3ms":[self.q3ms, 2,3],
@@ -1202,7 +1188,7 @@ class MS_Data_Manager():
                 fd = self.Create_Filter_Info(current["filter_dict"][minFilterKey], vendor)
                 id = self.mass_extract.match(fd['mr'])
             
-                fm = float(id.groups()[0]) # It decodes the masses from the filter, then it re-encodes them into fd['mr'], only to DECODE THEM AGAIN??????
+                fm = float(id.groups()[0]) # Might revise encoding scheme
                 lm = float(id.groups()[1])
                 
             elif vendor == 'ABI':
