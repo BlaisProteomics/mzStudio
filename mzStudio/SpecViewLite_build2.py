@@ -379,10 +379,22 @@ class SpecViewLitePanel(wx.Frame):
         if self.spectrum.scan_type in ['MS2' or 'etd']:
             dlg = wx.TextEntryDialog(self, 'Enter label threshold (Da) \n(0 to go by instrument default)', 'Set fragment ion label threshold')
             if dlg.ShowModal() == wx.ID_OK:
-                try:
-                    self.SpecWindow.adjusted_threshold = float(dlg.GetValue())
-                except:
-                    wx.MessageBox("Enter a value")
+                if dlg.GetValue() != u'0':
+                    try:
+                        self.SpecWindow.adjusted_threshold = float(dlg.GetValue())
+                        
+                        if self.spectrum.scan_type in ['MS2', 'etd'] and self.spectrum.sequence:
+                            self.spectrum.label_dict = {}
+                            self.SpecWindow.build_label_dict(self.spectrum.charge) 
+                        
+                    except:
+                        wx.MessageBox("Enter a value")
+                else:
+                    self.SpecWindow.adjusted_threshold = 0
+                    if self.spectrum.scan_type in ['MS2', 'etd'] and self.spectrum.sequence:
+                            self.spectrum.label_dict = {}
+                            self.SpecWindow.build_label_dict(self.spectrum.charge) 
+                
                 self.SpecWindow.UpdateDrawing()            
                 
     
@@ -927,7 +939,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
             self.AnnotateText(dc, k)
             self.AnnotateLines(dc,k)
             self.MarkSelected(dc,k)
-            if self.spectrum.profile:
+            if self.spectrum.profile and not self.spectrum.processed_scan_data:
                 self.DrawProfileSpectrum(dc, k)
         self.storeImage(dc)
         #bpd = wx.BufferedPaintDC(self, buffer)
