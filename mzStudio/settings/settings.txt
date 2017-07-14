@@ -1,12 +1,12 @@
 viewCentroid	False
 max_cg	100
-min_cg	2
+min_cg	1
 MALDIServer	None
 label_res	False
-label_threshold	Thermo	200
+label_threshold	Thermo	200.0
 label_threshold	ABI	10
 label_threshold	ABI-MALDI	10
-label_threshold	mgf	10
+label_threshold	mgf	3.59210526316
 maintext	BLACK
 mainfont	size	10
 mainfont	font	ROMAN
@@ -15,7 +15,7 @@ mainfont	weight	BOLD
 mainfont	face	Times New Roman
 mainfont	color	BLACK
 abi_centroid	new
-eliminate_noise	True
+eliminate_noise	False
 step_length	0.02
 peak_min	5
 threshold_cent_abi	0
@@ -35,4 +35,7 @@ ric_spec_width	550
 auto_resize	True
 drawCentroid	False
 xic_titles	False
-searchAlgorithm	Comet
+searchAlgorithm	Mascot
+labelPeaks	True
+multiFileOption	LOAD ALL
+ionLabelThresh	0.0
