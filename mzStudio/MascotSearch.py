@@ -527,7 +527,7 @@ class MascotSearch(wx.Dialog):
             psms = reader(resultfile)
             self.psm_results = list(psms)
             psms.close()
-            header = reader(resultfile, sheet_name = 'Mascot Header')
+            header = reader(resultfile, sheet_name = 'Mascot_Header')
             self.header_results = list(header)
             header.close()
             try:
