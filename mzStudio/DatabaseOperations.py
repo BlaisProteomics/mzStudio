@@ -213,6 +213,11 @@ def pull_data_dict(database, query, table='peptides'):
     
     '''
     
+    if query.split()[0].lower() != 'select':
+        wx.MessageBox('Query must select entries.')
+        raise NotImplementedError
+    
+    
     #cols = get_columns(database, table)
     conn = sql.connect(database)
     c = conn.cursor()

@@ -73,7 +73,7 @@ TBFLAGS = ( wx.TB_HORIZONTAL
 
 
 
-from multiplierz.mass_biochem import fragment, mw, protonMass, AminoAcidMasses, chemicalDataMass
+from multiplierz.mass_biochem import fragment, mw, protonMass, AminoAcidMasses, chemicalDataMass#, unimod
 
 def replace(foo, bar, baz):
     foo[baz] = foo[bar]
@@ -646,9 +646,21 @@ class BlaisPepCalc(wx.Panel):
                         wx.MessageBox("No known modification %s of %s." % (token, aa))
                         return
                     mods.append((pos, mass))
+            #elif segment[0] == '[' and segment[-2] == ']':
+                #modstr = segment[1:-2]
+                #try:
+                    #mass = float(segment[:-1].strip('[]'))
+                #except ValueError:
+                    #mass = unimod.get_mod_delta(modstr)
+                    #mods.append((pos, mass))
+
             elif any(x.isdigit() for x in segment):
                 mass = float(segment[:-1].strip('[]'))
                 mods.append((pos, mass))
+            elif not len(segment)==1:
+                raise ValueError, 'Parsing error on or around %s' % segment            
+        
+        totalModMass = sum(zip(*mods)[1]) if mods else 0
         
         modstrs = ['%s%d: %f' % (aminos[i-1], i, mass) for i, mass in mods]
         
@@ -658,7 +670,7 @@ class BlaisPepCalc(wx.Panel):
             modmass = sum(zip(*mods)[1])
         else:
             modmass = 0
-        precmass = mw(aminos)
+        precmass = mw(aminos) + totalModMass
         chgmass = ((precmass + modmass + (protonMass * cg_by)) / cg_by) 
         chgfrags = fragment(aminos, modstrs, ions = iontypes, charges = [cg_by])
         frags = {}
