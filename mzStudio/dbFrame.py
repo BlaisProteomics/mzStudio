@@ -436,10 +436,14 @@ class dbFrame(wx.Panel):
             #select * from peptides where "X" like "%%";
             q = curQ.find("order by")
             if  q > -1:
-                curQ= curQ[:(q-1)]
+                if curQ.endswith(';'):
+                    curQ= curQ[:(q-1)]
+                else:
+                    curQ = curQ[:q]
             else:
-                curQ=curQ[:-1]
-            curQ += ' order by "' + self.cols[col] + '" ' + self.ordering + ';' 
+                if curQ.endswith(';'):
+                    curQ=curQ[:-1]
+            curQ += ' order by "' + self.cols[col] + '" ' + self.ordering #+ ';' 
             #print curQ
             self.query.SetValue(curQ)
             self.OnClick(None)
