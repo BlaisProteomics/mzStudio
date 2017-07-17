@@ -1282,7 +1282,11 @@ class MS_Data_Manager():
             current["time_ranges"] = [current['m'].time_range()]
             if vendor == "Thermo":
                 if current["viewCentroid"]:
-                    current["scan"] = current["m"].rscan(1)
+                    try:
+                        current["scan"] = current["m"].rscan(1)
+                    except AttributeError:
+                        
+                        current['scan'] = mz_centroid(current["m"].scan(1))
                 else:
                     current["scan"] = current["m"].scan(1)
             if vendor == 'mgf':
@@ -1763,9 +1767,15 @@ class MS_Data_Manager():
         if filt.find("FTMS") > -1 or filt.find("TOF MS") > -1 or filt.find("TOF PI") > -1 or filt.find("Q3") >-1 or filt.find("EMS") > -1 or filt.find("PI ") > -1 or filt.find("ER MS ") > -1 or filt.find("ITMS + p ESI Full ms ") > -1 or filt.find("Precursor") > -1 or filt.find("EPI") > -1:
             if currentFile["viewCentroid"]:
                 if currentFile['vendor']=='Thermo':
-                    currentFile["scan"] = currentFile["m"].rscan(currentFile["scanNum"])
-                elif currentFile['vendor']=='ABI':
-                    currentFile["scan"] = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = currentFile['settings']['threshold_cent_abi'])
+                    try:
+                        currentFile["scan"] = currentFile["m"].rscan(currentFile["scanNum"])
+                    except AttributeError:
+                        if ' c ' not in filt and 'cent' not in filt:
+                            currentFile['scan'] = mz_centroid(currentFile['m'].scan(currentFile['scanNum']), threshold_scale = 2)
+                        else:
+                            currentFile['scan'] = currentFile['m'].scan(currentFile['scanNum'])
+                #elif currentFile['vendor']=='ABI':
+                    #currentFile["scan"] = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = currentFile['settings']['threshold_cent_abi'])
                 #print "Pulled cent!"
             else:
                 if currentFile['vendor']=='Thermo':
@@ -4842,7 +4852,10 @@ class DrawPanel(wx.Panel):
                 if currentFile['vendor']=='ABI':
                     scan_data = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = currentFile['settings']['threshold_cent_abi'])
                 if currentFile['vendor']=='ABI-MALDI':
-                    scan_data = mz_centroid(currentFile['m'].scan())
+                    try:
+                        scan_data = mz_centroid(currentFile['m'].scan(), threshold_scale = 2)
+                    except:
+                        scan_data = mz_centroid(currentFile['m'].scan())
             else:
                 scan_data = currentFile["scan"]  
         else:
@@ -5077,7 +5090,7 @@ class DrawPanel(wx.Panel):
                         #Unlabeled peaks done in normal
                         dc.SetPen(wx.Pen(wx.Colour(*currentFile['settings']['line color']),currentFile['settings']['line width']))
                         pen = wx.Pen(wx.Colour(*currentFile['settings']['line color']),currentFile['settings']['line width'])
-                        if currentFile['Processing'] or (profile and currentFile['settings']['drawCentroid']) or not profile:
+                        if currentFile['Processing'] or currentFile["viewCentroid"] or (profile and currentFile['settings']['drawCentroid']) or not profile:
                             '''
                             If PROFILE, AND VIEW CENTROID False skip this line
                             
@@ -5500,16 +5513,16 @@ class DrawPanel(wx.Panel):
                                 filt = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])]
                             except:
                                 filt = currentFile["filter_dict"][(currentFile["scanNum"])]
-                        if filt.find("+ p")>-1:
-                            if not currentFile["viewCentroid"]:
-                                profFlag = True
+                        #if filt.find("+ p")>-1:
+                        if '+ p' in filt:
+                            profFlag = True # Indicates *file* scan is in profile data.
                                
                         t2=time.time()
                         #if currentFile["vendor"] != "ABI-MALDI": #Need to have option to centroid
                         self.DrawSpectrum(dc, k, i, profFlag) #draws the centroid
                         t3=time.time()
                         #is this a profile spectrum?
-                        if profFlag and not currentFile['Processing']:
+                        if profFlag and not (currentFile["viewCentroid"] or currentFile['Processing']):
                             self.DrawProfileSpectrum(dc, k, i)
                         t4=time.time()
                         if currentFile['features']:
@@ -6623,6 +6636,7 @@ class TopLevelFrame(wx.Frame):
 
         self.Bind(aui.EVT_AUI_PANE_DOCKED, self.OnSash)
         self.Bind(aui.EVT_AUI_PERSPECTIVE_CHANGED, self.OnPersp)
+        self.Bind(aui.EVT_AUINOTEBOOK_PAGE_CHANGED, self.OnPageChange)
 
         
         
