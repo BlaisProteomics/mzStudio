@@ -1,6 +1,11 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
 __version__ = '0.9.9'
 
+#----------------------------------------------------------------------------------------------------------------------
+# WELCOME to mzStudio!
+#----------------------------------------------------------------------------------------------------------------------
+
+
 import wx, os
 
 global installdir
@@ -23,18 +28,6 @@ if __name__ == '__main__':
     wx.SplashScreen(bmp, wx.SPLASH_CENTER_ON_SCREEN|wx.SPLASH_TIMEOUT, 1000, None, -1)
     wx.Yield()
 
-#--------------POSSIBLE FIXES/FEATURES
-
-# 1) Toolar - make first appear with just open; other functions will throw error until data file is opened.
-
-# 2) mzCore Nterm and variable translations are hard-coded i.e. Ntranslate = {'iTRAQ4plex (N-term)': 'iTRAQ',
-#     This makes it difficult to add new mods.  Should be read from text file.
-# 3) Spectrum text add column headers (mz, intensity).  Maybe put in agw window?
-# 4) XIC add ability for individual time ranges per XIC and "link" "unlink" option for zoom.
-# 6) Settings: save scan_dict and xic?
-# 8) FIX LOAD XIC; be able to save XIC marks.
-
-
 try:
     import wxversion
     wxversion.select("3.0")
@@ -45,13 +38,6 @@ import wx
 
 if wx.__version__[0] != '3':
     print "WARNING- wxPython version %s may not be fully supported.  Please install wxPython 3." % wx.__version__
-
-
-
-
-            
-        
-            
 
 
 #-----------------SYSTEM IMPORTS                      
@@ -79,9 +65,9 @@ import AreaWindow
 import Settings
 import MGrid
 import FeatureImport
-#import t2dv2
+
 from additions import floatrange
-# platform.release() = '2003Server'; '7'
+
 import BlaisPepCalcSlim_aui2
 from customProcessing import ProcessorDialog
 from textSpectrum import TextSpectrumDialog
@@ -115,8 +101,6 @@ import wx.lib.agw.aui as aui
 import Progressgauge as pg
 import wx.grid
 import wx.lib.throbber as  throb
-#import wx.lib.agw.aui
-
 
 import sqlite3
 
@@ -206,11 +190,6 @@ except ImportError: # if it's not there locally, try the wxPython lib.
     import wx.lib.agw.pybusyinfo as PBI
 import wx.lib.mixins.gridlabelrenderer as glr
 import wx.grid as grid
-#import wx.lib.agw.flatmenu as FM
-#from wx.lib.agw.artmanager import ArtManager, RendererBase, DCSaver
-#from wx.lib.agw.fmresources import ControlFocus, ControlPressed
-#from wx.lib.agw.fmresources import FM_OPT_SHOW_CUSTOMIZE, FM_OPT_SHOW_TOOLBAR, FM_OPT_MINIBAR
-
 
 #-----------------Globals
 global images 
@@ -279,22 +258,15 @@ class ScanDictThread:
 
     def Run(self):
         print "Building Scan Dicts (Thread)"
-        #try:
-        #self.m.set_experiment('0')
+        
         try:
             self.scan_dict, self.rt_dict, self.filter_dict, self.rt2scan = mz_core.create_dicts(self.m, start=self.start, stop=self.stop)
         except Exception as err:
             self.running = False
             raise err
-        #except:
-        #    print "Error making scan dicts!"
-        #    pass
+        
         print "Done"
-        #print self.filter_dict[(366, '0')]
-        #l = list(self.filter_dict.keys())
-        #l.sort()
-        #for member in l:
-        #    print member             
+           
         self.running = False    
     
 class XICThread:
@@ -357,7 +329,7 @@ class MS_Data_Manager():
         self.Display_ID = {}
         self.mass_extract = re.compile('.*?\[(\d+?.\d+?)-(\d+?.\d+?)\]')
         
-        #---------------------------------------
+        #-------------------------------------------------------------------------------------------------------------------
         #     FILTER LAND
         # Instructions for adding filter.
         # 1) Define regex.
@@ -365,6 +337,7 @@ class MS_Data_Manager():
         #    This couples to a handler defined in filter management.
         # 3) Add filter managment handler
         # 4) Add entry for title to Mass Dict so first/last mass can be parsed
+        #--------------------------------------------------------------------------------------------------------------------
         
         #u'ITMS + p ESI SRM ms2 519.20@cid35.00 [278.50-283.50, 500.50-505.50]'
         self.srm = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI SRM ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?), (\d+?.\d+?)-(\d+?.\d+?)\]')
@@ -472,12 +445,7 @@ class MS_Data_Manager():
                 if id:
                     filter_dict = handler(filter_dict, id)
                     break
-        #if inst == 'ABI':
-            #for ms_filter, handler in self.abi_filters:
-                #id = ms_filter.match(filt)
-                #if id:
-                    #filter_dict = handler(filter_dict, id)
-                    #break      
+        
         if inst == 'mgf':
             for ms_filter, handler in self.mgf_filters:
                 id = ms_filter.match(filt)
@@ -2837,7 +2805,7 @@ class DrawPanel(wx.Panel):
                 if filt.find('FTMS')>-1:
                     scan_data = currentFile["m"].scan(scanNum)
                     cent_data = currentFile['m'].rscan(scanNum)
-                elif filt.find('TOF')>-1:
+                elif any([filt.find(x) for x in ['TOF', 'Q1', 'Q3']]):
                     scan_data= currentFile["m"].scan(scanNum)
                     cent_data = currentFile['m'].scan(scanNum, centroid=True)
             else:
@@ -2979,7 +2947,7 @@ class DrawPanel(wx.Panel):
         busy = PBI.PyBusyInfo("Saving SVG, please wait...", parent=None, title="Processing...")
         wx.Yield()
         buffersize = self.Window._Buffer.GetSize()
-        self.svgDC = wx.SVGFileDC(svgfile, width = buffersize.width, height = buffersize.height)
+        self.svgDC = wx.SVGFileDC(svgfile, width = buffersize.width/2.0, height = buffersize.height/2.0, dpi = 72)
         #currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
         #print "SAVING...(lines)"
         for line in self.msdb.svg["lines"]:
@@ -3020,7 +2988,7 @@ class DrawPanel(wx.Panel):
         busy = PBI.PyBusyInfo("Saving PDF, please wait...", parent=None, title="Processing...")
         wx.Yield()
         buffersize = self.Window._Buffer.GetSize()
-        self.svgDC = wx.SVGFileDC(tempsvg, width = buffersize.width, height = buffersize.height)
+        self.svgDC = wx.SVGFileDC(tempsvg, width = buffersize.width/2.0, height = buffersize.height/2.0, dpi=72)
         for line in self.msdb.svg["lines"]:
             if len(line)==4:
                 self.svgDC.DrawLine(*line)
@@ -3395,7 +3363,7 @@ class DrawPanel(wx.Panel):
     def OnLeftDown(self, event):
         '''
         
-        Left button down
+        Manages left button down event.
         
         pos = position
         
@@ -3869,10 +3837,18 @@ class DrawPanel(wx.Panel):
                     currentFile["spectrum_style"]='average'
                 
         if e == "SPEC":
+            # Right down and up in same position zooms out.
             if pos == self.right_down_pos:
                 self.msdb.set_mass_ranges(currentFile["FileAbs"])
                 self.msdb.set_axes()
-            elif not currentFile['vendor'] == 'mgf':
+                self.Window.ClearOverlay()
+                if refresh:
+                    self.Window.UpdateDrawing()  
+                    self.Refresh()    
+                return
+            
+            # otherwise make XIC    
+            if not currentFile['vendor'] in ['mgf', 'ABI-MALDI']:
                 #self.Window.ClearOverlay()
                 dc = wx.BufferedDC(wx.ClientDC(self.Window), self.Window._Buffer)
                 dc.DrawText("Building XIC...", pos[0], self.yaxco[1])
@@ -3912,6 +3888,9 @@ class DrawPanel(wx.Panel):
                         refresh = False
                 #del busy
                 #proc.Destroy()
+            else:
+                wx.MessageBox("XIC not supported for %s" % currentFile['vendor'], "mzStudio")
+                
         self.Window.ClearOverlay()
         if refresh:
             self.Window.UpdateDrawing()  
@@ -7257,10 +7236,12 @@ class TopLevelFrame(wx.Frame):
         currentFile["ID_Dict"]= currentPage.build_ID_dict(currentFile["rows"], currentFile["mzSheetcols"], currentFile["Filename"], currentFile["vendor"])
         self.Refresh()
         #b = BlaisPepCalc2.MainBPC(self, wx.NewId())
+        addTheFrame = True
         if not self.parentFrame.ObjectOrganizer.containsType(BlaisPepCalcSlim_aui2.MainBPC):
             b = BlaisPepCalcSlim_aui2.MainBPC(self, -1, self.parentFrame.ObjectOrganizer)
         else:
             b = self.parentFrame.ObjectOrganizer.getObjectOfType(BlaisPepCalcSlim_aui2.MainBPC)
+            addTheFrame=False
 
             
             
@@ -7270,7 +7251,8 @@ class TopLevelFrame(wx.Frame):
             
         self._mgr.AddPane(dbf, aui.AuiPaneInfo().Bottom().MaximizeButton(True).MinimizeButton(True).Caption("mzResult: " + xlsfile))
         #self._mgr.Update()         
-        self._mgr.AddPane(b, aui.AuiPaneInfo().Left().MaximizeButton(True).MinimizeButton(True).Caption("PepCalc"))
+        
+        if addTheFrame: self._mgr.AddPane(b, aui.AuiPaneInfo().Left().MaximizeButton(True).MinimizeButton(True).Caption("mzPepCalc"))
         self._mgr.Update()
         
         dbf.aui_pane = self._mgr.GetPane(dbf)
