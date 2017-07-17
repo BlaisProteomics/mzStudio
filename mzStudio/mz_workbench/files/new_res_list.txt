@@ -158,3 +158,4 @@ cglbalbaK|HCGly-HCGly-LbA-LbA Lysine|C:14, H:26, O:5, C13:2, N:6|PAL Labels
 tmtK|TMT Lysine|C:13, H:32, O:3, C13:5, N:4|Lysine
 fcK|c4f9 Ubiq-Lys|C:17, F:9, H:22, O:4, N:4|Fluorous
 nghbahbaK|HNGly-HNGly-HbA-HbA Lysine|C:10, S35:2, H:26, O:5, N15:8, N:2|PAL Labels
+K|Lysine|C:6, H:12, O:1, N:2|Common
