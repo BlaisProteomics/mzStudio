@@ -1300,7 +1300,9 @@ class SpecWindow(BufferedWindow):  #wx.Window
         if self.spectrum.vendor == 'Thermo':
             if self.spectrum.filter.find('FTMS')>-1:
                 thresh = 200
-            if self.spectrum.filter.find('TOF')>-1:
+            elif any([x in self.spectrum.filter for x in ['TOF', 'Q1', 'Q3']]):
+                thresh = 10
+            else:
                 thresh = 10
         elif self.spectrum.vendor == 'ABI':
             thresh = 10
@@ -1308,6 +1310,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
             thresh = 10
         else:
             thresh = 0
+        
         firstMass = self.spectrum.mass_ranges[key][0]
         lastMass = self.spectrum.mass_ranges[key][1]
         print "Masses"

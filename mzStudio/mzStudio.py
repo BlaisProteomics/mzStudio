@@ -3697,6 +3697,10 @@ class DrawPanel(wx.Panel):
                             #self.msdb.build_current_ID(self.msdb.Display_ID[file], scanNum)                             
                         else:
                             # Set XIC time range.
+                            if self.new_stopTime < self.new_startTime:
+                                temp = self.new_stopTime
+                                self.new_stopTime = self.new_startTime
+                                self.new_startTime = temp
                             if currentFile['vendor']=='Thermo':
                                 currentFile["time_ranges"]=[(self.f(self.new_startTime, currentFile["rt2scan"].keys()), self.f(self.new_stopTime, currentFile["rt2scan"].keys()))]
                             elif currentFile['vendor']=='mgf':
@@ -4549,10 +4553,11 @@ class DrawPanel(wx.Panel):
                 for member in xticks:
                     memberstr = "%.2f" % member if isinstance(member, float) else str(member)
                     x1 = currentFile['xic_axco'][key][0][0] + px*((member-startTime))
-                    dc.DrawText(memberstr, x1-8,yaxis[3]+5)
-                    self.msdb.svg["text"].append((memberstr, x1-8,yaxis[3]+5,0.00001))
-                    dc.DrawLine(x1, yaxis[3], x1, yaxis[3]+2)
-                    self.msdb.svg["lines"].append((x1, yaxis[3], x1, yaxis[3]+2))
+                    if x1 > (xaxis[0]-1) and x1 < (xaxis[2] +1):
+                        dc.DrawText(memberstr, x1-8,yaxis[3]+5)
+                        self.msdb.svg["text"].append((memberstr, x1-8,yaxis[3]+5,0.00001))
+                        dc.DrawLine(x1, yaxis[3], x1, yaxis[3]+2)
+                        self.msdb.svg["lines"].append((x1, yaxis[3], x1, yaxis[3]+2))
                 #This draws the text for the mz range
                 if currentActive:
                     col = self.get_xic_color(xic, dc)
@@ -4574,8 +4579,11 @@ class DrawPanel(wx.Panel):
                     current_x = currentFile['xic_axco'][key][0][0] + ((float(rt)-startTime)*px)
                     #------------------This draws the red line on the XIC
                     dc.SetPen(wx.Pen(wx.RED,2))
-                    dc.DrawLine(current_x, yaxis[1], current_x, yaxis[3])
-                    self.msdb.svg["lines"].append((current_x, yaxis[1], current_x, yaxis[3]))
+                    bar_min = xaxis[0]
+                    bar_max = xaxis[2]
+                    if current_x > bar_min and current_x < bar_max:
+                        dc.DrawLine(current_x, yaxis[1], current_x, yaxis[3])
+                        self.msdb.svg["lines"].append((current_x, yaxis[1], current_x, yaxis[3]))
                     #-----------------------------------------------------
                     dc.SetPen(wx.Pen(wx.BLACK,1))
                     dc.SetTextForeground("BLACK")
@@ -5702,6 +5710,7 @@ class DrawPanel(wx.Panel):
         infodict["ID_Dict"][infodict['scanNum']] = psm 
         self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["scanNum"])
         self.Window.UpdateDrawing()
+        self.Refresh()
         
 class MyGrid(grid.Grid, glr.GridWithLabelRenderersMixin):
     def __init__(self, *args, **kw):
@@ -7126,7 +7135,7 @@ class TopLevelFrame(wx.Frame):
         
         if event.GetId() == 100:
             #self.OnJump(None)
-            self.ctrl.GetPage().OnJump(None)
+            self.ctrl.GetPage(selection).OnJump(None)
         if event.GetId() == 110:
             self.OnMakeDb(None)
         if event.GetId() == 120:

@@ -1216,9 +1216,10 @@ class RICWindow(BufferedWindow):
                     xticks.append(round(startTime, 1))
                     xticks.append(round(stopTime, 1))
                 for member in xticks:
+                    memberstr = "%.2f" % member if isinstance(member, float) else str(member)
                     x1 = self.xic_axco[key][0][0] + px*((member-startTime))
-                    dc.DrawText(str(member), x1-8,yaxis[3]+5)
-                    self.svg["text"].append((str(member), x1-8,yaxis[3]+5,0.00001))
+                    dc.DrawText(memberstr, x1-8,yaxis[3]+5)
+                    self.svg["text"].append((memberstr, x1-8,yaxis[3]+5,0.00001))
                     dc.DrawLine(x1, yaxis[3], x1, yaxis[3]+2)
                     self.svg["lines"].append((x1, yaxis[3], x1, yaxis[3]+2))
                 if currentActive:
