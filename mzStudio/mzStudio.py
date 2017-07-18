@@ -1771,7 +1771,10 @@ class MS_Data_Manager():
                         currentFile["scan"] = currentFile["m"].rscan(currentFile["scanNum"])
                     except AttributeError:
                         if ' c ' not in filt and 'cent' not in filt:
-                            currentFile['scan'] = mz_centroid(currentFile['m'].scan(currentFile['scanNum']), threshold_scale = 2)
+                            try:
+                                currentFile['scan'] = mz_centroid(currentFile['m'].scan(currentFile['scanNum']), threshold_scale = 2)
+                            except:
+                                currentFile['scan'] = currentFile['m'].scan(currentFile['scanNum'])
                         else:
                             currentFile['scan'] = currentFile['m'].scan(currentFile['scanNum'])
                 #elif currentFile['vendor']=='ABI':
