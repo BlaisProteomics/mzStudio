@@ -27,8 +27,8 @@ from collections import defaultdict
 #import mz_workbench.ABSciex_core as ABSciex_core
 from multiplierz.mzAPI.raw import mzFile
 import mz_workbench.mz_masses as mz_masses
-print sys.path
-print os.path.abspath(os.getcwd())
+#print sys.path
+#print os.path.abspath(os.getcwd())
 sys.path.append(".")
 
 import glob

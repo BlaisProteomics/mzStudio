@@ -21,8 +21,8 @@ from collections import defaultdict
 import mz_workbench.mz_core as mz_core
 from multiplierz.mzAPI.raw import mzFile
 
-print sys.path
-print os.path.abspath(os.getcwd())
+#print sys.path
+#print os.path.abspath(os.getcwd())
 sys.path.append(".")
 
 import glob
