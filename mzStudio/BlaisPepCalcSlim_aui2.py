@@ -1,4 +1,4 @@
-__author__ = 'Scott Ficarro'
+__author__ = 'Scott Ficarro, William Max Alexander'
 __version__ = '1.0'
 
 
@@ -31,8 +31,8 @@ from mz_workbench.mz_core import read_new_res_dict
 # import mz_workbench.ABSciex_core as ABSciex_core
 from multiplierz.mzAPI.raw import mzFile
 import mz_workbench.mz_masses as mz_masses
-print sys.path
-print os.path.abspath(os.getcwd())
+#print sys.path
+#print os.path.abspath(os.getcwd())
 sys.path.append(".")
 
 import glob
@@ -671,7 +671,7 @@ class BlaisPepCalc(wx.Panel):
         else:
             modmass = 0
         precmass = mw(aminos) + totalModMass
-        chgmass = ((precmass + modmass + (protonMass * cg_by)) / cg_by) 
+        chgmass = ((precmass + (protonMass * cg_by)) / cg_by) 
         chgfrags = fragment(aminos, modstrs, ions = iontypes, charges = [cg_by])
         frags = {}
         for k, v in chgfrags.items():
