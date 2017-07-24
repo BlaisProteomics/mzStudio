@@ -41,7 +41,7 @@ if wx.__version__[0] != '3':
 
 
 #-----------------SYSTEM IMPORTS                      
-import os, re, sys, cPickle, platform, time, thread, csv, gc
+import re, sys, cPickle, platform, time, thread, csv, gc
 from collections import defaultdict
 from tempfile import mkdtemp
 from random import seed
@@ -56,16 +56,14 @@ import Filter_management as fm
 import BlaisPepCalcSlim_aui2 as BlaisPepCalc2
 import DatabaseOperations as db
 import Peptigram
-import QueryBuilder
+#import QueryBuilder
 import XICPalette
-#import SpecBase
-#-----------------------------------
 import SpecBase_aui3
 import AreaWindow
 import Settings
 import MGrid
 import FeatureImport
-
+import SingleIDFrame
 from additions import floatrange
 
 import BlaisPepCalcSlim_aui2
@@ -90,6 +88,7 @@ import multiplierz.mzAPI as mzAPI
 import multiplierz.mzReport as mzReport
 from multiplierz.mgf import standard_title_parse, write_mgf
 from multiplierz.spectral_process import centroid as mz_centroid
+from multiplierz.internalAlgorithms import average
 import mzGUI_standalone as mzGUI
 import multiplierz.mzSearch.mascot as mascot
 import multiplierz.mzTools.featureDetector as featureDetector
@@ -275,7 +274,7 @@ class XICThread:
     wx.Delayed Result - allows making XIC in a separate thread to keep GUI responsive.
     
     '''    
-    def __init__(self, win, m, start_time, stop_time, start_mz, stop_mz, filter=''):
+    def __init__(self, win, m, start_time, stop_time, start_mz, stop_mz, filter='', experiment = ''):
         self.win = win
         self.start_time = start_time
         self.stop_time = stop_time
@@ -284,6 +283,7 @@ class XICThread:
         self.m = m
         self.result = None
         self.filter = filter.strip()
+        self.experiment = experiment
 
     def Start(self):
         self.keepGoing = self.running = True
@@ -298,7 +298,11 @@ class XICThread:
     def Run(self):
         print "Making XIC (Thread)"
         try:
-            self.result = self.m.xic(self.start_time, self.stop_time, self.start_mz, self.stop_mz, self.filter)
+            if self.m.file_type == 'wiff' and self.experiment:
+                self.result = self.m.xic(self.start_time, self.stop_time, self.start_mz, self.stop_mz,
+                                         filter = self.filter, experiment = self.experiment)
+            else:
+                self.result = self.m.xic(self.start_time, self.stop_time, self.start_mz, self.stop_mz, self.filter)
         except Exception as err:
             print err
             print "XIC errror!"
@@ -360,7 +364,8 @@ class MS_Data_Manager():
         self.qms2 = re.compile('.*?(TOF MS|TOF PI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         #EPI + p NSI Full ms2 584.70423947@33.622501373291[100-1000][478:3]
         self.epi = re.compile('.*?(EPI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')#\[(\d+?):(\d+?)\]')
-        self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI Full ms2 \d+?.\d+?@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
+        #self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI Full ms2 \d+?.\d+?@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
+        self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI \d+?.\d+?@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         self.precursor1 = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         #ER MS + p NSI Full ms [0-0]
         self.erms = re.compile('.*?(ER) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
@@ -516,6 +521,14 @@ class MS_Data_Manager():
         return counter
 
     def set_mass_ranges(self, filename):
+        '''
+        
+        Sets scan low and high mass (properties "scan low mass", "scan high mass", and "mass_ranges") by parsing them
+        from the filter.  Then, drawSpectrum and/or drawProfileSpectrum will know where to display from.
+        
+        If the display locked, will not reset, instead will keep current.
+        
+        '''
         if not self.files[filename]['Processing']:
             vendor = self.files[filename]["vendor"]
             if vendor != "ABI-MALDI":
@@ -560,63 +573,10 @@ class MS_Data_Manager():
                 self.files[filename]["scan high mass"]=self.files[filename]["m"].info()['Range'][1]
                 self.files[filename]["mass_ranges"]=[self.files[filename]["m"].info()['Range']]
         else: #------------------PROCESSED SCAN
-            self.files[filename]["scan low mass"]=float(self.files[filename]['processed_first'])
-            self.files[filename]["scan high mass"]=float(self.files[filename]['processed_last'])
-            self.files[filename]["mass_ranges"]=[(float(self.files[filename]['processed_first']), float(self.files[filename]['processed_last']))]        
-            
-    def _set_mass_ranges(self, filename):
-        #Changes broke mass range lock.  Reverted to old code.
-        if not self.files[filename]['Processing']:
-            vendor = self.files[filename]["vendor"]
-            if vendor != "ABI-MALDI":
-                if not self.files[filename]["locked"]:
-                    found = False
-                    for member in self.mass_dict.keys():
-                        pa = self.mass_dict[member][0]
-                        if vendor == "Thermo":
-                            lookup = self.files[filename]["scanNum"]
-                        if vendor == "mgf":
-                            lookup = self.files[filename]["scanNum"]    #self.files[filename]["mgf_rev_dict"][    
-                            if lookup not in self.files[filename]["filter_dict"].keys():
-                                lookup = self.files[filename]["scan_dict"][self.files[filename]["scanNum"]]
-                        if vendor == "ABI":
-                            lookup = (self.files[filename]["scanNum"],self.files[filename]["experiment"])
-                        id = pa.match(self.files[filename]["filter_dict"][lookup])
-                        if id:
-                            low_mass = id.groups()[self.mass_dict[member][1]]
-                            hi_mass = id.groups()[self.mass_dict[member][2]]
-                            found = True
-                            break
-                    if not found:
-                        #raise ValueError("Filter not parsed!  Unrecognized file format!")
-                        low_mass = 100.0
-                        hi_mass = 101.0
-                    # If I understand the above, it can be done with a single more general regex.
-#------------------------------------------------------------------------
-                #filterstr = self.files[filename]["filter_dict"][self.files[filename]["scanNum"]]
-                #mass_find = re.search('\[(\d+?.*\d*?)-(\d+?.*\d*?)\]', filterstr)
-                #if mass_find:
-                    #lowmass, highmass = map(float, mass_find.groups())
-                #else:
-                    #lowmass, highmass = 10, 2000
-                #self.files[filename]["scan low mass"] = lowmass
-                #self.files[filename]["scan high mass"] = highmass
-                #self.files[filename]["mass_ranges"]= [(lowmass, highmass)]
-#--------------------------------------------------------------------
-                else:
-                    low_mass = self.files[filename]["newl"]
-                    hi_mass = self.files[filename]['newf']
-                    self.files[filename]["scan low mass"]=float(low_mass)
-                    self.files[filename]["scan high mass"]=float(hi_mass)
-                    self.files[filename]["mass_ranges"]=[(float(low_mass), float(hi_mass))]
-            else:
-                self.files[filename]["scan low mass"]=self.files[filename]["m"].info()['Range'][0]
-                self.files[filename]["scan high mass"]=self.files[filename]["m"].info()['Range'][1]
-                self.files[filename]["mass_ranges"]=[self.files[filename]["m"].info()['Range']]
-        else:
-            self.files[filename]["scan low mass"]=float(self.files[filename]['processed_first'])
-            self.files[filename]["scan high mass"]=float(self.files[filename]['processed_last'])
-            self.files[filename]["mass_ranges"]=[(float(self.files[filename]['processed_first']), float(self.files[filename]['processed_last']))]            
+            if not self.files[filename]["locked"]:
+                self.files[filename]["scan low mass"]=float(self.files[filename]['processed_first'])
+                self.files[filename]["scan high mass"]=float(self.files[filename]['processed_last'])
+                self.files[filename]["mass_ranges"]=[(float(self.files[filename]['processed_first']), float(self.files[filename]['processed_last']))]                 
     
     def GetHiMass(self, filename):
         return max(t[0] for t in self.files[filename]["scan"])
@@ -700,17 +660,24 @@ class MS_Data_Manager():
         self.parent.parent.StartGauge(text="Building XIC...")
         _filter = ''
         #self.parent.parent.Parent.StartGauge(text="Building XIC...")
-        params = list(params)
-        if params[2] > params[3]:    
-            params[2], params[3] = params[3], params[2]
+        assert len(params) == 5
+        params = {'start_time':params[0],
+                  'stop_time':params[1],
+                  'start_mz':params[2],
+                  'stop_mz':params[3],
+                  'filter':params[4]}
+        if params['start_mz'] >  params['stop_mz']:
+            params['start_mz'], params['stop_mz'] = params['stop_mz'], params['start_mz']
         if 'SRM' in m.filters()[0][1]:
-            params[-1] = 'SRM ms2'
-        if m.file_type == '.d' or m.file_type == 'wiff':
-            _filter = params[-1]
-            params[-1] = 'Full ms' # Just to keep D.py happy.
-        params = tuple(params)
+            params['filter'] = 'SRM ms2'
+        if m.file_type == '.d':
+            _filter = params['filter'] # Just to keep D.py happy.
+            params['filter'] = 'Full ms'
+        if m.file_type == 'wiff' and 'Exp' in params['filter']:
+            params['experiment'] = int(params['filter'].split()[1])
+            params['filter'] = 'Full ms'
         
-        t = XICThread(win, m, *params)
+        t = XICThread(win, m, **params)
         t.Start()
         while t.IsRunning():
             time.sleep(0.1)
@@ -719,11 +686,12 @@ class MS_Data_Manager():
         del t
         if not result:
             print "Threading failed, performing in-thread XIC."
-            result = m.xic(*params)
+            result = m.xic(**params)
         assert result
         
         self.parent.parent.StopGauge()
-        if m.file_type != '.d' and (m.file_type != 'wiff' and 'Full ms' not in _filter):
+        #if m.file_type != '.d' and (m.file_type != 'wiff' and 'Full ms' not in _filter):
+        if m.file_type != '.d':
             return result
         else:
             #Here is where the manual filtering is performed.
@@ -1142,6 +1110,9 @@ class MS_Data_Manager():
                 if current["filter_dict"][minFilterKey].lower().find("full ms2") > -1:
                     current["master_scan"]="ms2"
                     current['master_filter']="Full ms2"
+                elif current["filter_dict"][minFilterKey].lower().find("precursor") > -1:
+                    current["master_scan"]="Precursor"
+                    current['master_filter']="Exp 1 (Precursor)"                
                 elif current["filter_dict"][minFilterKey].lower().find("srm ms2") > -1:
                     current["master_scan"]="ms2"
                     current['master_filter']="SRM ms2"                
@@ -1285,7 +1256,6 @@ class MS_Data_Manager():
                     try:
                         current["scan"] = current["m"].rscan(1)
                     except AttributeError:
-                        
                         current['scan'] = mz_centroid(current["m"].scan(1))
                 else:
                     current["scan"] = current["m"].scan(1)
@@ -1563,17 +1533,17 @@ class MS_Data_Manager():
         e = None
         for i in self.getActiveList():
             currentFile = self.files[self.Display_ID[i]]
-            if currentFile['mode'] != 'SPEC':
+            #if currentFile['mode'] != 'SPEC':
                 #----------------------------NEED TO FIND THRESHHOLD BOX COORDS
-                currentx1, currenty1, currentx2, currenty2 = self.parent.thresh_box
-                if hitx > currentx1 and hitx < currentx2 and hity > currenty1 and hity < currenty2:
-                        print "HIT!"
-                        found = True
-                        file = i
-                        e = "Thr"
-                        break
-            if currentFile['mode'] == 'SPEC':
-                pass
+            currentx1, currenty1, currentx2, currenty2 = self.parent.thresh_box
+            if hitx > currentx1 and hitx < currentx2 and hity > currenty1 and hity < currenty2:
+                    print "HIT!"
+                    found = True
+                    file = i
+                    e = "Thr"
+                    break
+            #if currentFile['mode'] == 'SPEC':
+                #pass
         if not found:
             file = -1
         return found, e, file
@@ -1623,7 +1593,7 @@ class MS_Data_Manager():
                         grid = k
                         file = i
                         break
-            if currentFile['mode'] == 'SPEC':
+            elif currentFile['mode'] == 'SPEC':
                 for k, coord in enumerate(currentFile['axco']):
                     currentx1 = coord[0][0]
                     currentx2 = coord[0][2]
@@ -1772,7 +1742,9 @@ class MS_Data_Manager():
                     except AttributeError:
                         if ' c ' not in filt and 'cent' not in filt:
                             try:
-                                currentFile['scan'] = mz_centroid(currentFile['m'].scan(currentFile['scanNum']), threshold_scale = 2)
+                                precentroidscan = currentFile['m'].scan(currentFile['scanNum'])
+                                threshold = average(zip(*precentroidscan)[1]) * 2
+                                currentFile['scan'] = mz_centroid(precentroidscan, threshold = threshold)
                             except:
                                 currentFile['scan'] = currentFile['m'].scan(currentFile['scanNum'])
                         else:
@@ -2100,6 +2072,7 @@ class BufferedWindow(wx.Window):
                         currentFile['mark_boxes'].append([win, (x1, x2, y1, y2)])
         else:
             self.parent.parent.parent.statusbar.SetStatusText("")
+            
         if event.Dragging() and event.LeftIsDown():
             try:
                 if self.parent.found:
@@ -2157,14 +2130,19 @@ class BufferedWindow(wx.Window):
                                     #active_xic = currentFile['active_xic'][grid]
                                     #xaxis = currentFile['xic_axco'][grid][0]
                                     #yaxis = currentFile['xic_axco'][grid][1]                                 
-                                    #sb = self._Buffer.GetSubBitmap(50, 50, 500, 500)
-                                    #dc.DrawBitmapPoint(sb, (xaxis[0], yaxis[0]))
+                                    #sb = self._Buffer.GetSubBitmap(wx.Rect(10, 10, 100, 100))
+                                    #self._Buffer.SaveFile("D:\SBF\img1.bmp", wx.BITMAP_TYPE_BMP)
+                                    #sb = self._Buffer.GetSubBitmap(0, 0, 500, 500)
+                                    #dc.DrawBitmap(sb, xaxis[0], yaxis[0])
+                                    #print "A"
                                     #dc.DrawBitmap(sb, pos[0]+50, pos[1]+25)
                                     #del sb
                         #dc.DrawRectangle(self.parent.postup[0], self.parent.yaxco[1], pos[0] - self.parent.postup[0], self.parent.yaxco[3]- self.parent.yaxco[1])
                         del odc
                         self.Refresh()
                         self.Update()
+                        
+                    #-------------This is the line for the threshold bar.
                     elif self.parent.e == 'Thr':
                         print "Doing it"
                         pdc = wx.BufferedDC(wx.ClientDC(self), self._Buffer)
@@ -2276,8 +2254,8 @@ class DrawWindow(BufferedWindow):
 #class ParentFrame(aui.AuiNotebook):
 class ParentFrame(object):
     def __init__(self, parent): 
-        #-----------------------PARENT IS THE TopLevelFrame
-        #-----------------------"ParentFrame" manages the aui notebook.
+        #-----------------------After redesign, ParentFrame is a container for the AUI notbook (self.notebook)
+        #-----------------------i.e. "ParentFrame" manages the aui notebook.
         #-----------------------Tool bar and menu come from the parent (top level frame)
         #-----------------------
         #-----------------------OnNewChild adds a page to the aui notebook (page is a drawpanel)
@@ -3378,6 +3356,11 @@ class DrawPanel(wx.Panel):
         
         Manages left button down event.
         
+        When the left mouse button is pressed, various HitTests are performed to find out which window was clicked.
+        Appropriate action is then taken.
+        
+        If CTRL key is pressed, a data object will be made for drag and drop.
+        
         pos = position
         
         Calls HitTest.  Returns:
@@ -3387,19 +3370,18 @@ class DrawPanel(wx.Panel):
             Found = True or False
         
         '''
-        #if wx.GetKeyState(wx.WXK_ALT):
-            #print "MARK AVERAGE START"
-            #self.alt_drag_start = event.GetPositionTuple()
-            #return
         
         pos = event.GetPosition()
         self.postup = pos
+        
+        #--------------------------------------------- Performs hit test
         found, e, grid, file = self.msdb.HitTest(pos)
         self.found = found
         self.grid=grid
         self.file=file
         self.e = e        
         
+        #-------------------------------CTRL pressued, if Spec or XIC make object for drag and drop.
         if wx.GetKeyState(wx.WXK_CONTROL):
             print "DRAG MAKE DATA OBJECT"
             currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
@@ -3865,7 +3847,7 @@ class DrawPanel(wx.Panel):
                 return
             
             # otherwise make XIC    
-            if not currentFile['vendor'] in ['mgf', 'ABI-MALDI']:
+            if not currentFile['vendor'] in ['mgf', 'ABI-MALDI'] and self.right_down_pos:
                 #self.Window.ClearOverlay()
                 dc = wx.BufferedDC(wx.ClientDC(self.Window), self.Window._Buffer)
                 dc.DrawText("Building XIC...", pos[0], self.yaxco[1])
@@ -4864,7 +4846,9 @@ class DrawPanel(wx.Panel):
                     scan_data = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = currentFile['settings']['threshold_cent_abi'])
                 if currentFile['vendor']=='ABI-MALDI':
                     try:
-                        scan_data = mz_centroid(currentFile['m'].scan(), threshold_scale = 2)
+                        precentroidscan = currentFile['m'].scan()
+                        threshold = average(zip(*precentroidscan)[1]) * 2
+                        scan_data = mz_centroid(precentroidscan, threshold)
                     except:
                         scan_data = mz_centroid(currentFile['m'].scan())
             else:
@@ -4904,10 +4888,11 @@ class DrawPanel(wx.Panel):
                 scan_data = [(0, 0)]
             #----------FOR PROCESSED SPECTRUM, MUST OVERRIDE RAW DATA
             #Redefine first and last mass - this is for viewing the entire spectrum
-            minMass = min([x[0] for x in scan_data])
-            maxMass = max([x[0] for x in scan_data])
-            currentFile['processed_first']=minMass
-            currentFile['processed_last']=maxMass
+            if not currentFile['locked']:
+                minMass = min([x[0] for x in scan_data])
+                maxMass = max([x[0] for x in scan_data])
+                currentFile['processed_first']=minMass
+                currentFile['processed_last']=maxMass
         
         currentFile["processed_data"] = scan_data
 
@@ -5269,7 +5254,9 @@ class DrawPanel(wx.Panel):
                     self.msdb.svg["text"].append(("Inj: " + str(inj_time), x+5, ystart,0.00001))
                 except AttributeError: # Actually a WIFF file in disguise.
                     pass
-                
+            if currentFile["Processing"]:
+                ystart+= 15
+                dc.DrawText("PROCESSED", x+5, ystart)
                 
             dc.SetFont(wx.Font(10, wx.ROMAN, wx.NORMAL, wx.BOLD, False))
         #self.parent.Window.dragController.SetPosition()
@@ -5711,6 +5698,29 @@ class DrawPanel(wx.Panel):
         #---------------------------------------------------
         # Transfer the most significant hit to the ID_Dictionary, build the ID, and refresh the display.
         infodict["ID_Dict"][infodict['scanNum']] = psm 
+        
+        if not self.parent.ObjectOrganizer.containsType(SingleIDFrame.SingleID_Panel):
+            
+            SingleIDPanel = SingleIDFrame.SingleID_Panel(self.parent.parent, -1, None, psm, self.parent.ObjectOrganizer, header)
+            self.parent.parent._mgr.AddPane(SingleIDPanel, aui.AuiPaneInfo().Right().Caption("SearchResult"))
+            self.parent.parent._mgr.Update()
+            #b.aui_pane = self._mgr.GetPaneByWidget(b)    
+            
+        else:
+            
+            #modify existing panel.
+            
+            idPanel = self.parent.ObjectOrganizer.getObjectOfType(SingleIDFrame.SingleID_Panel)
+            #------------------------------ Update grid and header
+            idPanel.grid.Destroy()
+            idPanel.grid = SingleIDFrame.SingleID_Grid(idPanel, psm)
+            idPanel.update_header(header)
+            idPanel.grid.Refresh()
+            #------------------------------
+            idPanel.psm = psm #update PSM
+            self.parent.parent._mgr.Update()
+        
+        
         self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["scanNum"])
         self.Window.UpdateDrawing()
         self.Refresh()
@@ -5905,9 +5915,8 @@ class XICgrid(grid.Grid, glr.GridWithLabelRenderersMixin):
         try:
             all_modes = self.parent.currentFile['m'].scan_modes()
             filter_list = ['Full ms ']
-            for mode in all_modes:
-                if mode not in filter_list:
-                    filter_list.append(mode)
+            for exp, mode in all_modes:
+                filter_list.append('Exp %d (%s)' % (exp, mode))
         except AttributeError:
             filter_list = ['Full ms ','Full ms2 ']
         if self.parent.currentFile['m'].file_type == 'mgf':
@@ -6034,7 +6043,7 @@ class xicFrame(wx.Frame):
         for member in self.currentFile['filter_dict'].values(): 
             targ_filt.add(member)
         print len(targ_filt)
-        self.currentFile["targ_filt"] = list(targ_filt)
+        self.currentFile["targ_filt"] = sorted(targ_filt)
         self.currentFile['targ_check']=True
         self.grid.Destroy()
         self.grid = XICgrid(self)
@@ -6061,15 +6070,19 @@ class xicFrame(wx.Frame):
             self.grid.SetCellValue(self.GetXICEntries()-1, 7, '1')
             self.grid.SetCellValue(self.GetXICEntries()-1, 8, 'x')
             if self.GetXICEntries()-1 != 0:
-                if self.currentFile['xic_style'] != 'OVERLAY':
-                    prev = self.GetXICEntries() - 2
-                    value = int(self.grid.GetCellValue(int(prev), 0))
+                prev = self.GetXICEntries() - 2
+                value = int(self.grid.GetCellValue(int(prev), 0))
+                if self.currentFile['xic_style'] != 'OVERLAY':                        
                     value += 1
-                    self.grid.SetCellValue(self.GetXICEntries()-1, 0, str(value))
-                else:
-                    prev = self.GetXICEntries() - 2
-                    value = int(self.grid.GetCellValue(int(prev), 0))
-                    self.grid.SetCellValue(self.GetXICEntries()-1, 0, str(value))                    
+                self.grid.SetCellValue(self.GetXICEntries()-1, 0, str(value))  
+                
+                prevrow = evt.GetRow()-1
+                prevstart = self.grid.GetCellValue(prevrow, 1)
+                prevstop = self.grid.GetCellValue(prevrow, 2)
+                self.grid.SetCellValue(self.GetXICEntries()-1, 1, prevstart)
+                self.grid.SetCellValue(self.GetXICEntries()-1, 2, prevstop)
+                    
+                
             self.mark_base.append({})
     
     def GetXICEntries(self):
@@ -6627,7 +6640,7 @@ class TopLevelFrame(wx.Frame):
         self.page_bmp = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE, wx.ART_OTHER, wx.Size(16, 16))
 
         # add the panes to the manager
-        self._mgr.AddPane(self.ctrl, aui.AuiPaneInfo().CenterPane().Caption("BlaisBrowser"))
+        self._mgr.AddPane(self.ctrl, aui.AuiPaneInfo().CenterPane().Caption("mzStudio"))
         #self._mgr.Bind(wx.lib.agw.aui.EVT_AUI_PANE_CLOSE, self.OnPageClose)
         #self._mgr.Bind(wx.lib.agw.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.OnPageClose)
         #self._mgr.Bind(wx.lib.agw.aui.EVT_AUI, self.OnPageClose)
@@ -7425,8 +7438,13 @@ in order to access .RAW, .WIFF and .D files.  Enable now?
             if askdialog.ShowModal() == wx.ID_YES:
                 #api_management.registerInterfaces()
                 from subprocess import call
-                call([sys.executable, '-m', 'multiplierz.mzAPI.management'])           
-        
+                call([sys.executable, '-m', 'multiplierz.mzAPI.management'])  
+    #from wx.py.crust import CrustFrame            
+    #pyFrame = CrustFrame()
+    #pyFrame.SetSize((750,525))
+    #pyFrame.Show(True)
+    #pyFrame.shell.interp.locals['app']=app
+    
     app.MainLoop()
 
     
