@@ -4,10 +4,10 @@ __version__ = '1.0'
 
 # Area window
 try:
-    import multiplierz.fit as fit
+    import fit
+    module_works = True
 except ImportError:
-    print "Fitting library not found!"
-    pass
+    module_works = False
 import wx
 #import pylab
 import matplotlib.pyplot as pyt
@@ -30,6 +30,10 @@ def calc_peak_area(data, multiplier=60.0):
 
 class AreaWindow(wx.Frame):
     def __init__(self, parent, id, xic):
+        if not module_works:
+            wx.MessageBox('XIC quantification window is disabled in this version of mzStudio.  Check https://github.com/blaisproteomics/mzstudio for a new version soon.')
+            raise NotImplementedError
+        
         print xic
         wx.Frame.__init__(self,parent,id, 'Area Window', size =(500,500))
         panel = wx.Panel(self)
