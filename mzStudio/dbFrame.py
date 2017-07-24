@@ -8,9 +8,9 @@ try:
     from agw import pybusyinfo as PBI
 except ImportError: # if it's not there locally, try the wxPython lib.
     import wx.lib.agw.pybusyinfo as PBI
-import BlaisPepCalcSlim_aui as BlaisPepCalc
+#import BlaisPepCalcSlim_aui as BlaisPepCalc
 import DatabaseOperations as db    
-import QueryBuilder    
+#import QueryBuilder    
 import os
 import mzStudio as BlaisBrowser
 import re    

@@ -49,7 +49,7 @@ class XICPalette(wx.Frame):
                     if curWin > winmax:
                         winmax = curWin
             winmax += 1
-            print winmax
+            #print winmax
             for k in range(0,10):
                 if self.frm.grid.GetCellValue(k, 0) == str(self.key):
                     self.frm.grid.SetCellValue(k + trace, 0, str(winmax))
