@@ -3,11 +3,11 @@ __version__ = '1.0'
 
 
 # Area window
-try:
-    import fit
-    module_works = True
-except ImportError:
-    module_works = False
+#try:
+    #import fit
+    #module_works = True
+#except ImportError:
+    #module_works = False
 import wx
 #import pylab
 import matplotlib.pyplot as pyt
@@ -16,23 +16,35 @@ import numpy
 import os
 
 
-def calc_peak_area(data, multiplier=60.0):
-    # Get Gaussian Fit Peak Area
-    params = (numpy.mean([y for (x,y) in data]),
-              numpy.median([x for (x,y) in data]),
-              0.3, 0)
-    (f,p,R2) = fit.fit_data(data=data, parameters=params, function=fit.gauss)
+#def calc_peak_area(data, multiplier=60.0):
+    ## Get Gaussian Fit Peak Area
+    #params = (numpy.mean([y for (x,y) in data]),
+              #numpy.median([x for (x,y) in data]),
+              #0.3, 0)
+    #(f,p,R2) = fit.fit_data(data=data, parameters=params, function=fit.gauss)
 
-    # Use integral of gaussian
-    a = float(p[0])
-    c = float(p[2])
-    return abs(a * c * multiplier * math.sqrt(2*math.pi))
+    ## Use integral of gaussian
+    #a = float(p[0])
+    #c = float(p[2])
+    #return abs(a * c * multiplier * math.sqrt(2*math.pi))
+    
+
+def calc_peak_area(data, multiplier = 1):
+    total = 0
+    for i in range(0, len(data)-1):
+        mz1, int1 = data[i]
+        mz2, int2 = data[i+1]
+        width = mz2 - mz1
+        height = (int1 + int2) / 2
+        total += width * height
+    return total
+        
 
 class AreaWindow(wx.Frame):
     def __init__(self, parent, id, xic):
-        if not module_works:
-            wx.MessageBox('XIC quantification window is disabled in this version of mzStudio.  Check https://github.com/blaisproteomics/mzstudio for a new version soon.')
-            raise NotImplementedError
+        #if not module_works:
+            #wx.MessageBox('XIC quantification window is disabled in this version of mzStudio.  Check https://github.com/blaisproteomics/mzstudio for a new version soon.')
+            #raise NotImplementedError
         
         print xic
         wx.Frame.__init__(self,parent,id, 'Area Window', size =(500,500))
@@ -55,8 +67,8 @@ class AreaWindow(wx.Frame):
             x.append(entry[0])
             y.append(entry[1])
         if len(xic) > 2:
-            (f, p, R2) = fit.fit_data(data=xic, function=fit.gauss)
-            p1 = pyt.plot(x, list(f), color = 'r', linewidth = 2)
+            #(f, p, R2) = fit.fit_data(data=xic, function=fit.gauss)
+            #p1 = pyt.plot(x, list(f), color = 'r', linewidth = 2)
             pyt.plot(x, y, color = 'b')        
             area = calc_peak_area(xic)
             pyt.text(min(x), max(y), "Area %.1e" % area)#, {'color':'k','fontsize':14}
