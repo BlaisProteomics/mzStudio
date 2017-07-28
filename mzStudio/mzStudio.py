@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0'
+__version__ = '1.0.1'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -40,6 +40,9 @@ if wx.__version__[0] != '3':
     print "WARNING- wxPython version %s may not be fully supported.  Please install wxPython 3." % wx.__version__
 
 
+
+CENTROID_SCALE = 3
+
 #-----------------SYSTEM IMPORTS                      
 import re, sys, cPickle, platform, time, thread, csv, gc
 from collections import defaultdict
@@ -47,6 +50,11 @@ from tempfile import mkdtemp
 from random import seed
 seed(1)
 import math
+
+#---------------------------------Set backend so matplotlib uses wx rather than Tkinter - otherwise, they fight for event loop.
+#import matplotlib
+#matplotlib.use('WXAgg', force=True)
+#------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -871,7 +879,8 @@ class MS_Data_Manager():
                     ['searchAlgorithm'],
                     ['labelPeaks'],
                     ['multiFileOption'],
-                    ['ionLabelThresh']]
+                    ['ionLabelThresh'],
+                    ['areaCalcOption']]
         settingsfile = open(os.path.join(installdir, r'settings\settings.txt'), 'w')
         settings = current['settings']
         
@@ -1392,7 +1401,7 @@ class MS_Data_Manager():
                 space = 60 #40 originally, added extra space for labels
                 if mode == "SPEC":
                     indent = 50
-                    width = 900
+                    width = float(sz[0])-150 #900
                 if mode == "RIC-SPEC":
                     indent = (float(sz[0])/float(2))
                     width = (float(sz[0])/float(2))-100
@@ -1705,12 +1714,24 @@ class MS_Data_Manager():
         found_mz = 0
         found_int = 0
         #if self.files[filename]['labelThreshOverride']: tolerance=self.files[filename]['labelThreshOverride']
-        for j, member in enumerate(scan):
-            if mz > member[0] - tolerance and mz < member[0] + tolerance:
-                found = True
-                found_mz = member[0]
-                found_int = member[1]
-                break
+        #for j, member in enumerate(scan):
+            #if mz > member[0] - tolerance and mz < member[0] + tolerance:
+                #found = True
+                #found_mz = member[0]
+                #found_int = member[1]
+                #break
+        #candidate = min(scan, key = lambda x: abs(mz - x[0]))
+        #if (mz - tolerance) < candidate[0] < (mz + tolerance):
+            #found_mz, found_int = candidate
+            #found = True
+        
+        candidates = [x for x in scan if mz-tolerance < x[0] < mz+tolerance]
+        try:
+            found_mz, found_int = max(candidates, key = lambda x: x[1])[:2]
+            found = True
+        except:
+            pass
+        
         return found, found_mz, found_int
 
     def set_scan(self, scanNum, file_number):
@@ -1734,6 +1755,8 @@ class MS_Data_Manager():
             filt = currentFile["filter_dict"][currentFile["scanNum"]]  #[currentFile["mgf_scan_dict"]
         elif currentFile['vendor']=='ABI':
             filt = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])]
+        elif currentFile['vendor']=='ABI-MALDI':
+            filt = currentFile["filter_dict"].values()[0]
         if filt.find("FTMS") > -1 or filt.find("TOF MS") > -1 or filt.find("TOF PI") > -1 or filt.find("Q3") >-1 or filt.find("EMS") > -1 or filt.find("PI ") > -1 or filt.find("ER MS ") > -1 or filt.find("ITMS + p ESI Full ms ") > -1 or filt.find("Precursor") > -1 or filt.find("EPI") > -1:
             if currentFile["viewCentroid"]:
                 if currentFile['vendor']=='Thermo':
@@ -1743,7 +1766,7 @@ class MS_Data_Manager():
                         if ' c ' not in filt and 'cent' not in filt:
                             try:
                                 precentroidscan = currentFile['m'].scan(currentFile['scanNum'])
-                                threshold = average(zip(*precentroidscan)[1]) * 2
+                                threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
                                 currentFile['scan'] = mz_centroid(precentroidscan, threshold = threshold)
                             except:
                                 currentFile['scan'] = currentFile['m'].scan(currentFile['scanNum'])
@@ -1770,7 +1793,7 @@ class MS_Data_Manager():
         if currentFile['vendor']=='ABI':
             currentFile['fd'] = self.Create_Filter_Info(currentFile["filter_dict"][(currentFile["scanNum"],currentFile['experiment'])], 'ABI')
         if currentFile['vendor']=='ABI-MALDI':
-            currentFIle['fd']= self.Create_Filter_Info(urrentFile["filter_dict"][currentFile["scanNum"]], 'ABI-MALDI')
+            currentFile['fd']= self.Create_Filter_Info(currentFile["filter_dict"][currentFile["scanNum"]], 'ABI-MALDI')
 
     def set_average_scan(self, start, stop, filt, file_number):
         currentFile = self.files[self.Display_ID[file_number]]
@@ -1861,7 +1884,9 @@ class MS_Data_Manager():
             key = (scan, exp)
             print key
         if vendor == 'ABI-MALDI':
-            key = 1
+            key = None
+            if self.files[filename]["fd"]['mode'] == 'ms1':
+                return
         
         currentFilter = self.files[filename]["filter_dict"][key]
         
@@ -1871,7 +1896,14 @@ class MS_Data_Manager():
             elif currentFilter.find("TOF PI + p NSI Full ms2")>-1:
             #if vendor == 'ABI':
                 #scan_data = self.files[filename]['m'].cscan(self.files[filename]['m'].scan_time_from_scan_name(scan), exp, algorithm="new", eliminate_noise = True, step_length = 0.025, peak_min = 3)
-                scan_data = self.files[filename]['m'].scan(self.files[filename]['scanNum'], centroid=True)                
+                scan_data = self.files[filename]['m'].scan(self.files[filename]['scanNum'], centroid=True)   
+            else:
+                try:
+                    precentroidscan = self.files[filename]['m'].scan()
+                    threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
+                    scan_data = mz_centroid(precentroidscan, threshold)
+                except:
+                    scan_data = mz_centroid(self.files[filename]['m'].scan())
         else:
             scan_data = self.files[filename]['scan']
             
@@ -2753,7 +2785,7 @@ class DrawPanel(wx.Panel):
         
         '''
         currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
-        if currentFile['vendor'] in ['Thermo', 'mgf']:
+        if currentFile['vendor'] in ['Thermo', 'mgf', 'ABI-MALDI']:
             filt = currentFile["filter_dict"][currentFile["scanNum"]]
         #elif currentFile['vendor'] == 'ABI':
         #    filt = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])
@@ -2782,7 +2814,7 @@ class DrawPanel(wx.Panel):
         if filt.find("etd")>-1:
             scan_type = 'etd'
         if vendor == 'ABI-MALDI':
-            if filt.find("_MSMS_") > -1:
+            if filt.lower().find("_msms_") > -1:
                 scan_type = "MS2"
             else:
                 scan_type = "MS1"
@@ -2810,7 +2842,9 @@ class DrawPanel(wx.Panel):
             cent_data = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = current['settings']['threshold_cent_abi'])
         elif vendor == "ABI-MALDI":
             scan_data = currentFile["scan"]
-            cent_data = None
+            threshold = average(zip(*scan_data)[1]) * CENTROID_SCALE
+            cent_data = mz_centroid(scan_data, threshold)            
+            
         else:
             scan_data = None
             cent_data = None
@@ -2826,7 +2860,7 @@ class DrawPanel(wx.Panel):
                 seqkey = 'Annotated Sequence'
                 varmodkey = 'Modifications'
             try:
-                if vendor in ['Thermo', 'mgf']:
+                if vendor in ['Thermo', 'mgf','ABI-MALDI', 'ABI']:
                     seq = currentFile["ID_Dict"][currentFile["scanNum"]][seqkey]
                     varmod = currentFile["ID_Dict"][currentFile["scanNum"]][varmodkey]
                     fixedmod = currentFile["fixedmod"]
@@ -2877,8 +2911,14 @@ class DrawPanel(wx.Panel):
         
         rawfile = currentFile["FileAbs"]
         
+        #need view centroid
+        #need view processed data
+        
+        view_processed_data = currentFile['Processing']
+        view_centroid = currentFile['settings']['viewCentroid']
+        
         spec = SpecObject.SpecObject(vendor, profile, detector, scan_type, scan_data, cent_data, processed_scan_data, filt, display_range, mass_ranges, score,
-                 sequence, varmod, fixedmod, scan, charge, rawfile)
+                 sequence, varmod, fixedmod, scan, charge, rawfile, view_processed_data, view_centroid)
         
         return spec
 
@@ -3081,6 +3121,13 @@ class DrawPanel(wx.Panel):
                 activeFile["experiment"]=experiment.strip()
                 self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
                 self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"], vendor = 'ABI')
+            elif activeFile['vendor'] == 'mgf':
+                scan = int(dlg.GetValue())
+                activeFile['scanNum'] = scan
+                self.msdb.set_scan(activeFile['scanNum'], self.msdb.active_file)
+                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"])
+            else:
+                raise Exception
             self.Window.UpdateDrawing()
             self.Refresh()
 
@@ -3811,7 +3858,7 @@ class DrawPanel(wx.Panel):
                         for member in currentFile['xic'][grid][currentFile['active_xic'][grid]]:
                             if member[0]>startTime and member[0]<stopTime:
                                 xic.append(member)
-                        aw = AreaWindow.AreaWindow(None, -1, xic)
+                        aw = AreaWindow.AreaWindow(None, -1, xic, currentFile['settings']['areaCalcOption'])
                         if aw.valid:
                             aw.Show()
                         if self.parent.parent.area_tb:  #self.parent.parent.area_tb
@@ -4847,7 +4894,7 @@ class DrawPanel(wx.Panel):
                 if currentFile['vendor']=='ABI-MALDI':
                     try:
                         precentroidscan = currentFile['m'].scan()
-                        threshold = average(zip(*precentroidscan)[1]) * 2
+                        threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
                         scan_data = mz_centroid(precentroidscan, threshold)
                     except:
                         scan_data = mz_centroid(currentFile['m'].scan())
@@ -6620,7 +6667,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 0.9.9, 2017-07-06, build 1)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.1, 2017-07-27)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)

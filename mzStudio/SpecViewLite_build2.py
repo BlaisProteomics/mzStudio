@@ -461,10 +461,11 @@ class SpecWindow(BufferedWindow):  #wx.Window
         self.adjusted_threshold = 0
         self.parent_window = parent_window
         self.spectrum = spectrum
-        if self.spectrum.processed_scan_data:
-            self.show_processed_data = True
-        else:
-            self.show_processed_data = False
+        self.show_processed_data = self.spectrum.viewProcData
+        #if self.spectrum.processed_scan_data:
+        #    self.show_processed_data = True
+        #else:
+        #    self.show_processed_data = False
         print self.spectrum.filter
         print "S"
         self.set_axes()
@@ -939,7 +940,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
             self.AnnotateText(dc, k)
             self.AnnotateLines(dc,k)
             self.MarkSelected(dc,k)
-            if self.spectrum.profile and not self.spectrum.processed_scan_data:
+            if self.spectrum.profile and not (self.show_processed_data or self.spectrum.viewCent):      #if profFlag and not (currentFile["viewCentroid"] or currentFile['Processing']):
                 self.DrawProfileSpectrum(dc, k)
         self.storeImage(dc)
         #bpd = wx.BufferedPaintDC(self, buffer)
@@ -1093,12 +1094,24 @@ class SpecWindow(BufferedWindow):  #wx.Window
         found = False
         found_mz = 0
         found_int = 0
-        for j, member in enumerate(scan):
-            if mz > member[0] - tolerance and mz < member[0] + tolerance:
-                found = True
-                found_mz = member[0]
-                found_int = member[1]
-                break
+        
+        
+        
+        #for j, member in enumerate(scan):
+            #if mz > member[0] - tolerance and mz < member[0] + tolerance:
+                #found = True
+                #found_mz = member[0]
+                #found_int = member[1]
+                #break
+            
+        candidates = [x for x in scan if mz-tolerance < x[0] < mz+tolerance]
+        try:
+            found_mz, found_int = max(candidates, key = lambda x: x[1])[:2]
+            found = True
+        except:
+            pass            
+            
+            
         return found, found_mz, found_int
 
     def build_label_dict(self, cg):
@@ -1519,7 +1532,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
         self.width = width
         labels = []
         scan_type = 'MS2'
-        if self.spectrum.vendor == 'Thermo':
+        if self.spectrum.vendor in ['Thermo', 'mgf', 'ABI-MALDI']:
             filter = self.spectrum.filter
         elif self.spectrum.vendor == 'ABI':
             #try:

@@ -156,7 +156,7 @@ class FileEntry():
         self.filename = filename
 
 class BaseEntry():
-    def __init__(self, pid, sequence='', varmod='', fixedmod='', rawfile='', charge=0, filter='', title='', detector="IT", display_range=[], full_range=[], mass_ranges=[] ,axes=1, experiment='', scan=1, notes='', massList='', scan_data=None, cent_data = None, vendor='Thermo',profile=False, scan_type="MS2", mascot_score=None, processed_scan_data=None):
+    def __init__(self, pid, sequence='', varmod='', fixedmod='', rawfile='', charge=0, filter='', title='', detector="IT", display_range=[], full_range=[], mass_ranges=[] ,axes=1, experiment='', scan=1, notes='', massList='', scan_data=None, cent_data = None, vendor='Thermo',profile=False, scan_type="MS2", mascot_score=None, processed_scan_data=None, viewProcData=False, viewCent=False):
         self.type = "Spectrum"
         self.sequence = sequence
         self.varmod = varmod
@@ -187,6 +187,8 @@ class BaseEntry():
         self.lines = []
         self.text = []
         self.processed_scan_data = processed_scan_data
+        self.viewProcData = viewProcData
+        self.viewCent = viewCent
         print "ID assigned: " + str(self.pid)
 
     def __str__(self):
@@ -832,7 +834,8 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
     def OnSave(self, event):
         if self.NamedFile:
             pickle_file = open(self.NamedFile, "w")
-            cPickle.dump(self.db, pickle_file)
+            data = self.tc.tree.SaveItemsToList(self.tc.tree.GetRootItem())
+            cPickle.dump(data, pickle_file)
             pickle_file.close()
         else:
             self.OnSaveAs(None)

@@ -2,6 +2,17 @@
 
 import wx
 
+
+'''
+
+Make sure the new setting is added to dictionary in OnUpdate() funciton.
+Make sure you add your settings to mzStudio.py in SaveSettings() function.
+
+
+'''
+
+
+
 class Page(wx.Panel):
     def __init__(self, parent):
         panel = wx.Panel.__init__(self, parent)
@@ -35,7 +46,7 @@ class SettingsFrame(wx.Frame):
         return (("Centroid Profile Data", (10, 10), (100,30),self.page_general), ("Multifile Report", (230, 10), (60,30),self.page_general),
                 ("Label Threshold", (10, 10), (100,20),self.page_thermo), ("Ion label tolerance", (230, 10), (60,30),self.page_thermo),
                 ("Min Charge to Label", (10, 50), (100,30),self.page_general), ("Label Peaks", (230, 50), (60,30),self.page_general),
-                ("Max Charge to Label", (10, 90), (100,30),self.page_general),
+                ("Max Charge to Label", (10, 90), (100,30),self.page_general), ("Area Algorithm", (230, 90), (60,30),self.page_general),
                 ("Show resolution", (10, 130), (100,20),self.page_general),
                 ("Main Font Size", (10, 170), (100,20),self.page_general),
                 ("Main Font", (10, 210), (100,20),self.page_general),
@@ -113,6 +124,7 @@ class SettingsFrame(wx.Frame):
         return (('viewCentroid', (110, 10), (100,20), ["True","False"], ["True","False"].index(str(self.settings['viewCentroid'])), self.page_general),
                 ('multiFileOption', (320, 10), (100,20), ["LOAD ALL","SEQUENTIAL"], ["LOAD ALL","SEQUENTIAL"].index(str(self.settings['multiFileOption'])), self.page_general),
                 ('labelPeaks', (320, 50), (100,20), ["True","False"], ["True","False"].index(str(self.settings['labelPeaks'])), self.page_general),
+                ('areaCalcOption', (320, 90), (100,20), ["SUM","GUASSIAN"], ["SUM","GUASSIAN"].index(str(self.settings['areaCalcOption'])), self.page_general),
                 ('label_res', (110, 130), (100,20), ["True","False"], ["True","False"].index(str(self.settings['label_res'])), self.page_general),
                ('main_font_size', (110, 170), (100,20), ["8", "9", "10", "12"], ["8", "9", "10", "12"].index(str(self.settings['mainfont']['size'])), self.page_general),
                ('main_font_font', (110, 210), (100,20), ["ROMAN", "SWISS"], ["ROMAN", "SWISS"].index(str(self.settings['mainfont']['font'])), self.page_general),
@@ -157,6 +169,7 @@ class SettingsFrame(wx.Frame):
         currentFile['viewCentroid'] = True if self.FindWindowByName("viewCentroid").GetValue() == 'True' else False
         currentFile['settings']['labelPeaks'] = True if self.FindWindowByName("labelPeaks").GetValue() == 'True' else False
         currentFile['settings']['multiFileOption'] = self.FindWindowByName("multiFileOption").GetValue()
+        currentFile['settings']['areaCalcOption'] = self.FindWindowByName("areaCalcOption").GetValue()
         currentFile['settings']['ionLabelThresh'] = float(self.FindWindowByName("ionLabelThresh").GetValue())
                                                                           
         currentFile['drawCentroid'] = True if self.FindWindowByName("drawCentroid").GetValue() == 'True' else False

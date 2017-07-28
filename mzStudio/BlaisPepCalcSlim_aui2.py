@@ -73,7 +73,7 @@ TBFLAGS = ( wx.TB_HORIZONTAL
 
 
 
-from multiplierz.mass_biochem import fragment, mw, protonMass, AminoAcidMasses, chemicalDataMass#, unimod
+from multiplierz.mass_biochem import fragment, mw, protonMass, AminoAcidMasses, chemicalDataMass, AW#, unimod
 
 def replace(foo, bar, baz):
     foo[baz] = foo[bar]
@@ -610,31 +610,21 @@ class BlaisPepCalc(wx.Panel):
             elif _ions == "b/y - 4 phos":
                 _sub = (4*(3* mz_masses.mass_dict[calcType]['H'] + mz_masses.mass_dict[calcType]['P'] + 4* mz_masses.mass_dict[calcType]['O']))/float(int(cg_by))
             _ions = 'b/y'
-            
+        iontypes = ['b','y'] if _ions == 'b/y' else ['c','z']
+        
         if nterm == "None":
             nterm = ''
         if cterm == "None":
             cterm = ''        
         
         aminos = ''.join([x for x in list(seq) if x.isupper()])        
-        
+    
         mods = []
-        if nterm:
-            nmod = mz_masses.calc_mass(mz_masses.Nterm_dict[nterm])
-            mods.append((1, nmod))
-            #nmodstr = ['%s1: %.5f' % (aminos[0], nmod)]
-        if cterm:
-            cmod = mz_masses.calc_mass(mz_masses.Cterm_dict[cterm])
-            mods.append((len(aminos), cmod))
-            #cmodstr = ['%s%d: %.5f' % (aminos[-1], len(aminos), cmod)]
-        
-        pa = re.compile('([a-z0-9.\]\[]*[A-Z]+?)')        
+        pa = re.compile('([a-z0-9\-.\]\[]*[A-Z]+?)')        
         modtokens = pa.findall(seq)
         for pos, segment in enumerate(modtokens, start = 1):
-            if all(x.isalpha() for x in segment) and any(x for x in segment if x.islower()):
-                #token = ''.join(x for x in segment if x.islower())
-                #aa = ''.join(x for x in segment if x.isupper())
-                token = segment[:-1]
+            if any(x.isalpha() for x in segment[:-1]) and any(x for x in segment if x.islower()):
+                token = segment[:-1].strip('[]')
                 aa = segment[-1:]
                 if not token:
                     continue
@@ -660,16 +650,23 @@ class BlaisPepCalc(wx.Panel):
             elif not len(segment)==1:
                 raise ValueError, 'Parsing error on or around %s' % segment            
         
-        totalModMass = sum(zip(*mods)[1]) if mods else 0
-        
         modstrs = ['%s%d: %f' % (aminos[i-1], i, mass) for i, mass in mods]
         
-        iontypes = ['b','y'] if _ions == 'b/y' else ['c','z']
+        if nterm:
+            nmod = mz_masses.calc_mass(mz_masses.Nterm_dict[nterm])
+            mods.append((0, nmod - AW['H'])) # Only one *-term mod at at time.
+            nmodstr = 'N-term: %.5f' % nmod
+            modstrs.append(nmodstr)
+        if cterm:
+            cmod = mz_masses.calc_mass(mz_masses.Cterm_dict[cterm])
+            mods.append((len(aminos)+1, cmod  - (AW['H'] + AW['O'])))
+            cmodstr = 'C-term: %.5f' % cmod       
+            modstrs.append(cmodstr)
         
-        if mods:
-            modmass = sum(zip(*mods)[1])
-        else:
-            modmass = 0
+        
+        
+        totalModMass = sum(zip(*mods)[1]) if mods else 0
+        
         precmass = mw(aminos) + totalModMass
         chgmass = ((precmass + (protonMass * cg_by)) / cg_by) 
         chgfrags = fragment(aminos, modstrs, ions = iontypes, charges = [cg_by])
@@ -793,8 +790,12 @@ class BlaisPepCalc(wx.Panel):
 
     def OnXFer(self, event):
         if not self.y_ions and self.b_ions:
-            print "No sequence stored; returning."
+            print "Invalid command; no sequence stored."
             return
+        if self.parent.parent.ctrl.GetSelection() == -1:
+            print "Invalid command; no data selected."
+            return
+        
         
         if self.parent.labelOverwrite:
             currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())

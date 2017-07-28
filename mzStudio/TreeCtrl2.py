@@ -438,13 +438,14 @@ class TestTreeCtrlPanel(wx.Panel):
                       'HCGly-HCGly-HCGly-HCGly': 'HCGlyHCGlyHCGlyHCGly',
                       'HNGly-HNGly': 'HNGlyHNGly',
                       'LbA-LbA': 'LbALbA',
-                      'Acetyl':'Acetyl'}
+                      'Acetyl':'Acetyl',
+                      'TMT': 'cTMT'}
             for mod in fixedmod.split(","):
                 print mod
                 mod = mod.strip()
                 if mod.find("N-term") > -1:
                     print "NTERM"
-                    mod = mod.split(" ")[1]
+                    mod = mod.split(" ")[0]
                     mod = mod.strip()
                     if mod in mod_dict.keys():
                         bpc.b.FindWindowByName("nTerm").SetValue(mod_dict[mod])
@@ -477,10 +478,33 @@ class TestTreeCtrlPanel(wx.Panel):
         #-------You have to catch the event, and use event.GetLabel to update the actual object.
         #pos = event.GetPosition()
         #item, flags, col = self.tree.HitTest(pos)
-        self.column_edit = 0  # tell the event handler which column
-        self.tree.EditLabel(self.tree.GetSelection())
+        #self.column_edit = 0  # tell the event handler which column
+        #self.tree.EditLabel(self.tree.GetSelection())  #ON LABEL END EDIT CATCHES EVENT
         # Edit Infobar
         # For spectrum, this is the sequence
+        
+        item = self.tree.GetSelection()
+        dlg = wx.TextEntryDialog(self, 'Enter New Info Bar', 'Edit Info Bar',  defaultValue=self.tree.GetItemText(item, 0))
+        
+        if dlg.ShowModal() == wx.ID_OK:
+            item = self.tree.GetSelection()
+            data = self.tree.GetPyData(item)
+            if 'spectrum_data' in data.keys():
+                obj = data['spectrum_data']
+                obj.sequence = dlg.GetValue()  #self.tree.GetItemText(item, 0)
+            if 'xic_data' in data.keys():
+                obj = data['xic_data']
+                obj.title = dlg.GetValue() #self.tree.GetItemText(item, 0) 
+            if 'exp' in data.keys():
+                if data['exp']=='folder':
+                    pass
+            
+            #data['exp']=dlg.GetValue()
+            self.tree.SetItemText(item, dlg.GetValue(), 0)
+            
+            self.parent.TreeRefresh()            
+        dlg.Destroy()        
+        
         
         
     def OnPopupFour_evt(self, event):
@@ -508,26 +532,30 @@ class TestTreeCtrlPanel(wx.Panel):
         
         
     def OnLabelEndEdit(self, event):
-        #------------------------------Text is edited, but need to update the object.
-        if self.column_edit == 0:
-            item = self.tree.GetSelection()
-            data = self.tree.GetPyData(item)
-            if 'spectrum_data' in data.keys():
-                obj = data['spectrum_data']
-                obj.sequence = event.GetLabel()  #self.tree.GetItemText(item, 0)
-            if 'xic_data' in data.keys():
-                obj = data['xic_data']
-                obj.title = event.GetLabel()  #self.tree.GetItemText(item, 0)            
-            self.parent.TreeRefresh()            
-        #--------------------------------For editing Title bar; strange error so this is not used now (see above).
-        if self.column_edit == 1:
-            item = self.tree.GetSelection()
-            data = self.tree.GetPyData(item)
-            data['exp']=event.GetLabel() #self.tree.GetItemText(item, 1)
-            self.tree.SetItemText(item, self.column_text, 0)
-            #self.tree.Refresh()
-            self.parent.TreeRefresh()
         event.Skip()
+        ##------------------------------Text is edited, but need to update the object.
+        #if self.column_edit == 0:
+            #item = self.tree.GetSelection()
+            #data = self.tree.GetPyData(item)
+            #if 'spectrum_data' in data.keys():
+                #obj = data['spectrum_data']
+                #obj.sequence = event.GetLabel()  #self.tree.GetItemText(item, 0)
+            #if 'xic_data' in data.keys():
+                #obj = data['xic_data']
+                #obj.title = event.GetLabel()  #self.tree.GetItemText(item, 0) 
+            #if 'exp' in data.keys():
+                #if data['exp']=='folder':
+                    #pass
+            #self.parent.TreeRefresh()            
+        ##--------------------------------For editing Title bar; strange error so this is not used now (see above).
+        #if self.column_edit == 1:
+            #item = self.tree.GetSelection()
+            #data = self.tree.GetPyData(item)
+            #data['exp']=event.GetLabel() #self.tree.GetItemText(item, 1)
+            #self.tree.SetItemText(item, self.column_text, 0)
+            ##self.tree.Refresh()
+            #self.parent.TreeRefresh()
+        #event.Skip()
         
         
     def OnEditItem(self, event):
