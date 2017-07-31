@@ -1061,7 +1061,8 @@ def calc_pep_mass_from_residues(sequence, cg = 1, varmod = '', fixedmod = '', Nt
     
     currentDict = None
     
-    resadd = re.compile('\[([0-9]+.[0-9]+)\]([A-Z])')
+    #resadd = re.compile('\[([0-9]+.[0-9]+)\]([A-Z])')
+    resadd = re.compile('\[([0-9]+.?[0-9]*)\]([A-Z])')
     
     if calcType=='mi':
         currentDict=mass_dict['mi']

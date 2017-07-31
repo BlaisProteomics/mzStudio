@@ -169,13 +169,13 @@ class dbFrame(wx.Panel):
                        '[lk]':'like "%%"', '[pdesc]':'"Protein Description"',
                        '[set1]':'"Accession Number", "Protein Description", "Peptide Sequence", "Variable Modifications", "Experimental mz", "Charge", "Predicted mr", "Delta", "Peptide Score", "Spectrum Description", "Scan", "GeneName"',
                        '~vm':'"Variable Modifications"', '~lk':'like "%%"', '~pepd':'order by "Peptide Score" desc', '~gn':'"GeneName"', '~var':'"Variable Modifications"',
-                       '~xc':'"Cross-Correlation"', '~sc':'"Peptide Score"', '~ex':'"Expect"', '~ac':'"Accession"', '~de':'"Protein Description"',}
+                       '~xc':'"Cross-Correlation"', '~sc':'"Peptide Score"', '~ex':'"Expect"', '~ac':'"Accession"', '~de':'"Protein Description"', '~seq':'"Peptide Sequence"'}
 
     def OnClose(self, event):
-        if self.aui_pane.name != event.pane.name:
-            print "%s got event but isn't being closed." % self.aui_pane.name
-            event.Skip()
-            return 
+        #if self.aui_pane.name != event.pane.name:
+        #    print "%s got event but isn't being closed." % self.aui_pane.name
+        #    event.Skip()
+        #    return 
     
         self.currentFile["xlsSource"]=''
         self.currentFile['SearchType'] = None  
@@ -204,7 +204,7 @@ class dbFrame(wx.Panel):
         self.parent.parentFrame.ObjectOrganizer.removeObject(self)
                 
         
-        print "Cleanup goes here!"
+        print "Db frame close!"
 
 
     def SizeFrame(self):

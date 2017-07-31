@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -971,6 +971,7 @@ class MS_Data_Manager():
         current["xic_title"]=[["TIC"]]
         current["rows"] = []
         current["overlay"]={}
+        current["overlay_sequence"]={}
         current["combo"] = []
         current["database"]=None
         current["Display"]=True
@@ -2593,7 +2594,7 @@ class DrawPanel(wx.Panel):
             self.sb.aui_pane_obj = self.parent.parent._mgr.GetPane(self.sb)
                                 
             self.parent.parent._mgr.Update() 
-            self.parent.parent._mgr.Bind(aui.EVT_AUI_PANE_CLOSE, self.sb.OnClose)
+            #self.parent.parent._mgr.Bind(aui.EVT_AUI_PANE_CLOSE, self.sb.OnClose)
         else:
             self.sb = self.parent.ObjectOrganizer.ActiveObjects[SpecBase_aui3.SpecFrame]
     
@@ -2811,6 +2812,8 @@ class DrawPanel(wx.Panel):
             scan_type = "MS2"
         elif filt.find("Full ms ")>-1:
             scan_type = "MS1"
+        elif filt.find("Full lock ms ")>-1:
+            scan_type = "MS1"
         if filt.find("etd")>-1:
             scan_type = 'etd'
         if vendor == 'ABI-MALDI':
@@ -2870,14 +2873,22 @@ class DrawPanel(wx.Panel):
                     fixedmod = currentFile["fixedmod"]                    
             except:
                 try:
-                    seq = currentFile['overlay_sequence']
+                    seq = currentFile['overlay_sequence'][currentFile['scanNum']]
                     varmod = ''
                     fixedmod = ''
                 except:
                     seq = ''
                     varmod = ''
                     fixedmod = ''       
-                    
+            if currentFile['scanNum'] in currentFile['overlay'].keys():
+                seq = currentFile['overlay_sequence'][currentFile['scanNum']]
+                #Need to get N-term mods from overlay?  For now, use fixed mods?
+                #cTMT
+                #TMT
+                fixedmod = ''
+                varmod = ''
+                
+            
             peptide_container = mz_core.create_peptide_container(seq, varmod, fixedmod)
             sequence = ''
             for member in peptide_container:
@@ -5033,7 +5044,7 @@ class DrawPanel(wx.Panel):
                 scan_type = 'MS2'
             if filter.find("FTMS")>-1 or filter.find("TOF")>-1:
                 rd = 4 #HIGH MASS ACCURACY SHOW MORE DECIMAL PLACES
-            if filter.find("FTMS") > -1 and filter.find("Full ms ") > -1:
+            if filter.find("FTMS") > -1 and (filter.find("Full ms ") > -1 or filter.find("Full lock ms") > -1):
                 scan_type = 'MS1'
             if filter.find("TOF MS") > -1 and filter.find("Full ms ") > -1:
                 scan_type = 'MS1'
@@ -5342,9 +5353,15 @@ class DrawPanel(wx.Panel):
             peptide_container = mz_core.create_peptide_container(seq, varmod, fixedmod)
             sequence = ''
             for member in peptide_container:
-                sequence += member            
-            dc.DrawText(sequence + ' (' + str(score) + ')', currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25)
-            self.msdb.svg["text"].append((seq, currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25,0.00001))
+                sequence += member
+            if currentFile['scanNum'] not in currentFile['overlay'].keys():    
+                dc.DrawText(sequence + ' (' + str(score) + ')', currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25)
+                self.msdb.svg["text"].append((seq, currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25,0.00001))
+            else:
+                dc.DrawText("Overlay:  " + currentFile['overlay_sequence'][currentFile['scanNum']] + '  (Clear for search result)', currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25)
+        elif currentFile['scanNum'] in currentFile['overlay'].keys():
+            dc.DrawText(currentFile['overlay_sequence'][currentFile['scanNum']], currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25)
+            
 
     def DrawProfileSpectrum(self, dc, key, rawID):
         '''
@@ -6667,7 +6684,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.1, 2017-07-27)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.2, 2017-07-31)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -6688,6 +6705,8 @@ class TopLevelFrame(wx.Frame):
 
         # add the panes to the manager
         self._mgr.AddPane(self.ctrl, aui.AuiPaneInfo().CenterPane().Caption("mzStudio"))
+        
+        self._mgr.Bind(aui.EVT_AUI_PANE_CLOSE, self.OnClose)
         #self._mgr.Bind(wx.lib.agw.aui.EVT_AUI_PANE_CLOSE, self.OnPageClose)
         #self._mgr.Bind(wx.lib.agw.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.OnPageClose)
         #self._mgr.Bind(wx.lib.agw.aui.EVT_AUI, self.OnPageClose)
@@ -6816,7 +6835,24 @@ class TopLevelFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, handler, menuItem)
 
     def OnClose(self, evt):
-        evt.Skip()
+        
+        print "Caught close."
+        win = evt.GetPane()
+        cap = win.caption
+        
+        if cap == 'mzPepCalc':
+            bpc = self.parentFrame.ObjectOrganizer.getObjectOfType(BlaisPepCalcSlim_aui2.MainBPC)
+            #self.parentFrame.ObjectOrganizer.removeObject(bpc)
+            bpc.OnClose(None)
+        if cap == 'SpecStylus':
+            sb = self.parentFrame.ObjectOrganizer.getObjectOfType(SpecBase_aui3.SpecFrame)
+            #self.parentFrame.ObjectOrganizer.removeObject(bpc)
+            sb.OnClose(None)   
+        if cap.startswith("mzResult: "):
+            dbf = self.parentFrame.ObjectOrganizer.getObjectOfType(dbFrame.dbFrame)
+            dbf.OnClose(None)
+        #return
+        #evt.Skip()
     
     def OnSaveImage(self, evt): 
         curpage = self.ctrl.GetSelection()
@@ -7180,14 +7216,15 @@ class TopLevelFrame(wx.Frame):
                 #b = BlaisPepCalcSlim_aui2.BlaisPepCalc(self, -1, self.ctrl.ObjectOrganizer)
                 #MainBPC
                 b = BlaisPepCalcSlim_aui2.MainBPC(self, -1, self.parentFrame.ObjectOrganizer)
-                self._mgr.AddPane(b, aui.AuiPaneInfo().Left().Caption("PepCalc"))
+                self._mgr.AddPane(b, aui.AuiPaneInfo().Left().Caption("mzPepCalc"))
                 self._mgr.Update()
                 b.aui_pane = self._mgr.GetPaneByWidget(b)
                 
                 # THIS is how to properly catch the pane close event.
                 # _mgr can't be the third argument in a Bind call, but it can
                 # do the binding for some reason, which has the same effect.
-                self._mgr.Bind(aui.EVT_AUI_PANE_CLOSE, b.OnClose)
+                
+                #---* self._mgr.Bind(aui.EVT_AUI_PANE_CLOSE, b.OnClose)
             
             return
         
@@ -7343,7 +7380,7 @@ class TopLevelFrame(wx.Frame):
         
         dbf.aui_pane = self._mgr.GetPane(dbf)
         
-        self._mgr.Bind(aui.EVT_AUI_PANE_CLOSE, dbf.OnClose)
+        #self._mgr.Bind(aui.EVT_AUI_PANE_CLOSE, dbf.OnClose)
             
         #except:
             #del busy

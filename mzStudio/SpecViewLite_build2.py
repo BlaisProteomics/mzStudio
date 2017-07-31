@@ -1114,6 +1114,37 @@ class SpecWindow(BufferedWindow):  #wx.Window
             
         return found, found_mz, found_int
 
+    def GetNtermMod(self, fixedmods):
+        
+        mod_dict = {'iTRAQ4plex': 'iTRAQ',
+                    'TMT6plex': 'TMT',
+                    'TMT': 'cTMT',
+                    'iTRAQ8plex': 'iTRAQ8plex',
+                    'HGly-HGly': 'HCGlyHCGly',
+                    'HCGly-HCGly': 'HCGlyHCGly',
+                    'HCGly-HCGly-HCGly-HCGly': 'HCGlyHCGlyHCGlyHCGly',
+                    'HNGly-HNGly-HNGly-HNGly': 'HNGlyHNGlyHNGlyHNGly',
+                    'HNGly-HNGly': 'HNGlyHNGly',
+                    'LbA-LbA': 'LbALbA',
+                    'HbA-HbA': 'HbAHbA',
+                    'LbA-HbA': 'LbAHbA',
+                    'Acetyl': 'Acetyl',
+                    'Propionyl': 'Propionyl',
+                    'Phenylisocyanate': 'Phenylisocyanate'}        
+        
+        nTermMod = ''
+        
+        mods = fixedmods.split(',')
+        
+        for mod in mods:
+            mod = mod.strip()
+            if mod.find('N-term') > -1:
+                submod = mod.split('(')[0].strip()
+                nTermMod = mod_dict[submod]
+                break
+        return nTermMod
+    
+
     def build_label_dict(self, cg):
         if self.spectrum.scan_type != "MS1":
             print "Labeling"
@@ -1128,7 +1159,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
                 #-----------------NEEFD TO CHANGE PARSE RULES
                 if self.spectrum.sequence.find('-') == -1:
                     sequence = self.spectrum.sequence
-                    nterm = ''
+                    nterm = self.GetNtermMod(self.spectrum.fixedmod)
                     cterm = ''
                 else:
                     _seq = self.spectrum.sequence
@@ -1364,6 +1395,9 @@ class SpecWindow(BufferedWindow):  #wx.Window
                 dc.DrawText(self.spectrum.filter, subxx, self.spectrum.axco[len(self.spectrum.axco)-1][0][1]+25)
             except:
                 pass
+            if self.spectrum.sequence:
+                dc.DrawText(self.spectrum.sequence, subxx, self.spectrum.axco[len(self.spectrum.axco)-1][0][1]+50)
+            
             
         if max_int > 0:
             cutoff = 0.75 * float(max_int)

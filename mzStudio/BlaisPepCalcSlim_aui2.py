@@ -185,14 +185,15 @@ class MainBPC(wx.Panel):
         #self.Bind(wx.EVT_CLOSE, self.OnClose)
         
     def OnClose(self, event):
-        if self.aui_pane.name != event.pane.name:
-            print "%s got event but isn't being closed." % self.aui_pane.name
-            event.Skip()
-            return
+        #if self.aui_pane.name != event.pane.name:
+        #    print "%s got event but isn't being closed." % self.aui_pane.name
+        #    event.Skip()
+        #    return
             
         self.organizer.removeObject(self)
         assert not self.organizer.containsType(self)
-        print "FOOBAR"
+        print "PepCalc Close event!"
+        #event.Skip()
         
         
     def _CreateMenu(self):
@@ -208,7 +209,7 @@ class MainBPC(wx.Panel):
         clear_and_add = wx.Bitmap(os.path.join(os.path.dirname(__file__), 'image', 'Clear and add overlay.bmp'), wx.BITMAP_TYPE_BMP)
         repl = wx.Bitmap(os.path.join(os.path.dirname(__file__), 'image', 'repl_img.bmp'), wx.BITMAP_TYPE_BMP)
         overlay_label = wx.Bitmap(os.path.join(os.path.dirname(__file__), 'image', 'overlaylabel_img.bmp'), wx.BITMAP_TYPE_BMP)
-
+        removeOverlay =  wx.ArtProvider.GetBitmap(wx.ART_ERROR, wx.ART_TOOLBAR, (32,32))
         #overlaylabel_img
         #(150, "XIC", wx.Image(installdir + r'\image\Add new trace.png'), "XIC adds to new window", "XIC adds to new window'", 150))
         #--------------Adds drop box to flatmenu
@@ -222,6 +223,7 @@ class MainBPC(wx.Panel):
         self.menubar.AddTool(30, "Add Sequence to Memory Bank", add)
         self.menubar.AddTool(40, "Open Mod Manager", mod)
         self.menubar.AddTool(50, "Overlay ions on spectrum", overlay)
+        self.menubar.AddTool(80, "Remove spectrum overlay", removeOverlay)
         #self.menubar.AddTool(60, "Convert mods", convert)
         
         
@@ -233,6 +235,7 @@ class MainBPC(wx.Panel):
         self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 50)
         #self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 60)
         #self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 70)
+        self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 80)
         
     def OnToolClick(self, evt):
         if evt.GetId() == 10:
@@ -250,6 +253,8 @@ class MainBPC(wx.Panel):
         #if evt.GetId() == 70:
             ##self.labelOverwrite = not self.labelOverwrite
             #pass
+        if evt.GetId() == 80:
+            self.b.removeOverlay(evt)        
                      
 class BlaisPepCalc(wx.Panel):
     def __init__(self, parent, id, organizer):
@@ -788,6 +793,21 @@ class BlaisPepCalc(wx.Panel):
     def OnBank(self, event):
         pass
 
+    def removeOverlay(self, event):
+        currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
+        currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]   
+        scanNum = currentFile["scanNum"]
+        if scanNum in currentFile['overlay'].keys():
+            del currentFile['overlay'][scanNum]
+            del currentFile['overlay_sequence'][scanNum]
+            currentFile['label_dict'] = {}
+            currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
+            currentPage.Window.UpdateDrawing()
+            currentPage.Window.Refresh()
+            currentPage.Refresh()             
+            
+            
+
     def OnXFer(self, event):
         if not self.y_ions and self.b_ions:
             print "Invalid command; no sequence stored."
@@ -796,19 +816,20 @@ class BlaisPepCalc(wx.Panel):
             print "Invalid command; no data selected."
             return
         
-        
+        nterm = self.FindWindowByName("nTerm").GetValue().strip()
         if self.parent.labelOverwrite:
             currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
             currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]         
             scanNum = currentFile["scanNum"]
             if scanNum not in currentFile["overlay"].keys():
                 currentFile["overlay"][scanNum]=[self.y_ions, self.b_ions]
-                currentFile['overlay_sequence']=self.FindWindowByName("sequence").GetValue()
+                
+                currentFile['overlay_sequence'][scanNum]=nterm + '-' + self.FindWindowByName("sequence").GetValue() + '-OH'
             else:
                 orig_y = currentFile["overlay"][scanNum][0]
                 orig_b = currentFile["overlay"][scanNum][1]
                 currentFile["overlay"][scanNum]=[self.y_ions + orig_y, self.b_ions + orig_b]
-                currentFile['overlay_sequence']=self.FindWindowByName("sequence").GetValue()
+                currentFile['overlay_sequence'][scanNum]=nterm + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
             currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
             currentPage.Window.UpdateDrawing()
             currentPage.Window.Refresh()
@@ -818,7 +839,7 @@ class BlaisPepCalc(wx.Panel):
             currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]         
             scanNum = currentFile["scanNum"]
             currentFile["overlay"][scanNum]=[self.y_ions, self.b_ions]
-            currentFile['overlay_sequence']=self.FindWindowByName("sequence").GetValue()
+            currentFile['overlay_sequence'][scanNum]=nterm + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
             currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
             currentPage.Window.UpdateDrawing()
             currentPage.Window.Refresh()

@@ -862,14 +862,19 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         pass
     
     def OnClose(self, event):
-        try:
-            del self.organizer.ActiveObjects[type(self)]
-        except:
-            pass
-        mgr = self.parent._mgr
-        mgr.ClosePane(self.aui_pane_obj)
-        self.Destroy()
-        mgr.Update()
+        #try:
+        #    del self.organizer.ActiveObjects[type(self)]
+        #except:
+        #    pass
+        
+        self.organizer.removeObject(self)
+        assert not self.organizer.containsType(self)
+        print "Process close from SpecStylus1"        
+        
+        #mgr = self.parent._mgr
+        #mgr.ClosePane(self.aui_pane_obj)
+        #self.Destroy()
+        #mgr.Update()
         # Does this have to communicate with the AUI notebook?
 
 class AddFrame(wx.Frame):
