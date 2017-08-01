@@ -39,3 +39,4 @@ searchAlgorithm	Mascot
 labelPeaks	True
 multiFileOption	LOAD ALL
 ionLabelThresh	0.0
+areaCalcOption	SUM
