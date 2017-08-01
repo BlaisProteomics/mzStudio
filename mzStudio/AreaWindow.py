@@ -66,7 +66,7 @@ class AreaWindow(wx.Frame):
             #raise NotImplementedError
         
         print xic
-        wx.Frame.__init__(self,parent,id, 'Area Window', size =(800,500))
+        wx.Frame.__init__(self,parent,id, 'Area Window', size =(800,550))
         panel = wx.Panel(self)
         self.panel = panel
         img = wx.EmptyImage(400,400)
