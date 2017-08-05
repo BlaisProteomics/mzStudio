@@ -109,6 +109,7 @@ class AreaWindow(wx.Frame):
                 try:
                     (f, p, R2) = fit.fit_data(data=xic, function=fit.gauss)
                 except:
+                    self.valid = False
                     wx.MessageBox("Error calling fit.\nIs scipy installed?", 'mzStudio')
                     return
                 

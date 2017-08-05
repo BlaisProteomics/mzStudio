@@ -5,8 +5,29 @@ __version__ = '1.0.2'
 # WELCOME to mzStudio!
 #----------------------------------------------------------------------------------------------------------------------
 
+TRY_VERSION_FOUR = False
 
-import wx, os
+import os
+
+try:
+    import wxversion
+    if not TRY_VERSION_FOUR:
+        wxversion.select("3.0")
+except:
+    pass
+
+import wx
+
+if wx.__version__[0] != '3':
+    print "WARNING- wxPython version %s may not be fully supported.  Please install wxPython 3." % wx.__version__
+
+
+#import webbrowser
+
+#webbrowser.open(r"onenote:///\\RC-DATA1.DFCI.HARVARD.EDU\blaise\ms_data_share\Isidoro\NOTEBOOK\ISIDORO's%20EXPERIMENTS\SBF%20Experiments\Current%20Items.one#2017-06-27-Protein%20Solublization&section-id={FE1D7C40-F72C-46AC-878B-02A3B59C3B0B}&page-id={B50E2946-71D1-412B-A713-53F5F78132D6}&end")
+
+
+
 
 global installdir
 installdir = os.path.abspath(os.path.dirname(__file__))
@@ -27,17 +48,6 @@ if __name__ == '__main__':
     bmp=img.ConvertToBitmap()
     wx.SplashScreen(bmp, wx.SPLASH_CENTER_ON_SCREEN|wx.SPLASH_TIMEOUT, 1000, None, -1)
     wx.Yield()
-
-try:
-    import wxversion
-    wxversion.select("3.0")
-except:
-    pass
-
-import wx
-
-if wx.__version__[0] != '3':
-    print "WARNING- wxPython version %s may not be fully supported.  Please install wxPython 3." % wx.__version__
 
 
 
@@ -3872,7 +3882,9 @@ class DrawPanel(wx.Panel):
                         aw = AreaWindow.AreaWindow(None, -1, xic, currentFile['settings']['areaCalcOption'])
                         if aw.valid:
                             aw.Show()
-                        if self.parent.parent.area_tb:  #self.parent.parent.area_tb
+                        else:
+                            del aw
+                        if self.parent.parent.area_tb and aw.valid:  #self.parent.parent.area_tb
                             current = self.parent.parent.area_tb.areaBox.GetValue()
                             if current:
                                 current += '\t'
