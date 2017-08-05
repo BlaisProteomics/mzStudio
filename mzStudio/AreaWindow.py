@@ -35,6 +35,18 @@ import plot_patched as plot
     #return abs(a * c * multiplier * math.sqrt(2*math.pi))
     
 
+def get_bars(data, multiplier=1):
+    bars = []
+    for i in range(0, len(data)-1):
+        mz1, int1 = data[i]
+        mz2, int2 = data[i+1]
+        width = mz2 - mz1
+        height = (int1 + int2) / 2
+        #total += width * height
+        center = float(width)/float(2.0)
+        bars.append([(mz1, 0), (mz1, int1), (mz2, int2), (mz2,0)])
+    return bars
+
 def calc_peak_area(data, multiplier = 1):
     total = 0
     for i in range(0, len(data)-1):
@@ -137,6 +149,12 @@ class AreaWindow(wx.Frame):
         if method=='SUM':
             if len(xic) > 2:
                 area = calc_peak_area(xic)
+                bars = get_bars(xic)
+                bar_plots = []
+                for member in bars:
+                    bar_plots.append(plot.PolyLine(member, colour='red', width=1))
+                #bar_plots = [line] + [plot.PolyLine(x, colour='black', width=1) for x in bars]
+                    
                 print area
                 self.area = "%.1e" % area                
                 #(f, p, R2) = fit.fit_data(data=xic, function=fit.gauss)
@@ -155,7 +173,9 @@ class AreaWindow(wx.Frame):
                 # other shapes 'circle', 'cross', 'square', 'dot', 'plus'
                 #marker = plot.PolyMarker(xic, marker='triangle')
                 # set up text, axis and draw
-                gc = plot.PlotGraphics([line], 'Area Window: ' + str(self.area), 'Time (min)', 'Intensity')
+                #bar_plots.append(line)
+                gc = plot.PlotGraphics([line] + bar_plots, 'Area Window: ' + str(self.area), 'Time (min)', 'Intensity')
+                
                 plotter.Draw(gc)  #xAxis=(0,15), yAxis=(0,15)   
                 
                              
@@ -233,7 +253,7 @@ class AreaWindow(wx.Frame):
 if __name__ == '__main__':
     xic = [(22.765981666666669, 43326.0546875), (22.816895000000002, 148095.123046875), (22.867786666666667, 116020.9453125), (22.918616666666665, 61602.265625), (22.969233333333335, 473938.3125), (23.019886666666668, 3233170.5), (23.070638333333335, 1518784.875), (23.121554999999997, 20428157.5390625), (23.172296666666668, 77530489.375), (23.222820000000002, 33785018.3203125), (23.273486666666667, 7279730.365234375), (23.324263333333334, 2133839.75), (23.375080000000001, 1033855.1875)]
     app = wx.App(False)
-    a = AreaWindow(None, -1, xic, "GUASSIAN")
+    a = AreaWindow(None, -1, xic, "SUM")
     a.Show()
     app.MainLoop()
     
