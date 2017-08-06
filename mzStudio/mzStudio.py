@@ -362,6 +362,16 @@ class MS_Data_Manager():
         #--------------------------------------------------------------------------------------------------------------------
         
         #u'ITMS + p ESI SRM ms2 519.20@cid35.00 [278.50-283.50, 500.50-505.50]'
+        #+ p ESI sid=30.00 Q1MS [300.000-1000.000]
+        self.quantiva_QMS = re.compile('.*?[+] ([pc]) [NE]SI sid=(\d+?.\d+?)  Q([13])MS \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        self.quantiva_MS2 = re.compile('.*?[+] ([pc]) [NE]SI sid=(\d+?.\d+?)  (Full ms2|Full pr) (\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        #self.quantiva_SRM = re.compile('.*?[+] ([pc]) [NE]SI sid=(\d+?.\d+?)  SRM ms2 (\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        self.quantiva_SRM = re.compile('.*?[+] ([pc]) [NE]SI sid=(\d+?.\d+?)  SRM ms2 (\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?).+?(\d+?.\d+?)-(\d+?.\d+?)\]')
+        #pa = re.compile('.*?[+] ([pc]) [NE]SI sid=(\d+?.\d+?)  SRM ms2 (\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)(, (\d+?.\d+?)-(\d+?.\d+?))*\]')
+        
+        #pa = re.compile('.*?[+] ([pc]) [NE]SI sid=(\d+?.\d+?)  SRM ms2 (\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)((?:, )(\d+?.\d+?)-(\d+?.\d+?))*\]')
+        
+        #u'+ p ESI sid=30.00  Full ms2 645.000 [10.000-1400.000]'
         self.srm = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI SRM ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?), (\d+?.\d+?)-(\d+?.\d+?)\]')
         self.pa = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI r? ?d Full ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         self.lockms2 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI r? ?d? ?Full lock ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')        
@@ -403,7 +413,7 @@ class MS_Data_Manager():
         
         self.Dms = re.compile(r'(GC|TOF) MS \+ NSI Full (ms[2]?) ((\d+.\d+)@\d+.\d+)?\[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
 
-        self.srm = re.compile(r'(.*SRM.*)')
+        #self.srm = re.compile(r'(.*SRM.*)')
         
         # TODO:  Add a filter pattern handler for "full lock ms2" scans?
         # Done.
@@ -413,7 +423,7 @@ class MS_Data_Manager():
                                [self.targ_ms3, fm.Ontarg_ms3], [self.sim_ms1, fm.Onsim_ms1], 
                                [self.dd_ms3, fm.Ondd_ms3],
                                [self.Dms, fm.OnDms],
-                               [self.srm, fm.OnSRM]]
+                               [self.srm, fm.OnSRM], [self.quantiva_QMS, fm.OnQuantivaQMS], [self.quantiva_MS2, fm.OnQuantivaMS2], [self.quantiva_SRM, fm.OnQuantivaSRM]]
         
         
         self.abi_filters = [[self.qms1, fm.Onqms1], [self.qms2, fm.Onqms2],
@@ -445,7 +455,11 @@ class MS_Data_Manager():
                               "Thermo_etd":[self.etd, 6,7],
                               "Thermo_sim_ms1":[self.sim_ms1,2,3],
                               "Agilent":[self.Dms, 4, 5],
-                              "Thermo LTQ SRM":[self.srm, 5,8]}
+                              "Thermo LTQ SRM":[self.srm, 5,8],
+                              "Quantiva QMS":[self.quantiva_QMS, 3, 4],
+                              "Quantiva QMS2":[self.quantiva_MS2, 4, 5],
+                              "Quantiva SRM":[self.quantiva_SRM, 3, 6]}
+        
         #svg.Blit(0,0,size.width,size.height,dc,0,0)
 
     def Match_Filter(self, filt, inst):
@@ -496,6 +510,8 @@ class MS_Data_Manager():
                 filter_dict["energy"]="TOF-TOF"
             print filter_dict
         
+        if not filter_dict:
+            wx.MessageBox("Unrecognized Scan Format!\nCopy filter string and open a ticket on Github.\nhttps://github.com/BlaisProteomics/mzStudio/issues")
         assert filter_dict, filt
         return filter_dict
 
@@ -679,11 +695,13 @@ class MS_Data_Manager():
         _filter = ''
         #self.parent.parent.Parent.StartGauge(text="Building XIC...")
         assert len(params) == 5
+        
         params = {'start_time':params[0],
                   'stop_time':params[1],
                   'start_mz':params[2],
                   'stop_mz':params[3],
                   'filter':params[4]}
+        
         if params['start_mz'] >  params['stop_mz']:
             params['start_mz'], params['stop_mz'] = params['stop_mz'], params['start_mz']
         if 'SRM' in m.filters()[0][1]:
@@ -908,6 +926,8 @@ class MS_Data_Manager():
     def addFile(self,filename):
         '''        
         
+        Function to add a new data file to the msdb.
+        
         msdb.Display_ID is a dictionary of file display order to filename i.e. [0], or the first file to display, mapped to its filename.
         
         msdb.files[filename] is the dictionary containing all info about all files in the bank
@@ -1130,6 +1150,12 @@ class MS_Data_Manager():
                 if current["filter_dict"][minFilterKey].lower().find("full ms2") > -1:
                     current["master_scan"]="ms2"
                     current['master_filter']="Full ms2"
+                elif current["filter_dict"][minFilterKey].lower().find("full pr") > -1:
+                    current["master_scan"]="ms2"
+                    current['master_filter']="Full pr"   
+                elif current["filter_dict"][minFilterKey].lower().find("srm ms2") > -1:
+                    current["master_scan"]="ms2"
+                    current['master_filter']="SRM ms2"                   
                 elif current["filter_dict"][minFilterKey].lower().find("precursor") > -1:
                     current["master_scan"]="Precursor"
                     current['master_filter']="Exp 1 (Precursor)"                

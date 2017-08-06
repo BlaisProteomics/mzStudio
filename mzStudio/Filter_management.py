@@ -12,6 +12,41 @@ def Onms1(filter_dict, id):
     filter_dict["mr"]='[' + id.groups()[2]+'-'+id.groups()[3]+']'
     return filter_dict
 
+def OnQuantivaQMS(filter_dict, id):
+    #('.*?[+] ([pc]) [NE]SI sid=(\d+?.\d+?) Q([13])MS \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+    filter_dict["mode"]="ms1"
+    filter_dict["analyzer"]='Q' + id.groups()[2] + 'MS'
+    filter_dict["data"]= "+cent" if id.groups()[0]== "c" else "+prof"
+    filter_dict["mr"]='[' + id.groups()[3]+'-'+id.groups()[4]+']'
+    filter_dict['sid']=id.groups()[1]
+    return filter_dict
+
+def OnQuantivaMS2(filter_dict, id):
+    #('.*?[+] ([pc]) [NE]SI sid=(\d+?.\d+?) (Full ms2)|(pr) (\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+    #           0                      1             2           3             4           5
+    filter_dict["mode"]="ms2"
+    filter_dict["analyzer"]=id.groups()[2]
+    filter_dict["data"]= "+cent" if id.groups()[0]== "c" else "+prof"
+    filter_dict["mr"]='[' + id.groups()[4]+'-'+id.groups()[5]+']'
+    filter_dict['sid']=id.groups()[1]
+    filter_dict["precursor"]=id.groups()[3]
+    filter_dict["reaction"]='CAD'
+    filter_dict["energy"]=''    
+    return filter_dict
+
+def OnQuantivaSRM(filter_dict, id):
+    #
+    #           0                      1             2           3             4           5
+    filter_dict["mode"]="ms2"
+    filter_dict["analyzer"]='SRM'
+    filter_dict["data"]= "+cent" if id.groups()[0]== "c" else "+prof"
+    filter_dict["mr"]='[' + id.groups()[3]+'-'+id.groups()[6]+']'
+    filter_dict['sid']=id.groups()[1]
+    filter_dict["precursor"]=id.groups()[2]
+    filter_dict["reaction"]='CAD'
+    filter_dict["energy"]=''    
+    return filter_dict
+
 def Onlockms2(filter_dict, id):
     filter_dict["mode"]="ms2"
     filter_dict["analyzer"]=id.groups()[0]
