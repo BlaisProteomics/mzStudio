@@ -21,14 +21,6 @@ import wx
 if wx.__version__[0] != '3':
     print "WARNING- wxPython version %s may not be fully supported.  Please install wxPython 3." % wx.__version__
 
-
-#import webbrowser
-
-#webbrowser.open(r"onenote:///\\RC-DATA1.DFCI.HARVARD.EDU\blaise\ms_data_share\Isidoro\NOTEBOOK\ISIDORO's%20EXPERIMENTS\SBF%20Experiments\Current%20Items.one#2017-06-27-Protein%20Solublization&section-id={FE1D7C40-F72C-46AC-878B-02A3B59C3B0B}&page-id={B50E2946-71D1-412B-A713-53F5F78132D6}&end")
-
-
-
-
 global installdir
 installdir = os.path.abspath(os.path.dirname(__file__))
 try:
