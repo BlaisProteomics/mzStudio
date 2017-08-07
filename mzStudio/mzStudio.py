@@ -385,8 +385,8 @@ class MS_Data_Manager():
         #EPI + p NSI Full ms2 584.70423947@33.622501373291[100-1000][478:3]
         self.epi = re.compile('.*?(EPI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')#\[(\d+?):(\d+?)\]')
         #self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI Full ms2 \d+?.\d+?@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
-        self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI \d+?.\d+?@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
-        self.precursor1 = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
+        #self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI \d+?.\d+?@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
+        self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(\d+?.\d+?) \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         #ER MS + p NSI Full ms [0-0]
         self.erms = re.compile('.*?(ER) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         self.q1ms = re.compile('.*?(Q1) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
@@ -420,7 +420,7 @@ class MS_Data_Manager():
         
         self.abi_filters = [[self.qms1, fm.Onqms1], [self.qms2, fm.Onqms2],
                             [self.pi, fm.Onpi], [self.tofms2, fm.Ontofms2], [self.erms, fm.Onerms],
-                            [self.precursor, fm.Onprecursor], [self.precursor1, fm.Onprecursor],
+                            [self.precursor, fm.Onprecursor], #[self.precursor1, fm.Onprecursor],
                             [self.epi, fm.Onepi], [self.q3ms, fm.Onq3ms], [self.q1ms, fm.Onq3ms],
                             [self.ems, fm.Onems]]
         self.mgf_filters = [[self.mgf, fm.Onmgf]]
@@ -441,7 +441,7 @@ class MS_Data_Manager():
                               "ABI_q1ms":[self.q1ms, 2, 3],
                               "ABI_q3ms":[self.q3ms, 2,3],
                               "ABI_ems":[self.ems, 2,3],
-                              "ABI_precursor":[self.precursor, 2,3],
+                              "ABI_precursor":[self.precursor, 4,5],
                               "ABI_epi":[self.epi, 4,5],
                               "ABI_er":[self.erms, 2,3],
                               "Thermo_etd":[self.etd, 6,7],

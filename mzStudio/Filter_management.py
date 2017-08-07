@@ -171,18 +171,24 @@ def OnSRM(filter_dict, id):
     return filter_dict
     
 
-def OnTOFms2(filter_dict, id):
-    filter_dict['mode'] = 'ms2'
-    filter_dict['analyzer'] = 'TOF'
-    filter_dict['data'] = 'cent'
-    filter_dict['mr'] = '[%s-%s]' % id.groups()
+#def OnTOFms2(filter_dict, id):
+    #filter_dict['mode'] = 'ms2'
+    #filter_dict['analyzer'] = 'TOF'
+    #filter_dict['data'] = 'cent'
+    #filter_dict['mr'] = '[%s-%s]' % id.groups()
+    #return filter_dict
 
 
 def Onprecursor(filter_dict, id):
+    #self.precursor = re.compile('.*?(Precursor) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(\d+?.\d+?) \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
+    #                                    0             1                        2            3             4              5
     filter_dict["mode"]="Precursor"
     filter_dict["analyzer"]=id.groups()[0]
     filter_dict["data"]= "+cent" if id.groups()[1]== "c" else "+prof"
-    filter_dict["mr"]='[' + id.groups()[2]+'-'+id.groups()[3]+']'
+    filter_dict["mr"]='[' + id.groups()[4]+'-'+id.groups()[5]+']'
+    filter_dict["precursor"]= id.groups()[2]
+    filter_dict["reaction"]='CAD'
+    filter_dict["energy"]=''    
     return filter_dict    
 
 def Onqms1(filter_dict, id):
