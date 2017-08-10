@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -3587,12 +3587,13 @@ class DrawPanel(wx.Panel):
         if tfound:
             currentFile = self.msdb.files[self.msdb.Display_ID[tfile]]  
             print "HIT!"
-            self.frm = xicFrame(self, currentFile, self.msdb.active_file)
-            for k in range(0,10):
-                if self.frm.grid.GetCellValue(k, 0) == str(tgrid):
-                    self.frm.grid.SetCellValue(k, 4, '1')
-                    self.frm.OnClick(None)
-                    self.frm.Destroy()
+            if len(currentFile['xic_params']) > 1: #Require at least one XIC window.
+                self.frm = xicFrame(self, currentFile, self.msdb.active_file)
+                for k in range(0,10):
+                    if self.frm.grid.GetCellValue(k, 0) == str(tgrid):
+                        self.frm.grid.SetCellValue(k, 4, '1')
+                        self.frm.OnClick(None)
+                        self.frm.Destroy()
         #-------------------------------------CHECK TO SEE IF EXTRACT XIC BUTTON HIT
         tfound, ttrace, tgrid, tfile = self.msdb.HitTestXICBox(pos, 40)
         if tfound:
@@ -4582,15 +4583,20 @@ class DrawPanel(wx.Panel):
                 
                 dc.SetTextForeground("BLACK")
                 dc.SetPen(wx.Pen(wx.BLACK,1))
+                
+                #--------------------------------------------------------------
+                #Determine tick marks
+                #Scale is the distance (time) b/w tick marks.
+                #--------------------------------------------------------------
                 xticks = []
                 startTime = float(startTime)
                 stopTime = float(stopTime) # Not doing these casts can have hilarious effects.
-                if tr >= 0.5:
+                if tr >= 0.1:
                     if tr > 10:
                         scale = int(round(round(tr, -1 * int(math.floor(math.log10(tr)))) / 10))
                         assert scale
                     else:
-                        scale = tr/10
+                        scale = tr/10.0
                     
                     if self.GetClientSize()[0] < 600:
                         scale = scale * 3
@@ -4603,7 +4609,9 @@ class DrawPanel(wx.Panel):
                         firstlabel = float(self.myRound(startTime*10, scale*10))/float(10)
                         lastlabel = float(self.myRound(stopTime*10, scale*10))/float(10)
                     else:
-                        return # Has MS technology reached the sub-second-sampling level yet?
+                        firstlabel = float(self.myRound(startTime*100, scale*100))/float(100)
+                        lastlabel = float(self.myRound(stopTime*100, scale*100))/float(100)
+                    
                     if firstlabel < startTime:
                         firstlabel += scale
                     if lastlabel > stopTime:
@@ -4620,17 +4628,33 @@ class DrawPanel(wx.Panel):
                         #for i in range (int(firstlabel)*10, int(lastlabel)*10 + int(scale)*10, int(scale)*10):
                         for i in floatrange(firstlabel*10, lastlabel*10 + scale*10, scale*10):
                             xticks.append(float(i)/float(10))
+                    if scale < 0.1:
+                        for i in floatrange(firstlabel*100, lastlabel*100 + scale*100, scale*100):
+                            xticks.append(float(i)/float(100))   
                 else:
-                    xticks.append(round(startTime, 1))
-                    xticks.append(round(stopTime, 1))
+                    xticks.append(startTime)
+                    xticks.append(stopTime)                    
+                    #xticks.append(round(startTime, 1))
+                    #xticks.append(round(stopTime, 1))
+                    
+                #if not xticks:
+                #    raise ValueError()
+                    
                 for member in xticks:
-                    memberstr = "%.2f" % member if isinstance(member, float) else str(member)
+                    if tr > 0.01: 
+                        memberstr = "%.2f" % member if isinstance(member, float) else str(member)
+                    else:
+                        memberstr = "%.4f" % member if isinstance(member, float) else str(member)
                     x1 = currentFile['xic_axco'][key][0][0] + px*((member-startTime))
                     if x1 > (xaxis[0]-1) and x1 < (xaxis[2] +1):
                         dc.DrawText(memberstr, x1-8,yaxis[3]+5)
                         self.msdb.svg["text"].append((memberstr, x1-8,yaxis[3]+5,0.00001))
                         dc.DrawLine(x1, yaxis[3], x1, yaxis[3]+2)
                         self.msdb.svg["lines"].append((x1, yaxis[3], x1, yaxis[3]+2))
+                if len(xticks) == 2:
+                    if xticks[0] == xticks[1]:
+                        dc.DrawText("Can't display!\nZoom Out!", x1,yaxis[3]-50)
+                                
                 #This draws the text for the mz range
                 if currentActive:
                     col = self.get_xic_color(xic, dc)
@@ -5257,8 +5281,8 @@ class DrawPanel(wx.Panel):
             if currentFile['filterLock']:
                 dc.DrawText("Filter Locked: " + currentFile['filterLock'], subxx, y - 45)
             #This displays filename on trace
-            dc.DrawText(currentFile["Filename"].split('.')[0], subxx, y - 30)
-            self.msdb.svg["text"].append((currentFile["Filename"][:-4], subxx, y - 30,0.00001))
+            #dc.DrawText(currentFile["Filename"].split('.')[0], subxx, y - 30)
+            #self.msdb.svg["text"].append((currentFile["Filename"][:-4], subxx, y - 30,0.00001))
             if currentFile['vendor']=='Thermo':
                 if currentFile["spectrum_style"] == "single scan":
                     dc.DrawText("Scan: " + str(currentFile["scanNum"]), x+5, y + 110)
@@ -6714,7 +6738,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.2, 2017-07-31)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.3, 2017-08-09)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)

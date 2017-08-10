@@ -1149,7 +1149,10 @@ class RICWindow(BufferedWindow):
                     scaling = True                
                 tr = stopTime-startTime
                 print "tr:" + str(tr)
-                px = float(width)/float(tr)
+                try:
+                    px = float(width)/float(tr)
+                except:
+                    px = 0
                 try:
                     py = float(height)/float(max_signal)
                 except:
@@ -1179,16 +1182,15 @@ class RICWindow(BufferedWindow):
                 self.svg["pointLists"].append(points)
         
                 xticks = []
-                
-                if tr >= 0.5:
-                    if tr > 500:
-                        scale = int(round(round(tr, -1 * int(math.floor(math.log10(tr)))) / 5))
-                    elif tr > 10:
+                startTime = float(startTime)
+                stopTime = float(stopTime) # Not doing these casts can have hilarious effects.                
+                if tr >= 0.1:
+                    if tr > 10:
                         scale = int(round(round(tr, -1 * int(math.floor(math.log10(tr)))) / 10))
                         assert scale
                     else:
-                        scale = tr/10
-
+                        scale = tr/10.0
+                    
                     if self.GetClientSize()[0] < 600:
                         scale = scale * 3
                     elif self.GetClientSize()[0] < 800:
@@ -1200,28 +1202,48 @@ class RICWindow(BufferedWindow):
                         firstlabel = float(self.myRound(startTime*10, scale*10))/float(10)
                         lastlabel = float(self.myRound(stopTime*10, scale*10))/float(10)
                     else:
-                        return # Has MS technology reached the sub-second-sampling level yet?
-                
+                        firstlabel = float(self.myRound(startTime*100, scale*100))/float(100)
+                        lastlabel = float(self.myRound(stopTime*100, scale*100))/float(100)
+                    
                     if firstlabel < startTime:
                         firstlabel += scale
                     if lastlabel > stopTime:
                         lastlabel -= scale
                     if scale >= 1:
+                        # Replace with float-compatible range equivalent?
+                        #for i in range (int(firstlabel), int(lastlabel + scale), int(scale)):
                         for i in floatrange(firstlabel, lastlabel + scale, scale):
+                            if i%1 == 0:
+                                i = int(i)
                             xticks.append(i)
                     if scale >= .1 and scale < 1:
+                        #for i in range (int(firstlabel)*10, int(lastlabel)*10 + int(scale)*10, int(scale)*10):
                         for i in floatrange(firstlabel*10, lastlabel*10 + scale*10, scale*10):
                             xticks.append(float(i)/float(10))
+                    if scale < 0.1:
+                        for i in floatrange(firstlabel*100, lastlabel*100 + scale*100, scale*100):
+                            xticks.append(float(i)/float(100))   
                 else:
-                    xticks.append(round(startTime, 1))
-                    xticks.append(round(stopTime, 1))
+                    xticks.append(startTime)
+                    xticks.append(stopTime)                    
+                    
+                    
+                    
                 for member in xticks:
-                    memberstr = "%.2f" % member if isinstance(member, float) else str(member)
+                    if tr > 0.01: 
+                        memberstr = "%.2f" % member if isinstance(member, float) else str(member)
+                    else:
+                        memberstr = "%.4f" % member if isinstance(member, float) else str(member)
                     x1 = self.xic_axco[key][0][0] + px*((member-startTime))
                     dc.DrawText(memberstr, x1-8,yaxis[3]+5)
                     self.svg["text"].append((memberstr, x1-8,yaxis[3]+5,0.00001))
                     dc.DrawLine(x1, yaxis[3], x1, yaxis[3]+2)
                     self.svg["lines"].append((x1, yaxis[3], x1, yaxis[3]+2))
+                    
+                if len(xticks) == 2:
+                    if xticks[0] == xticks[1]:
+                        dc.DrawText("Can't display!\nZoom Out!", x1,yaxis[3]-50)                
+                    
                 if currentActive:
                     col = self.get_xic_color(xic, dc)
                     dc.SetTextForeground(col)                
