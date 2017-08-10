@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -370,7 +370,8 @@ class MS_Data_Manager():
         self.etd = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI (t E d sa|d sa|d|r d) Full ms2 (\d+?.\d+?)@(hcd|cid|etd)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #self.etd_fusion = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI (t E d sa|d sa) Full ms2 (\d+?.\d+?)@(hcd|cid|etd)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #TOF MS p NSI Full ms2 540.032306122@0[100-1400][1375:4]
-        self.tofms2 = re.compile('.*?(TOF PI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        #self.tofms2 = re.compile('.*?(TOF PI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        self.tofms2 = re.compile('.*?(TOF PI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #PI + p NSI Full ms [100-1250][50:0]
         self.pi = re.compile('.*?(PI) [+] ([cp]) [NE]SI Full ms2 \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
 
@@ -435,7 +436,7 @@ class MS_Data_Manager():
                               "Thermo_dd_ms3":[self.dd_ms3, 8,9],
                               "MGF_ms2":[self.mgf, 1, 2],
                               "ABI_pi":[self.pi, 2, 3],
-                              "ABI_ms2":[self.tofms2, 5,6],
+                              "ABI_ms2":[self.tofms2, 4,5],
                               "ABI_qms2":[self.qms2, 3, 4],
                               "ABI_ms1":[self.qms1, 2,3],
                               "ABI_q1ms":[self.q1ms, 2, 3],
@@ -5500,7 +5501,9 @@ class DrawPanel(wx.Panel):
         Searches file for precursors within a certain mass range.
         
         '''
-        currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
+        #currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
+        currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
+        currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]                
         counter = 0
         found = []        
         
@@ -5527,7 +5530,8 @@ class DrawPanel(wx.Panel):
                     print currentFile["filter_dict"][i]
                 counter += 1
                 #------------------------------------------FIND MS2 scans, then match to regex.
-                if currentFile["scan_dict"][i]=="MS2":
+                #if currentFile["scan_dict"][i].lower()=="ms2":
+                if currentFile["filter_dict"][i].find("ms2") > -1:
                     filt = currentFile["filter_dict"][i]
                     if not isinstance(regex, list):
                         id = regex.match(filt)
@@ -5543,10 +5547,16 @@ class DrawPanel(wx.Panel):
                         if currentFile['vendor']=='Thermo':
                             # THERMO OR WIFF
                             if id:
-                                if id.groups()[0] in inst and id.groups()[1] in mode and id.groups()[3] in act:
-                                    prec = float(id.groups()[2])
-                                    if mz > prec - tolerance and mz < prec + tolerance:
-                                        found.append([i, id.groups()[2], id.groups()[3], filt])
+                                if currentFile['FileAbs'].endswith('.raw'):
+                                    if id.groups()[0] in inst and id.groups()[1] in mode and id.groups()[3] in act:
+                                        prec = float(id.groups()[2])
+                                        if mz > prec - tolerance and mz < prec + tolerance:
+                                            found.append([i, id.groups()[2], id.groups()[3], filt])
+                                elif currentFile['FileAbs'].endswith('.wiff'):
+                                    if id.groups()[0] in inst and id.groups()[1] in mode:
+                                        prec = float(id.groups()[2])
+                                        if mz > prec - tolerance and mz < prec + tolerance:
+                                            found.append([i, id.groups()[2], 'CAD', filt])                                    
                             else:
                                 id = self.msdb.etd.match(filt)
                                 if id:
@@ -5986,7 +5996,7 @@ class findFrame(wx.Panel):
         
         #2017-03-26 adding code for lock mass scans.
         if filt.find("ms2") > -1:
-            ms2_filters = [(currentPage.msdb.pa,2), (currentPage.msdb.etd,3), (currentPage.msdb.lockms2, 2), (currentPage.msdb.mgf, 0)]
+            ms2_filters = [(currentPage.msdb.pa,2), (currentPage.msdb.etd,3), (currentPage.msdb.lockms2, 2), (currentPage.msdb.mgf, 0), (currentPage.msdb.tofms2, 2)]
             for ms2_filter, mass_group in ms2_filters:
                 match = ms2_filter.match(filt)
                 if match:
@@ -6738,7 +6748,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.3, 2017-08-09)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.4, 2017-08-10)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
