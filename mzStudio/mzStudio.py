@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -2671,6 +2671,21 @@ class DrawPanel(wx.Panel):
             self.msdb.set_axes()
             self.Window.UpdateDrawing()
             self.Window.Refresh()
+        
+    def OnCopySpectrum(self, event):
+        currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
+        self.currentPage = currentPage
+        self.currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]  
+        bitmapData = wx.BitmapDataObject()
+        bitmapData.SetBitmap(self.img.ConvertToBitmap())
+        if wx.TheClipboard.Open():
+            result = wx.TheClipboard.SetData(bitmapData)
+            wx.TheClipboard.Close()
+        
+        
+        #activeFile["mode"] = "SPEC"
+        #self.msdb.set_axes()        
+        
         
     def PropagateXICsInWindow(self, event):
         currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
@@ -6748,7 +6763,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.4, 2017-08-10)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.5, 2017-08-10)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -7319,7 +7334,9 @@ class TopLevelFrame(wx.Frame):
         if event.GetId() == 170:
             self.ctrl.GetPage(selection).On_Search_Spectrum()
         if event.GetId() == 180:
-            self.ctrl.GetPage(selection).On_Set_Ion_Label_Tolerance(None)        
+            self.ctrl.GetPage(selection).On_Set_Ion_Label_Tolerance(None) 
+        if event.GetId() == 190:
+            self.ctrl.GetPage(selection).OnCopySpectrum(None)         
             
     def OnMakeDb(self, event):
         #-----------------------------------
@@ -7531,7 +7548,8 @@ class TopLevelFrame(wx.Frame):
             ("sep", 0, 0, 0, 0, 0),
             (160, "Spectrum Readout", wx.ART_NORMAL_FILE, "Spectrum Text", "Show Selected Spectrum in Text Format", 160),
             ("sep", 0, 0, 0, 0, 0),
-            (170, "Search Spectrum", wx.ART_EXECUTABLE_FILE, "Search Spectrum", "Submit Spectrum To Database Search", 170))
+            (170, "Search Spectrum", wx.ART_EXECUTABLE_FILE, "Search Spectrum", "Submit Spectrum To Database Search", 170),
+            (190, "Copy Window to Clipboard", wx.ART_COPY, "Copy Window to Clipboard", "Copy Window to Clipboard", 190))
     
     
     def AddToolBarItems(self, tb):
