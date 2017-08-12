@@ -162,7 +162,7 @@ class MainBPC(wx.Panel):
         
         organizer.addObject(self) # Allows only one BlaisPepCalc object to exist in a session.
         self.organizer = organizer         
-        wx.Panel.__init__(self, parent, id=id, name='BlaisPepCalc', size =(280,670), pos = (50,50))
+        wx.Panel.__init__(self, parent, id=id, name='BlaisPepCalc', size =(290,670), pos = (50,50))
         self._CreateMenu()
         self.parent = parent
         self.b = BlaisPepCalc(self, -1, organizer)
@@ -209,7 +209,8 @@ class MainBPC(wx.Panel):
         clear_and_add = wx.Bitmap(os.path.join(os.path.dirname(__file__), 'image', 'Clear and add overlay.bmp'), wx.BITMAP_TYPE_BMP)
         repl = wx.Bitmap(os.path.join(os.path.dirname(__file__), 'image', 'repl_img.bmp'), wx.BITMAP_TYPE_BMP)
         overlay_label = wx.Bitmap(os.path.join(os.path.dirname(__file__), 'image', 'overlaylabel_img.bmp'), wx.BITMAP_TYPE_BMP)
-        removeOverlay =  wx.ArtProvider.GetBitmap(wx.ART_ERROR, wx.ART_TOOLBAR, (32,32))
+        removeOverlay =  wx.ArtProvider.GetBitmap(wx.ART_ERROR, wx.ART_TOOLBAR, (24,24))
+        copyToClipboard = wx.ArtProvider.GetBitmap(wx.ART_COPY, wx.ART_TOOLBAR, (24,24))
         #overlaylabel_img
         #(150, "XIC", wx.Image(installdir + r'\image\Add new trace.png'), "XIC adds to new window", "XIC adds to new window'", 150))
         #--------------Adds drop box to flatmenu
@@ -224,6 +225,8 @@ class MainBPC(wx.Panel):
         self.menubar.AddTool(40, "Open Mod Manager", mod)
         self.menubar.AddTool(50, "Overlay ions on spectrum", overlay)
         self.menubar.AddTool(80, "Remove spectrum overlay", removeOverlay)
+        self.menubar.AddTool(90, "Copy To Clipboard", copyToClipboard)
+        
         #self.menubar.AddTool(60, "Convert mods", convert)
         
         
@@ -236,6 +239,7 @@ class MainBPC(wx.Panel):
         #self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 60)
         #self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 70)
         self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 80)
+        self.menubar.Bind(wx.EVT_TOOL, self.OnToolClick, id = 90)
         
     def OnToolClick(self, evt):
         if evt.GetId() == 10:
@@ -254,12 +258,14 @@ class MainBPC(wx.Panel):
             ##self.labelOverwrite = not self.labelOverwrite
             #pass
         if evt.GetId() == 80:
-            self.b.removeOverlay(evt)        
+            self.b.removeOverlay(evt) 
+        if evt.GetId() == 90:
+            self.b.OnCopyToClipboard(evt)         
                      
 class BlaisPepCalc(wx.Panel):
     def __init__(self, parent, id, organizer):
         self.parent = parent
-        wx.Panel.__init__(self, parent, id=id, name='BlaisPepCalc', size =(280,670), pos = (50,50))
+        wx.Panel.__init__(self, parent, id=id, name='BlaisPepCalc', size =(290,670), pos = (50,50))
         
         self.b = self # !!
         
@@ -287,6 +293,110 @@ class BlaisPepCalc(wx.Panel):
         self.Bind(wx.EVT_COMBOBOX, self.OnCalculate, self.FindWindowByName('ions'))
         
         self.bpc_tb = None
+        prodList = self.FindWindowByName("productListBox")
+        precList = self.FindWindowByName("precursorListBox")        
+        prodList.Bind(wx.EVT_CONTEXT_MENU, self.OnProdContextMenu)
+        precList.Bind(wx.EVT_CONTEXT_MENU, self.OnPrecContextMenu)
+        
+        
+    def OnProdContextMenu(self, evt):
+        if not hasattr(self, "popupID1"):
+            self.popupCID1 = wx.NewId()
+            self.popupCID2 = wx.NewId()
+            self.popupCID3 = wx.NewId()
+
+            self.Bind(wx.EVT_MENU, self.OnContextPopupOne, id=self.popupCID1)
+            self.Bind(wx.EVT_MENU, self.OnContextPopupTwo, id=self.popupCID2)
+            self.Bind(wx.EVT_MENU, self.OnContextPopupThree, id=self.popupCID3)
+
+        # make a menu
+        menu = wx.Menu()
+        # Show how to put an icon in the menu
+        item = wx.MenuItem(menu, self.popupCID1, "Copy b ion to Clipboard")
+        menu.AppendItem(item)
+        # add some other items
+        menu.Append(self.popupCID2, "Copy y ion to Clipboard")
+        menu.Append(self.popupCID3, "Copy all product ions to Clipboard")
+        
+        # Popup the menu.  If an item is selected then its handler
+        # will be called before PopupMenu returns.
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+
+    def sendTextToClipboard(self, text):
+        text_data = wx.TextDataObject(text)
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(text_data)
+            wx.TheClipboard.Close()        
+        
+    def OnContextPopupOne(self, event):
+        entry = self.FindWindowByName("productListBox").GetStringSelection()
+        if entry:
+            bion = entry.split(' ')[1]
+            self.sendTextToClipboard(bion)
+
+    def OnContextPopupTwo(self, event):
+        entry = self.FindWindowByName("productListBox").GetStringSelection()
+        if entry:
+            yion = entry.split(' ')[5]
+            self.sendTextToClipboard(yion)
+    
+    def OnContextPopupThree(self, event):
+        prodList = self.FindWindowByName("productListBox")
+        if prodList:
+            prods = [prodList.GetString(x) for x in xrange(0, prodList.GetCount())]
+            text = '\n'.join(prods)
+            self.sendTextToClipboard(text)
+        
+    def OnContextPopupFour(self, event):
+        entry = self.FindWindowByName("precursorListBox").GetStringSelection()
+        if entry: 
+            precursorIon = entry.split(' ')[2]
+            self.sendTextToClipboard(precursorIon)    
+        
+    def OnContextPopupFive(self, event):
+        precList = self.FindWindowByName("precursorListBox")  
+        if precList:
+            precs = [precList.GetString(x) for x in xrange(0, precList.GetCount())]
+            text = '\n'.join(precs)
+            self.sendTextToClipboard(text)    
+    
+    def OnPrecContextMenu(self, evt):
+        if not hasattr(self, "popupID4"):
+            self.popupCID4 = wx.NewId()
+            self.popupCID5 = wx.NewId()
+
+            self.Bind(wx.EVT_MENU, self.OnContextPopupFour, id=self.popupCID4)
+            self.Bind(wx.EVT_MENU, self.OnContextPopupFive, id=self.popupCID5)
+
+        # make a menu
+        menu = wx.Menu()
+        # Show how to put an icon in the menu
+        item = wx.MenuItem(menu, self.popupCID4, "Copy precursor ion to Clipboard")
+        menu.AppendItem(item)
+        # add some other items
+        menu.Append(self.popupCID5, "Copy all precursor ions to Clipboard")
+        
+        # Popup the menu.  If an item is selected then its handler
+        # will be called before PopupMenu returns.
+        self.PopupMenu(menu)
+        menu.Destroy()
+        
+    def OnCopyToClipboard(self, evt):
+        seq = self.FindWindowByName("sequence").GetValue()
+        prodList = self.FindWindowByName("productListBox")
+        precList = self.FindWindowByName("precursorListBox")
+        
+        if seq and prodList and precList:
+            prods = [prodList.GetString(x) for x in xrange(0, prodList.GetCount())]
+            precs = [precList.GetString(x) for x in xrange(0, precList.GetCount())]
+            
+            text = '\n'.join([seq]+ ['\n'] + prods + ['\n'] + precs)
+            text_data = wx.TextDataObject(text)
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(text_data)
+                wx.TheClipboard.Close()
         
     def SetToolBar(self, tb):
         tsize = (24,24)
@@ -435,8 +545,8 @@ class BlaisPepCalc(wx.Panel):
         return menu
 
     def ComboBoxData(self):
-        return (('nTerm', (180, 140), (70,20), ["None"] + self.Nterm_mods, 0, False, None, self),
-                ('cTerm', (180, 170), (70,20), ["None"] + self.Cterm_mods, 0, False, None, self),
+        return (('nTerm', (180, 140), (100,20), ["None"] + self.Nterm_mods, 0, False, None, self),
+                ('cTerm', (180, 170), (100,20), ["None"] + self.Cterm_mods, 0, False, None, self),
                 ('ions', (180, 200), (70,20), ["b/y", " b/y - H2O", " b/y - phos", " b/y - 2 phos", " b/y - 3 phos", " b/y - 4 phos", "c/z"], 0, False, None, self))
 
     def createComboBoxes(self, panel):
