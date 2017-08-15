@@ -74,7 +74,7 @@ class TestListCtrl(wx.ListCtrl,
 class ListBank(wx.Frame):
     def __init__(self, parent, id):
         self.parent = parent
-        wx.Frame.__init__(self,parent,id, 'List Bank', size =(460,240), pos = (50,50), style=wx.CAPTION | wx.CLOSE_BOX) #, style=wx.STAY_ON_TOP|wx.FRAME_EX_METAL|wx.FRAME_NO_TASKBAR
+        wx.Frame.__init__(self,parent,id, 'List Bank   (Right click to hide)', size =(460,240), pos = (50,50), style=wx.CAPTION| wx.CLOSE_BOX) #, style=wx.STAY_ON_TOP|wx.FRAME_EX_METAL|wx.FRAME_NO_TASKBAR  
         self.panel = wx.Panel(self, size =(460,260))
         
         #self.listb = TestListCtrl(self.parent, self.panel, -1, style=wx.LC_REPORT | wx.BORDER_NONE | wx.LC_SORT_ASCENDING)
@@ -101,6 +101,8 @@ class ListBank(wx.Frame):
         
         user_defined = glob.glob(os.path.join(install_dir, r'settings\*_bpc.txt'))
         
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+        
         self.user_dict = {}
         pos = 305
         for i, file_name in enumerate(user_defined):
@@ -109,24 +111,19 @@ class ListBank(wx.Frame):
             self.Bind(wx.EVT_BUTTON, self.OnUser, btn)
             self.user_dict[id]=file_name
         
-        
-        
-        
         #self.panel.Bind(wx.EVT_MOTION, self.OnMouse)
         self.Refresh()
         self.Update()
         self.Refresh()
         self.selected = None
         
+    def OnClose(self, event):
+        self.Hide()
         
     def OnUser(self, event):
-        print "E."
-        print "2."
         filename = self.user_dict[event.Id]
         self.loaddir = os.path.dirname(filename)
         self.loadfilename = os.path.basename(filename)
-        print dir
-        print filename
         file_r = open(filename, 'r')
         lines = file_r.readlines()
         self.listb.DeleteAllItems()
@@ -135,8 +132,6 @@ class ListBank(wx.Frame):
             
         file_r.close()        
         
-        
-    
     def OnMouse(self, event):
         print "Mouse ve"
         """implement dragging"""
@@ -244,8 +239,12 @@ class ListBank(wx.Frame):
         file_r = open(dir + '\\' + filename, 'r')
         lines = file_r.readlines()
         self.listb.DeleteAllItems()
-        for i, line in enumerate(lines):
-            self.listb.Populate(line.split('\t')[0].strip(), line.split('\t')[1].strip())
+        try:
+            for i, line in enumerate(lines):
+                self.listb.Populate(line.split('\t')[0].strip(), line.split('\t')[1].strip())
+        except:
+            wx.MessageBox("Error parsing file.  Format should be\nH-PEPTIDER-OH{tab}Title.\n\nCheck all tabs are in place.")
+            
             
         file_r.close()
 

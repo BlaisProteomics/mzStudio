@@ -283,7 +283,7 @@ class BlaisPepCalc(wx.Panel):
         self.createSpinBoxes(self)
         
         self.memory_bank = lb.ListBank(self, -1)
-        
+        #self.memory_bank = MemoryBank(self, -1)
         self.Bind(wx.EVT_LISTBOX_DCLICK, self.PrecPopUp, self.FindWindowByName('precursorListBox'))
         
         self.y_ions = self.b_ions = None
@@ -778,8 +778,6 @@ class BlaisPepCalc(wx.Panel):
             cmodstr = 'C-term: %.5f' % cmod       
             modstrs.append(cmodstr)
         
-        
-        
         totalModMass = sum(zip(*mods)[1]) if mods else 0
         
         precmass = mw(aminos) + totalModMass
@@ -852,7 +850,7 @@ class BlaisPepCalc(wx.Panel):
 
     def OnViewMemoryBank(self, event):
         #self.memory_bank = MemoryBank(self, -1)
-        self.memory_bank = lb.ListBank(self, -1)
+        #self.memory_bank = lb.ListBank(self, -1)
         self.memory_bank.Show()
 
     #def return_mem_seq(self):
@@ -893,12 +891,12 @@ class BlaisPepCalc(wx.Panel):
         return nterm + "-" + seq + "-" + cterm
 
     def OnMemoryBank(self,event):
-        try:
-            self.memory_bank.bank.Append(self.return_mem_seq())
-        except:
-            self.memory_bank = MemoryBank(self, -1)
-            self.memory_bank.Show()
-            #self.memory_bank.bank.Append(self.return_mem_seq())
+        #try:
+        self.memory_bank.bank.Append(self.return_mem_seq())
+        #except:
+        #    self.memory_bank = MemoryBank(self, -1)
+        #    self.memory_bank.Show()
+        #    #self.memory_bank.bank.Append(self.return_mem_seq())
             
     def OnBank(self, event):
         pass
@@ -916,8 +914,6 @@ class BlaisPepCalc(wx.Panel):
             currentPage.Window.Refresh()
             currentPage.Refresh()             
             
-            
-
     def OnXFer(self, event):
         if not self.y_ions and self.b_ions:
             print "Invalid command; no sequence stored."
@@ -926,20 +922,28 @@ class BlaisPepCalc(wx.Panel):
             print "Invalid command; no data selected."
             return
         
+        currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
+        currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]           
+        currentFilter = currentFile['filter_dict'][currentFile['scanNum']]
+        if 'ms2' not in currentFilter and 'ms3' not in currentFilter and 'msms' not in currentFilter:
+            wx.MessageBox("Not an MS2/MS3 scan, cannot label!")
+            return
         nterm = self.FindWindowByName("nTerm").GetValue().strip()
-        if self.parent.labelOverwrite:
-            currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
-            currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]         
+        ntermToken = None
+        if nterm == u'None':
+            ntermToken = 'H-'
+        else:
+            ntermToken = nterm
+        if self.parent.labelOverwrite:      
             scanNum = currentFile["scanNum"]
             if scanNum not in currentFile["overlay"].keys():
                 currentFile["overlay"][scanNum]=[self.y_ions, self.b_ions]
-                
-                currentFile['overlay_sequence'][scanNum]=nterm + '-' + self.FindWindowByName("sequence").GetValue() + '-OH'
+                currentFile['overlay_sequence'][scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue() + '-OH'
             else:
                 orig_y = currentFile["overlay"][scanNum][0]
                 orig_b = currentFile["overlay"][scanNum][1]
                 currentFile["overlay"][scanNum]=[self.y_ions + orig_y, self.b_ions + orig_b]
-                currentFile['overlay_sequence'][scanNum]=nterm + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
+                currentFile['overlay_sequence'][scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
             currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
             currentPage.Window.UpdateDrawing()
             currentPage.Window.Refresh()
@@ -949,7 +953,7 @@ class BlaisPepCalc(wx.Panel):
             currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]         
             scanNum = currentFile["scanNum"]
             currentFile["overlay"][scanNum]=[self.y_ions, self.b_ions]
-            currentFile['overlay_sequence'][scanNum]=nterm + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
+            currentFile['overlay_sequence'][scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
             currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
             currentPage.Window.UpdateDrawing()
             currentPage.Window.Refresh()

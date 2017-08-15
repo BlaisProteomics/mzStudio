@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -6763,7 +6763,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.6, 2017-08-12)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.7, 2017-08-14)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -6808,8 +6808,6 @@ class TopLevelFrame(wx.Frame):
         self.Bind(aui.EVT_AUI_PERSPECTIVE_CHANGED, self.OnPersp)
         self.Bind(aui.EVT_AUINOTEBOOK_PAGE_CHANGED, self.OnPageChange)
 
-        
-        
         self.timer = wx.Timer(self)
         
         mb = self.MakeMenuBar(full=False)
