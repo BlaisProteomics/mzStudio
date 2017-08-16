@@ -39,3 +39,5 @@ K|Propionyl:pK
 E|Glu->pyro-Glu:pE
 R|Methyl:mmR
 R|Dimethyl:dmR
+K|TMT6plex:tmtK
+K|TMT:ctmtK
