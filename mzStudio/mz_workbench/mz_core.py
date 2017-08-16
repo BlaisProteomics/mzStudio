@@ -760,8 +760,19 @@ def convert_mods(varmod, switch_dict):
         converted += mod
     return converted
 
+def remove_Nterms(varmod):
+    mods = []
+    for mod in varmod.split(';'):
+        mod = mod.strip()
+        if not mod.find('N-term') > -1:
+            mods.append(mod)
+    return '; '.join(mods)
+
 def create_peptide_container(seq, varmod, fixedmod, keepLabels=True, switch_labels={}, search_multi_mods=False):
     '''
+    VERSION: 0.7 (2017-08-15)
+    Added compatibility with variable N-term mods.
+    
     VERSION: 0.6 (2017-06-06)
     Added compatibility with COMET, Discoverer, and X!Tandem style varmods
     
@@ -809,6 +820,8 @@ def create_peptide_container(seq, varmod, fixedmod, keepLabels=True, switch_labe
     for i, member in enumerate(fixedmod):
         if member.find('N-term') > -1:  # N-terminal modifications are dealt with in the mass calculator
             del fixedmod[i]
+    
+    varmod = remove_Nterms(varmod)        
     
     if keepLabels:
         var_mod_dict['K|Label:2H(4)']='deutK'
