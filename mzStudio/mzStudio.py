@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.8'
+__version__ = '1.0.9'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -6763,7 +6763,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.8, 2017-08-15)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.9 2017-08-16)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -7147,7 +7147,7 @@ class TopLevelFrame(wx.Frame):
         self.tb4.Bind(wx.EVT_BUTTON, self.OnClickCalc, self.tb4.calcButton)  
         self.tb4.AddControl(self.tb4.calcButton)
         #self.tb4.pa = re.compile('([A-Z]+[a-z+]*)[ ]*\(*([0-9]+)\)*')
-        self.tb4.pa = re.compile('([A-Z][a-z]*)([0-9]*)(?=$|[A-Za-z])*')
+        self.tb4.pa = re.compile('([A-Z][a-z+]*)([0-9]*)(?=$|[A-Za-z])*')
         self.tb4.choice = wx.Choice(self.tb4, -1, choices=["Monoisotopic", "Average"])
         self.tb4.choice.SetStringSelection("Monoisotopic")
         self.tb4.AddControl(self.tb4.choice)        
