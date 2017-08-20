@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.9'
+__version__ = '1.0.10'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -5844,7 +5844,7 @@ class DrawPanel(wx.Panel):
         
         if not self.parent.ObjectOrganizer.containsType(SingleIDFrame.SingleID_Panel):
             
-            SingleIDPanel = SingleIDFrame.SingleID_Panel(self.parent.parent, -1, None, psm, self.parent.ObjectOrganizer, header)
+            SingleIDPanel = SingleIDFrame.SingleID_Panel(self.parent.parent, -1, None, psm, self.parent.ObjectOrganizer, header, searchMode)
             self.parent.parent._mgr.AddPane(SingleIDPanel, aui.AuiPaneInfo().Right().Caption("SearchResult"))
             self.parent.parent._mgr.Update()
             #b.aui_pane = self._mgr.GetPaneByWidget(b)    
@@ -5857,6 +5857,7 @@ class DrawPanel(wx.Panel):
             #------------------------------ Update grid and header
             idPanel.grid.Destroy()
             idPanel.grid = SingleIDFrame.SingleID_Grid(idPanel, psm)
+            idPanel.searchMode = searchMode
             idPanel.update_header(header)
             idPanel.grid.Refresh()
             #------------------------------
@@ -6763,7 +6764,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.9 2017-08-16)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.10 2017-08-19)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)

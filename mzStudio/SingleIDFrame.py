@@ -30,7 +30,11 @@ class SingleID_Panel(wx.Panel):
     Shows results from single spectrum search.
     
     '''
-    def __init__(self, parent, currentFile, fileID, psm, organizer, header):
+    def __init__(self, parent, currentFile, fileID, psm, organizer, header, searchMode):
+        
+        self.key_dict = {'Mascot': (u'--------------------------------------------------', 'Header'),
+                    'Comet': (u'Data', u'Program')}
+        
         self.organizer = organizer
         if organizer:
             organizer.addObject(self)
@@ -39,12 +43,13 @@ class SingleID_Panel(wx.Panel):
         self.parent = parent
         wx.Panel.__init__(self, parent, size =(280,670), pos = (50,50))
         self.psm = psm
-        
+        self.searchMode = searchMode
         header_dict = {}
+        
         if header:
             for _dict in header:
-                _val = _dict[u'--------------------------------------------------']
-                _key = _dict['Header']
+                _val = _dict[self.key_dict[searchMode][0]]
+                _key = _dict[self.key_dict[searchMode][1]]
                 header_dict[_key]=_val
             
         self.header_dict = header_dict
@@ -78,8 +83,8 @@ class SingleID_Panel(wx.Panel):
     def update_header(self, new_header):
         header_dict = {}
         for _dict in new_header:
-            _val = _dict[u'--------------------------------------------------']
-            _key = _dict['Header']
+            _val = _dict[self.key_dict[self.searchMode][0]]
+            _key = _dict[self.key_dict[self.searchMode][1]]
             header_dict[_key]=_val
                 
         self.header_dict = header_dict    
@@ -131,16 +136,19 @@ class SingleID_Panel(wx.Panel):
             
         sequence = self.psm['Peptide Sequence']
         varmod = self.psm['Variable Modifications']
-        fixedmod = self.header_dict['Fixed modifications']
+        if self.searchMode == 'Mascot':
+            fixedmod = self.header_dict['Fixed modifications']
+            for mod in fixedmod.split(","):
+                mod = mod.strip()
+                if mod.find("N-term") > -1:
+                    mod = mod.split(" ")[0]
+                    mod = mod.strip()
+                    bpc.b.FindWindowByName("nTerm").SetValue(mod_dict[mod])             
+        elif self.searchMode == 'Comet': 
+            aamods = ['add_A_alanine','add_C_cysteine','add_D_aspartic_acid','add_E_glutamic_acid','add_F_phenylalanine','add_G_glycine','add_H_histidine','add_I_isoleucine','add_K_lysine','add_L_leucine','add_M_methionine','add_N_asparagine','add_P_proline','add_Q_glutamine','add_R_arginine','add_S_serine','add_T_threonine','add_V_valine','add_W_tryptophan','add_Y_tyrosine'] #'add_Cterm_peptide','add_Cterm_protein', 'add_Nterm_peptide','add_Nterm_protein'
+            fixedmod =  dict((x, '[' + str(y) + ']') for x, y in [(x[4], y) for x, y in zip(self.header_dict.keys(), self.header_dict.values()) if x in aamods and y > 0])
         
         if fixedmod == None: fixedmod = ''        
-        
-        for mod in fixedmod.split(","):
-            mod = mod.strip()
-            if mod.find("N-term") > -1:
-                mod = mod.split(" ")[0]
-                mod = mod.strip()
-                bpc.b.FindWindowByName("nTerm").SetValue(mod_dict[mod])        
         
         import mz_workbench.mz_core as mz_core
         peptide_container = mz_core.create_peptide_container(sequence, varmod, fixedmod)

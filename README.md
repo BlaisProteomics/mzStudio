@@ -1,4 +1,4 @@
-# mzStudio (current version 1.0.9, 2017-08-16)
+# mzStudio (current version 1.0.10, 2017-08-19)
 The mzStudio Proteomic Mass Spectrometry Analysis Tool
 
 Recent additions:
