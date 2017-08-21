@@ -695,6 +695,14 @@ class BlaisPepCalc(wx.Panel):
         if eachValue:
             checkbox.SetValue(eachValue)
         return checkbox
+    
+    def is_number(self, s):
+        #code from https://stackoverflow.com/questions/354038/how-do-i-check-if-a-string-is-a-number-float
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
 
     def OnCalculate(self, event):
         calcType = 'mi' if self.FindWindowByName("masses").GetStringSelection() == 'monoisotopic' else 'av'
@@ -768,12 +776,18 @@ class BlaisPepCalc(wx.Panel):
         modstrs = ['%s%d: %f' % (aminos[i-1], i, mass) for i, mass in mods]
         
         if nterm:
-            nmod = mz_masses.calc_mass(mz_masses.Nterm_dict[nterm])
+            if nterm.isdigit() or self.is_number(nterm):
+                nmod = float(nterm)
+            else:
+                nmod = mz_masses.calc_mass(mz_masses.Nterm_dict[nterm])
             mods.append((0, nmod - AW['H'])) # Only one *-term mod at at time.
             nmodstr = 'N-term: %.5f' % nmod
             modstrs.append(nmodstr)
         if cterm:
-            cmod = mz_masses.calc_mass(mz_masses.Cterm_dict[cterm])
+            if cterm.isdigit() or self.is_number(cterm):
+                cmod = float(cterm)
+            else:
+                cmod = mz_masses.calc_mass(mz_masses.Cterm_dict[cterm])            
             mods.append((len(aminos)+1, cmod  - (AW['H'] + AW['O'])))
             cmodstr = 'C-term: %.5f' % cmod       
             modstrs.append(cmodstr)
