@@ -178,13 +178,15 @@ class ListBank(wx.Frame):
     def OnSelected(self, event):
         item = event.GetItem()
         self.selected=item.GetId() #-------Id is the index within the list.  Keep track of this for other commands
-        data = item.GetText().split('-')
+        data = item.GetText()
         if not data:
-            return
+            return        
+        hresult = [i for i, x in enumerate(data) if x == '-']
+        indices = (hresult[0], hresult[-1])
         
-        nterm = data[0]
-        seq = data[1]
-        cterm = data[2]
+        nterm = data[0:indices[0]]
+        seq = data[indices[0]+1:indices[1]]
+        cterm = data[indices[1]+1:]
         if nterm == "H":
             nterm = "None"
         if cterm == "OH":

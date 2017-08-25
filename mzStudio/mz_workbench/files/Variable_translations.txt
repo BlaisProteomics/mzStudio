@@ -1,43 +1,47 @@
-C|Pip:pipC
-S|Fucosylation:fucS
-S|Fringe:gfS
-T|Fringe:gfT
-C|SML:smlC
-S|HexNAc: gS
-T|HexNAc: gT
-S|XylXylGal: xxgS
-T|XylXylGal: xxgT
-S|Hex:galS
-T|Hex:galT
-K|iTRAQ8plex:eK
-T|Fucosylation:fucT
-C|ADP-Ribosyl:arC
-C|Carbamidomethyl:caC
-Q|Deamidated : E
-N|Deamidated : D
-M|Oxidation : oxM
-S|Phospho : pS
-T|Phospho : pT
-Y|Phospho : pY
-E|ADP-Ribosyl:arE
-N|ADP-Ribosyl:arN
-S|ADP-Ribosyl:arS
-D|ADP-Ribosyl:arD
-C|ADP-Ribosyl:arC
-Q|ADP-Ribosyl:arQ
-K|ADP-Ribosyl:arK
-R|ADP-Ribosyl:arR
-K|LbA-LbA:lbalbaK
-K|LbA-HbA:lbahbaK
-K|HbA-HbA:hbahbaK
-S|Phosphate Elimination:dhA
-K|HCGly-HCGly:cgK
-K|HNGly-HNGly:ngK
-K|HNGly-HNGly-HNGly-HNGly:ngngK
-K|HCGly-HCGly-HCGly-HCGly:cgcgK
-K|Propionyl:pK
-E|Glu->pyro-Glu:pE
-R|Methyl:mmR
-R|Dimethyl:dmR
-K|TMT6plex:tmtK
-K|TMT:ctmtK
+C|Pip::pipC
+S|Fucosylation::fucS
+S|Fringe::gfS
+T|Fringe::gfT
+C|SML::smlC
+S|HexNAc:: gS
+T|HexNAc:: gT
+S|XylXylGal:: xxgS
+T|XylXylGal:: xxgT
+S|Hex::galS
+T|Hex::galT
+K|iTRAQ8plex::eK
+T|Fucosylation::fucT
+C|ADP-Ribosyl::arC
+C|Carbamidomethyl::caC
+Q|Deamidated :: E
+N|Deamidated :: D
+M|Oxidation :: oxM
+S|Phospho :: pS
+T|Phospho :: pT
+Y|Phospho :: pY
+E|ADP-Ribosyl::arE
+N|ADP-Ribosyl::arN
+S|ADP-Ribosyl::arS
+D|ADP-Ribosyl::arD
+C|ADP-Ribosyl::arC
+Q|ADP-Ribosyl::arQ
+K|ADP-Ribosyl::arK
+R|ADP-Ribosyl::arR
+K|LbA-LbA::lbalbaK
+K|LbA-HbA::lbahbaK
+K|HbA-HbA::hbahbaK
+S|Phosphate Elimination::dhA
+K|HCGly-HCGly::cgK
+K|HNGly-HNGly::ngK
+K|HNGly-HNGly-HNGly-HNGly::ngngK
+K|HCGly-HCGly-HCGly-HCGly::cgcgK
+K|Propionyl::pK
+E|Glu->pyro-Glu::pE
+R|Methyl::mmR
+R|Dimethyl::dmR
+K|TMT6plex::tmtK
+K|TMT::ctmtK
+E|Methyl::mE
+D|Methyl::mD
+E|Methyl:2H(3)::mdE
+D|Methyl:2H(3)::mdD

@@ -1,7 +1,8 @@
-# mzStudio (current version 1.0.11, 2017-08-21)
+# mzStudio (current version 1.0.12, 2017-08-25)
 The mzStudio Proteomic Mass Spectrometry Analysis Tool
 
 Recent additions:
+  * Do you use Onenote?  Onenote links can now be pasted into SpecStylus!
   * Can now open files from Thermo Quantiva
 
 ![mzStudio](http://blaispathways.dfci.harvard.edu/graph/tutorial_data/101.png)

@@ -1,11 +1,16 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.11'
+__version__ = '1.0.12'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
 #----------------------------------------------------------------------------------------------------------------------
 
 TRY_VERSION_FOUR = False
+try:
+    import wxversion
+    wxversion.select("3.0")
+except:
+    pass
 
 import os
 
@@ -1943,7 +1948,7 @@ class MS_Data_Manager():
             
         y_label = 'y'
         b_label = 'b'
-        if self.files[filename]["fd"]['reaction']=='etd':
+        if 'reaction' in self.files[filename]["fd"] and self.files[filename]["fd"]['reaction']=='etd':
             y_label = 'z'
             b_label = 'c'
             
@@ -6764,7 +6769,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.11 2017-08-21)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.12 2017-08-25)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)

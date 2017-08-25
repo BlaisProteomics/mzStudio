@@ -683,6 +683,7 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         ppt = il.Add(wx.Bitmap(os.path.join(bitmapDir, "ppt.png"), wx.BITMAP_TYPE_PNG))
         py = il.Add(wx.Bitmap(os.path.join(bitmapDir, "py.png"), wx.BITMAP_TYPE_PNG))
         xic = il.Add(wx.Bitmap(os.path.join(bitmapDir, "x2.png"), wx.BITMAP_TYPE_PNG))
+        onenote = il.Add(wx.Bitmap(os.path.join(bitmapDir, "onenote.png"), wx.BITMAP_TYPE_PNG))
         
         self.tc.tree.SetImageList(il)
         self.il = il        

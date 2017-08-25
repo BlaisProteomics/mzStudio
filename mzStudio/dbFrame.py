@@ -372,6 +372,8 @@ class dbFrame(wx.Panel):
         
         if len(self.rows)==0:
             wx.MessageBox("Query returned no results.")
+            return
+        
         #if self.currentFile["SearchType"]=="Pilot":
         #    self.rows = db.pull_data_dict(self.currentFile["database"], "select * from fdr;", table='fdr')        
         
@@ -381,7 +383,7 @@ class dbFrame(wx.Panel):
         self.grid = dbGrid(self, len(self.rows))
         self.grid.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.OnSelect)
         self.grid.Bind(wx.grid.EVT_GRID_LABEL_LEFT_CLICK, self.OnLabelClick)
-        
+        self.grid.EnableEditing(False)
         self.SizeFrame()
         self.grid.Refresh()
         self.parent._mgr.Update()        
@@ -601,6 +603,8 @@ class dbFrame(wx.Panel):
             for member in peptide_container:
                 current_sequence += member
             self.bpc.b.FindWindowByName("sequence").SetValue(current_sequence)
+            c_mod_dict = {"C-Term(Methyl)" : "methyl ester",
+                          'Methyl:2H(3)' : "d3 methyl ester"}
             mod_dict = {'iTRAQ4plex': 'iTRAQ',
                       'TMT6plex': 'TMT',
                       'TMT': 'cTMT',
@@ -617,33 +621,45 @@ class dbFrame(wx.Panel):
                       'Propionyl': 'Propionyl',
                       'Phenylisocyanate': 'Phenylisocyanate'}
             #print self.currentFile["SearchType"]
-            if self.currentFile["SearchType"]=="Mascot":
+            if self.currentFile["SearchType"] in ["Mascot", "Proteome Discoverer"]:
                 #print "NTERM MODS!"
                 if fixedmod == None:
                     fixedmod = ''
                 for mod in fixedmod.split(","):
                     mod = mod.strip()
                     #print mod
-                    if mod.find("N-term") > -1:
+                    if mod.lower().find("n-term") > -1:
                         mod = mod.split(" ")[0]
                         mod = mod.strip()
                         #print mod_dict[mod]
                         self.bpc.b.FindWindowByName("nTerm").SetValue(mod_dict[mod])
+                for mod in fixedmod.split(","):
+                    mod = mod.strip()
+                    #print mod
+                    if mod.lower().find("c-term") > -1:
+                        mod = mod.split(" ")[0]
+                        mod = mod.strip()
+                        #print mod_dict[mod]
+                        self.bpc.b.FindWindowByName("cTerm").SetValue(c_mod_dict[mod])         
+                        
                 for mod in varmod.split(";"): #N-term: Acetyl
                     mod = mod.strip()
                     #print mod
-                    if mod.find("N-term") > -1:
+                    if mod.lower().find("n-term") > -1:
                         mod = mod.split(" ")[1]
                         mod = mod.strip()
                         #print mod_dict[mod]
                         self.bpc.b.FindWindowByName("nTerm").SetValue(mod_dict[mod])
-            if self.currentFile["SearchType"]=="Pilot":
-                for mod in varmod.split(";"):
-                    mod = mod.strip()
-                    if mod.find("N-term") > -1:
-                        mod = mod.split("@")[0]
-                        mod = mod.strip()
-                        self.bpc.b.FindWindowByName("nTerm").SetValue(mod_dict[mod])
+                    if mod.lower().find("c-term") > -1:
+                        if self.currentFile["SearchType"] == "Mascot":
+                            mod = mod.split(" ")[1]
+                            mod = mod.strip()
+                            #print mod_dict[mod]
+                            self.bpc.b.FindWindowByName("cTerm").SetValue(c_mod_dict[mod])   
+                        if self.currentFile["SearchType"] == 'Proteome Discoverer':
+                            self.bpc.b.FindWindowByName("cTerm").SetValue(c_mod_dict[mod]) 
+                       
+                
             self.bpc.b.OnCalculate(None)
             #----------------------IF SILAC MODE, UPDATE SILAC PEAKS
             if self.currentFile["SILAC"]["mode"]:

@@ -369,7 +369,8 @@ class CometGUI(wx.Dialog):
                 
         fixmodMassBySite = defaultdict(float)
         for fixmodstr in fixmodstrs:
-            modname, sites = fixmodstr.split()
+            sites = fixmodstr.split()[-1]
+            modname = fixmodstr[:fixmodstr.index(sites)].strip()
             try:
                 modmass = float(modname)
             except ValueError:

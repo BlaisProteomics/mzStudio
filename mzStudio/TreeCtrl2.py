@@ -153,10 +153,12 @@ class MyTreeCtrl(TreeListCtrl):#wx.TreeCtrl  #, listmix.TextEditMixin
                     icon = -1
                     if item['data']['full_path'].find(".py") > -1:
                         icon = 6
-                    if item['data']['full_path'].find(".ppt") > -1:
+                    elif item['data']['full_path'].find(".ppt") > -1:
                         icon = 5
-                    if item['data']['full_path'].find(".xls") > -1:
+                    elif item['data']['full_path'].find(".xls") > -1:
                         icon = 4
+                    elif item['data']['full_path'].find(r"onenote") > -1:
+                        icon = 8                    
                     
                     self.SetItemImage(node, icon, wx.TreeItemIcon_Normal)
                     #self.SetItemImage(node, icon, wx.TreeItemIcon_Selected)
@@ -328,10 +330,12 @@ class TestTreeCtrlPanel(wx.Panel):
             self.popupID2 = wx.NewId()
             self.popupID3 = wx.NewId()
             self.popupID4 = wx.NewId()
+            self.popupID5 = wx.NewId()
             self.Bind(wx.EVT_MENU, self.OnPopupOne_evt, id=self.popupID1)
             self.Bind(wx.EVT_MENU, self.OnPopupTwo_evt, id=self.popupID2)
             self.Bind(wx.EVT_MENU, self.OnPopupThree_evt, id=self.popupID3)
             self.Bind(wx.EVT_MENU, self.OnPopupFour_evt, id=self.popupID4)
+            self.Bind(wx.EVT_MENU, self.OnPopUpFive_evt, id=self.popupID5)
 
         # make a menu
         menu = wx.Menu()
@@ -340,18 +344,40 @@ class TestTreeCtrlPanel(wx.Panel):
         item2 = wx.MenuItem(menu, self.popupID2,"Sequence-->Clipboard")
         item3 = wx.MenuItem(menu, self.popupID3,"Edit Info Bar")
         item4 = wx.MenuItem(menu, self.popupID4,"Edit Title Bar")
+        item5 = wx.MenuItem(menu, self.popupID5,"Paste OneNote link")
         #bmp = images.Smiles.GetBitmap()
         #item.SetBitmap(bmp)
         menu.AppendItem(item)
         menu.AppendItem(item2)
         menu.AppendItem(item3)
         menu.AppendItem(item4)
+        menu.AppendItem(item5)
         # add some other items
         
         # Popup the menu.  If an item is selected then its handler
         # will be called before PopupMenu returns.
         self.PopupMenu(menu)
         menu.Destroy()
+        
+    def OnPopUpFive_evt(self, event):
+        text_data = wx.TextDataObject()
+        if wx.TheClipboard.Open():
+            result = wx.TheClipboard.GetData(text_data)
+            wx.TheClipboard.Close()
+        
+        link = text_data.GetText()
+        if link.startswith(r'onenote:///'):
+        
+            node = self.tree.GetSelection()
+            item = self.tree.AppendItem(node, "{ONE-NOTE LINK}")
+            #self.tree.SetItemImage(node, 8, wx.TreeItemIcon_Normal)   
+            self.tree.SetPyData(item, {"type":"auxfile", "flag":"experiment", "exp":'Title', 'full_path':link})     
+            self.parent.TreeRefresh()                   
+        else:
+            wx.MessageBox("Could not parse as onenote link.\nRight-click tab and select\nCopy link to page.")
+                            
+             
+        #print result
         
     def _OnPopupFour_evt(self, event):
         print "4"
@@ -619,6 +645,9 @@ class TestTreeCtrlPanel(wx.Panel):
                         self.parent.parent.custom_spectrum_process = prodog.function
                         self.parent.parent.custom_spectrum_process_file = prodog.filename  
                     prodog.Destroy()
+                elif self.tree.GetItemText(item).lower().startswith("onenote"):
+                    import webbrowser
+                    webbrowser.open(data['full_path'])
                     
                 #subprocess.Popen('"' + obj.filename + '"')
             if data['type'] == "Folder":

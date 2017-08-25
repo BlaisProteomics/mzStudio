@@ -1,6 +1,6 @@
 __author__ = 'Scott'
-__lastRevision__ = '2016-12-24'
-__version__ = "0.3.2-mzStudio"
+__lastRevision__ = '2017-08-25'
+__version__ = "0.3.3-mzStudio"
 
 import pylab
 import sys
@@ -38,6 +38,7 @@ Ntranslate = {'iTRAQ4plex (N-term)': 'iTRAQ',
                       'HCGly-HCGly-HCGly-HCGly (N-term)':'HCGlyHCGlyHCGlyHCGly',
                       'HNGly-HNGly-HNGly-HNGly (N-term)':'HNGlyHNGlyHNGlyHNGly',
                       'Phenylisocyanate (N-term)':'Phenylisocyanate'}
+
 NvTranslate = {'N-term: Acetyl': 'Acetyl',
                'N-term: Propionyl': 'Propionyl',
                'iTRAQ8plex@N-term': 'iTRAQ8plex',
@@ -50,8 +51,13 @@ NvTranslate = {'N-term: Acetyl': 'Acetyl',
                'N-term: HCGly-HCGly-HCGly-HCGly': 'HCGlyHCGlyHCGlyHCGly',
                'N-term: TMT': 'cTMT',
                'N-term: TMT6plex': 'TMT'}
-Ctranslate = {}
 
+Ctranslate = {'Methyl:2H(3) (C-term)':'d3 methyl ester',
+               'Methyl (C-term)':'methyl ester'}
+
+CvTranslate = {'C-term: Methyl:2H(3)':'d3 methyl ester',
+               'C-term: Methyl':'methyl ester',
+               'C-Term(Methyl)':'methyl ester'}
 
 def get_single_file(caption='Select File...', wx_wildcard = "XLS files (*.xls)|*.xls"):
     app = wx.PySimpleApp()
@@ -691,7 +697,9 @@ def merge_multi_mods(varmod):
 
 def read_fixed_translations():
     '''
-        
+    Version 0.2
+    Split on :: to allow : in mod name.
+    
     Version 0.1
     Allows conversion of Mascot style fixded modifications to PepCalc style tokens.
     
@@ -703,15 +711,17 @@ def read_fixed_translations():
     data = file_r.readlines()
     file_r.close()
     for line in data:
-        mod = line.split(':')[0].strip()
-        a = line.split(':')[1]
+        mod = line.split('::')[0].strip()
+        a = line.split('::')[1]
         trans = [x.strip() for x in a.split(',')]
         fixed_mod_dict[mod]=trans
     return fixed_mod_dict
     
 def read_variable_translations():
     '''
-            
+    Version 0.2
+    Split on :: to allow : in mod name.
+    
     Version 0.1
     Allows conversion of Mascot style variable modifications to PepCalc style tokens.
     
@@ -723,7 +733,7 @@ def read_variable_translations():
     data = file_r.readlines()
     file_r.close()  
     for line in data:
-        trans = line.split(':')
+        trans = line.split('::')
         var_mod_dict[trans[0].strip()]=trans[1].strip()
     return var_mod_dict
 
@@ -764,12 +774,24 @@ def remove_Nterms(varmod):
     mods = []
     for mod in varmod.split(';'):
         mod = mod.strip()
-        if not mod.find('N-term') > -1:
+        if not mod.lower().find('n-term') > -1:
+            mods.append(mod)
+    return '; '.join(mods)
+
+def remove_Cterms(varmod):
+    mods = []
+    for mod in varmod.split(';'):
+        mod = mod.strip()
+        if not mod.lower().find('c-term') > -1:
             mods.append(mod)
     return '; '.join(mods)
 
 def create_peptide_container(seq, varmod, fixedmod, keepLabels=True, switch_labels={}, search_multi_mods=False):
     '''
+    
+    VERSION: 0.8 (2017-08-25)
+    Extended compatibility with C-term mods.
+    
     VERSION: 0.7 (2017-08-15)
     Added compatibility with variable N-term mods.
     
@@ -820,8 +842,13 @@ def create_peptide_container(seq, varmod, fixedmod, keepLabels=True, switch_labe
     for i, member in enumerate(fixedmod):
         if member.find('N-term') > -1:  # N-terminal modifications are dealt with in the mass calculator
             del fixedmod[i]
+            
+    for i, member in enumerate(fixedmod):
+        if member.find('C-term') > -1:  # C-terminal modifications are dealt with in the mass calculator
+            del fixedmod[i]    
     
-    varmod = remove_Nterms(varmod)        
+    varmod = remove_Nterms(varmod)    
+    varmod = remove_Cterms(varmod)
     
     if keepLabels:
         var_mod_dict['K|Label:2H(4)']='deutK'
@@ -1098,8 +1125,11 @@ def calc_pep_mass_from_residues(sequence, cg = 1, varmod = '', fixedmod = '', Nt
             vm = varmod.split(';')
             for vmod in vm:
                 vmod = vmod.strip()
-                if vmod.find('N-term') > -1:
+                if vmod.lower().find('n-term') > -1:
                     Nterm = NvTranslate[vmod]
+                    
+                if vmod.lower().find('c-term') > -1:
+                    Cterm = CvTranslate[vmod]        
                 
 
         if Cterm:
