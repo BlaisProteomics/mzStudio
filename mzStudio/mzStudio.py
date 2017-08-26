@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.12'
+__version__ = '1.0.14'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -2781,6 +2781,7 @@ class DrawPanel(wx.Panel):
                         self.frm.grid.SetCellValue(i, 8, self.copyfrom.grid.GetCellValue(i,8))
 
                         self.frm.grid.SetCellValue(i, 13, self.copyfrom.grid.GetCellValue(i,13))
+                        self.frm.grid.SetCellValue(i, 14, self.copyfrom.grid.GetCellValue(i,14))
                         
                         self.frm.mark_base.append({})
                         
@@ -6769,7 +6770,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.12 2017-08-25)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.14 2017-08-25)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -6839,11 +6840,18 @@ class TopLevelFrame(wx.Frame):
             #self.Bind(wx.EVT_MENU, self.OnDoClose, item)
             item = menu.Append(-1, "Quit")
             self.Bind(wx.EVT_MENU, self.OnClose_smaller, item)
+            
+            help_menu = wx.Menu()
+            item = help_menu.Append(-1, "Help")            
+            self.Bind(wx.EVT_MENU, self.OnHelp, item)
+            
             _Test = False # This bit could be taken out altogether, aside from development stuff.
             if _Test:
                 item = menu.Append(-1, "....Test")
                 self.Bind(wx.EVT_MENU, self.OnTest, item)
+                
             mb.Append(menu, "&File")
+            mb.Append(help_menu, "Help")
             return mb    
         else:
             mb = wx.MenuBar()
@@ -6854,14 +6862,27 @@ class TopLevelFrame(wx.Frame):
             self.Bind(wx.EVT_MENU, self.onDFileBrowse, item)
             #item = menu.Append(-1, "Close All Windows")
             #self.Bind(wx.EVT_MENU, self.OnDoClose, item)
-            item = menu.Append(-1, "Quit")         
-            self.Bind(wx.EVT_MENU, self.OnClose_smaller, item)
-            mb.Append(menu, "&File")            
+            item = menu.Append(-1, "Quit")
+            self.Bind(wx.EVT_MENU, self.OnClose_smaller, item)            
+            
+            mb.Append(menu, "&File")   
+            
+            
             for eachMenuData in self.menuData():
                 menuLabel = eachMenuData[0]
                 menuItems = eachMenuData[1]
                 mb.Append(self.createMenu(menuItems), menuLabel)
+                
+            help_menu = wx.Menu()
+            item = help_menu.Append(-1, "Help")            
+            self.Bind(wx.EVT_MENU, self.OnHelp, item)            
+            mb.Append(help_menu, "Help")
+            
             return mb
+    
+    def OnHelp(self, evt):
+        import webbrowser
+        webbrowser.open('https://github.com/BlaisProteomics/mzStudio/wiki')
     
     def OnTest(self, evt):
         

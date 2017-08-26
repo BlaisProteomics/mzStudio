@@ -74,7 +74,7 @@ class TestListCtrl(wx.ListCtrl,
 class ListBank(wx.Frame):
     def __init__(self, parent, id):
         self.parent = parent
-        wx.Frame.__init__(self,parent,id, 'List Bank   (Right click to hide)', size =(460,240), pos = (50,50), style=wx.CAPTION| wx.CLOSE_BOX) #, style=wx.STAY_ON_TOP|wx.FRAME_EX_METAL|wx.FRAME_NO_TASKBAR  
+        wx.Frame.__init__(self,parent,id, 'List Bank   (Right click to hide)', size =(460,240), pos = (50,50), style=wx.CAPTION| wx.CLOSE_BOX |wx.STAY_ON_TOP) #, style=wx.STAY_ON_TOP|wx.FRAME_EX_METAL|wx.FRAME_NO_TASKBAR  
         self.panel = wx.Panel(self, size =(460,260))
         
         #self.listb = TestListCtrl(self.parent, self.panel, -1, style=wx.LC_REPORT | wx.BORDER_NONE | wx.LC_SORT_ASCENDING)
