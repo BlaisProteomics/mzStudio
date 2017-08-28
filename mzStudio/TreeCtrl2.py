@@ -17,7 +17,7 @@ import SpecViewLite_build2 as svl
 import RICviewLite_multi as rvl_multi
 import mzStudio
 #import mz_workbench.protein_core as protein_core
-import cPickle, re
+import cPickle, re, os
 import subprocess
 import BlaisPepCalcSlim_aui2
 #import wx.lib.agw.hypertreelist as HTL
@@ -331,11 +331,13 @@ class TestTreeCtrlPanel(wx.Panel):
             self.popupID3 = wx.NewId()
             self.popupID4 = wx.NewId()
             self.popupID5 = wx.NewId()
+            self.popupID6 = wx.NewId()
             self.Bind(wx.EVT_MENU, self.OnPopupOne_evt, id=self.popupID1)
             self.Bind(wx.EVT_MENU, self.OnPopupTwo_evt, id=self.popupID2)
             self.Bind(wx.EVT_MENU, self.OnPopupThree_evt, id=self.popupID3)
             self.Bind(wx.EVT_MENU, self.OnPopupFour_evt, id=self.popupID4)
             self.Bind(wx.EVT_MENU, self.OnPopUpFive_evt, id=self.popupID5)
+            self.Bind(wx.EVT_MENU, self.OnPopUpSix_evt, id=self.popupID6)
 
         # make a menu
         menu = wx.Menu()
@@ -345,6 +347,7 @@ class TestTreeCtrlPanel(wx.Panel):
         item3 = wx.MenuItem(menu, self.popupID3,"Edit Info Bar")
         item4 = wx.MenuItem(menu, self.popupID4,"Edit Title Bar")
         item5 = wx.MenuItem(menu, self.popupID5,"Paste OneNote link")
+        item6 = wx.MenuItem(menu, self.popupID6,"Grab OneNote link")
         #bmp = images.Smiles.GetBitmap()
         #item.SetBitmap(bmp)
         menu.AppendItem(item)
@@ -352,6 +355,7 @@ class TestTreeCtrlPanel(wx.Panel):
         menu.AppendItem(item3)
         menu.AppendItem(item4)
         menu.AppendItem(item5)
+        menu.AppendItem(item6)
         # add some other items
         
         # Popup the menu.  If an item is selected then its handler
@@ -359,22 +363,69 @@ class TestTreeCtrlPanel(wx.Panel):
         self.PopupMenu(menu)
         menu.Destroy()
         
+        
+    def OnPopUpSix_evt(self, event):
+        #text_data = wx.TextDataObject()
+        #if wx.TheClipboard.Open():
+        #    result = wx.TheClipboard.GetData(text_data)
+        #    wx.TheClipboard.Close()
+        
+        #link = text_data.GetText()
+        #if link.startswith(r'onenote:'):
+        try:
+            oneNoteHelperDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'C#')
+            
+            from subprocess import check_output
+            
+            x = check_output([r"\\rc-data1.dfci.harvard.edu\blaise\ms_data_share\mzBrowserProject\mzBrowser\mzStudio\C#\ConsoleApp1.exe", "-p"])
+            if x.find("<__OneNote Not Open__>") == -1:
+                import re
+                title_re = re.compile('.*?name="(.*?)" ', re.DOTALL)
+                pageTitle = title_re.match(x).groups()[0]
+                #out = check_output([r"C:\Users\Scott\Desktop\ConsoleApp1.exe", "-p"])
+                #import xml.etree.ElementTree as ET
+                #root = ET.fromstring(x)
+                #pageTitle = root.attrib['name']
+                objectID_re = re.compile('.*?objectID="(.*?)" ', re.DOTALL)
+                #objectID = root[4].attrib['objectID']
+                objectID = objectID_re.match(x, re.DOTALL).groups()[0]
+                pageID_re = re.compile('.*? ID="(.*?)" ', re.DOTALL)
+                #pageID = root.attrib['ID']
+                pageID = pageID_re.match(x, re.DOTALL).groups()[0]
+                
+                link = check_output([r"\\rc-data1.dfci.harvard.edu\blaise\ms_data_share\mzBrowserProject\mzBrowser\mzStudio\C#\ConsoleApp2.exe", pageID, objectID])
+                
+                node = self.tree.GetSelection()
+                #item = self.tree.AppendItem(node, "{ONE-NOTE LINK}")
+                item = self.tree.AppendItem(node, "{ONE-NOTE LINK}")
+                #self.tree.SetItemImage(node, 8, wx.TreeItemIcon_Normal)   
+                
+                
+                self.tree.SetPyData(item, {"type":"auxfile", "flag":"experiment", "exp":pageTitle, 'full_path':link})     
+                self.parent.TreeRefresh()                   
+            else:
+                wx.MessageBox("Error communicating with OneNote.\nIs the application open?")
+        except:
+            wx.MessageBox("Error Communicating with OneNote.\nOpen ticket on Github page.")
+                            
+             
+        #print result        
+        
     def OnPopUpFive_evt(self, event):
         text_data = wx.TextDataObject()
         if wx.TheClipboard.Open():
             result = wx.TheClipboard.GetData(text_data)
             wx.TheClipboard.Close()
         
-        link = text_data.GetText()
-        if link.startswith(r'onenote:///'):
+            link = text_data.GetText()
+            if link.startswith(r'onenote:'):
+                node = self.tree.GetSelection()
+                item = self.tree.AppendItem(node, "{ONE-NOTE LINK}")
+                self.tree.SetPyData(item, {"type":"auxfile", "flag":"experiment", "exp":'Title', 'full_path':link})     
+                self.parent.TreeRefresh()                   
+            else:
+                wx.MessageBox("Could not parse link.")
         
-            node = self.tree.GetSelection()
-            item = self.tree.AppendItem(node, "{ONE-NOTE LINK}")
-            #self.tree.SetItemImage(node, 8, wx.TreeItemIcon_Normal)   
-            self.tree.SetPyData(item, {"type":"auxfile", "flag":"experiment", "exp":'Title', 'full_path':link})     
-            self.parent.TreeRefresh()                   
-        else:
-            wx.MessageBox("Could not parse as onenote link.\nRight-click tab and select\nCopy link to page.")
                             
              
         #print result
@@ -645,7 +696,8 @@ class TestTreeCtrlPanel(wx.Panel):
                         self.parent.parent.custom_spectrum_process = prodog.function
                         self.parent.parent.custom_spectrum_process_file = prodog.filename  
                     prodog.Destroy()
-                elif self.tree.GetItemText(item).lower().startswith("onenote"):
+                elif data['full_path'].lower().startswith("onenote"):
+                #elif self.tree.GetItemText(item).lower().startswith("onenote"):
                     import webbrowser
                     webbrowser.open(data['full_path'])
                     

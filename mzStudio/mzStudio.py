@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.14'
+__version__ = '1.0.15'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -2724,11 +2724,11 @@ class DrawPanel(wx.Panel):
     
     def XICReport(self, event):
         text = ''
-        pages = self.parent.GetPageCount()
+        pages = self.parent.notebook.GetPageCount()
         #current_page = self.parent.GetSelection()
         print self.max_tables
         for i in range(0, pages):        #-----------Go through each page
-            pg = self.parent.GetPage(i)  
+            pg = self.parent.notebook.GetPage(i)  
             for k, file_member in enumerate(pg.msdb.files.keys()): #------Go through each file in each page
                 currentFile = pg.msdb.files[pg.msdb.Display_ID[k]]
                 #----- FILE, FILTER, MZ RANGE, TITLE,  PEAK HEIGHT
@@ -6770,7 +6770,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.14 2017-08-25)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.15 2017-08-28)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -7030,7 +7030,8 @@ class TopLevelFrame(wx.Frame):
             ("&XIC", "XIC", self.OnXIC),
             #("Generate XIC Report", "Generate XIC Report", self.XICReport),
             #("&Propagate XICs within Window", "Propagate in Window", self.PropagateXICsInWindow),
-            ("Propagate XICs", "Propagate XICs all Windows", self.PropagateXICsAllWindows))),
+            ("Propagate XICs", "Propagate XICs all Windows", self.PropagateXICsAllWindows),
+            ("XIC report to Clipboard", "XIC Report", self.XICReport))),
                 #("Analysis", (
             #("&Save Analysis", "Save Analysis", self.OnSaveAnalysis),
             #("&Load Analysis", "Save Analysis", self.OnLoadAnalysis))),
