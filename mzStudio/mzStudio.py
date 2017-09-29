@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.15'
+__version__ = '1.0.16'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
@@ -6770,7 +6770,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.15 2017-08-28)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.16 2017-09-28)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)

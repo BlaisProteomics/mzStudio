@@ -705,7 +705,7 @@ class BlaisPepCalc(wx.Panel):
             return False
 
     def OnCalculate(self, event):
-        calcType = 'mi' if self.FindWindowByName("masses").GetStringSelection() == 'monoisotopic' else 'av'
+        calcType = self.FindWindowByName("masses").GetStringSelection() == 'monoisotopic'
         nterm = self.FindWindowByName("nTerm").GetValue().strip()
         cterm = self.FindWindowByName("cTerm").GetValue().strip()
         _ions = self.FindWindowByName("ions").GetValue().strip()
@@ -794,9 +794,10 @@ class BlaisPepCalc(wx.Panel):
         
         totalModMass = sum(zip(*mods)[1]) if mods else 0
         
-        precmass = mw(aminos) + totalModMass
+        precmass = mw(aminos, use_monoisotopic=calcType) + totalModMass
         chgmass = ((precmass + (protonMass * cg_by)) / cg_by) 
-        chgfrags = fragment(aminos, modstrs, ions = iontypes, charges = [cg_by])
+        chgfrags = fragment(aminos, modstrs, ions = iontypes, charges = [cg_by],
+                            use_monoisotopic=calcType)
         frags = {}
         for k, v in chgfrags.items():
             frags[k.strip('+')] = v
@@ -816,7 +817,7 @@ class BlaisPepCalc(wx.Panel):
             b_ions = []
             y_ions = []
                 
-        charge_states = [precmass] + [(precmass + (protonMass*c))/c for c in range(1, 7)]
+        charge_states = [precmass] + [(precmass + (protonMass*c))/c for c in range(1, int(cg_calc)+1)]
         
         
         ##First, precursor.  
