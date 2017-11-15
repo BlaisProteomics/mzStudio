@@ -6770,7 +6770,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.16 2017-09-28)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.1.0 2017-11-15)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -6845,6 +6845,10 @@ class TopLevelFrame(wx.Frame):
             item = help_menu.Append(-1, "Help")            
             self.Bind(wx.EVT_MENU, self.OnHelp, item)
             
+            about_menu = wx.Menu()
+            item = about_menu.Append(-1, "About")            
+            self.Bind(wx.EVT_MENU, self.OnAbout, item)            
+            
             _Test = False # This bit could be taken out altogether, aside from development stuff.
             if _Test:
                 item = menu.Append(-1, "....Test")
@@ -6852,6 +6856,7 @@ class TopLevelFrame(wx.Frame):
                 
             mb.Append(menu, "&File")
             mb.Append(help_menu, "Help")
+            mb.Append(about_menu, "About")
             return mb    
         else:
             mb = wx.MenuBar()
@@ -6878,11 +6883,29 @@ class TopLevelFrame(wx.Frame):
             self.Bind(wx.EVT_MENU, self.OnHelp, item)            
             mb.Append(help_menu, "Help")
             
+            about_menu = wx.Menu()
+            item = about_menu.Append(-1, "About")            
+            self.Bind(wx.EVT_MENU, self.OnAbout, item)              
+            mb.Append(about_menu, "About")
+            
             return mb
     
     def OnHelp(self, evt):
         import webbrowser
         webbrowser.open('https://github.com/BlaisProteomics/mzStudio/wiki')
+        
+    def OnAbout(self, evt):
+        info = wx.AboutDialogInfo()
+        info.Name = "mzStudio"
+        info.Version = "1.1.0 (2017-11-15)"
+        info.Copyright = ""
+        info.Description = "mzStudio is a proteomics data analysis, visualization,\nand notebook application that is written in Python.\n\nRawFileReader reading tool. Copyright (C) 2016 by \nThermo Fisher Scientific, Inc. \nAll rights reserved."
+        #info.WebSite = ("http://www.pythonlibrary.org", "My Home Page")
+        info.Developers = ["Scott B. Ficarro, William Max Alexander"]
+        info.License = ""
+        # Show the wx.AboutBox
+        wx.AboutBox(info)
+        
     
     def OnTest(self, evt):
         
