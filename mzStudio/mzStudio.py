@@ -99,6 +99,7 @@ import mz_workbench.mz_core as mz_core
 import mz_workbench.mz_masses as mz_masses
 
 #-----------------multiplierz
+
 import multiplierz.mzAPI as mzAPI
 import multiplierz.mzReport as mzReport
 from multiplierz.mgf import standard_title_parse, write_mgf
@@ -6899,9 +6900,9 @@ class TopLevelFrame(wx.Frame):
         info.Name = "mzStudio"
         info.Version = "1.1.0 (2017-11-15)"
         info.Copyright = ""
-        info.Description = "mzStudio is a proteomics data analysis, visualization,\nand notebook application that is written in Python.\n\nRawFileReader reading tool. Copyright (C) 2016 by \nThermo Fisher Scientific, Inc. \nAll rights reserved."
+        info.Description = "mzStudio is a proteomics data analysis, visualization,\nand notebook application that is written in Python.\n\nmzStudio was developed in the Marto Lab by\nScott Ficarro and William Max Alexander.\n\nRawFileReader reading tool. Copyright (C) 2016 by \nThermo Fisher Scientific, Inc. \nAll rights reserved."
         #info.WebSite = ("http://www.pythonlibrary.org", "My Home Page")
-        info.Developers = ["Scott B. Ficarro, William Max Alexander"]
+        #info.Developers = ["Scott B. Ficarro, William Max Alexander"]
         info.License = ""
         # Show the wx.AboutBox
         wx.AboutBox(info)
