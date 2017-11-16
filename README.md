@@ -3,6 +3,7 @@ The mzStudio Proteomic Mass Spectrometry Analysis Tool
 
 Recent additions:
   * Updated to MSFileReader 4.0 for faster access to raw data files from Thermo Fisher Scientific mass spectrometers.
+  ** Note: Make sure to update to the lasest version of multiplierz!
   * Do you use Onenote?  Onenote links can now be pasted into SpecStylus!  (See wiki SpecStylus section)
   * Can now open files from Thermo Quantiva
 
