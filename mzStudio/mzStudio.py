@@ -385,7 +385,8 @@ class MS_Data_Manager():
 
         self.ms1 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         self.lockms1 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full lock ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
-        self.sim_ms1 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI d SIM ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        self.sim_ms1 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI d? ?SIM ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        
         #TOF MS + p NSI Full ms [350-1500] TOF MS + p NSI Full ms [10-600]
         self.qms1 = re.compile('.*?(TOF MS) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         self.qms2 = re.compile('.*?(TOF MS|TOF PI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
@@ -409,6 +410,8 @@ class MS_Data_Manager():
         self.active_file = None
         self.svg = defaultdict(list)
         self.mr = re.compile('\[(\d+?[.]?\d*?)[-](\d+?[.]?\d*?)\]')
+        
+        
         
         self.Dms = re.compile(r'(GC|TOF) MS \+ NSI Full (ms[2]?) ((\d+.\d+)@\d+.\d+)?\[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
 
@@ -6771,7 +6774,7 @@ class TestPopup(wx.PopupWindow):
         
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.1.0 2017-11-15)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.1.1 2017-11-18)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -6898,7 +6901,7 @@ class TopLevelFrame(wx.Frame):
     def OnAbout(self, evt):
         info = wx.AboutDialogInfo()
         info.Name = "mzStudio"
-        info.Version = "1.1.0 (2017-11-15)"
+        info.Version = "1.1.1 (2017-11-18)"
         info.Copyright = ""
         info.Description = "mzStudio is a proteomics data analysis, visualization,\nand notebook application that is written in Python.\n\nmzStudio was developed in the Marto Lab by\nScott Ficarro and William Max Alexander.\n\nRawFileReader reading tool. Copyright (C) 2016 by \nThermo Fisher Scientific, Inc. \nAll rights reserved."
         #info.WebSite = ("http://www.pythonlibrary.org", "My Home Page")
