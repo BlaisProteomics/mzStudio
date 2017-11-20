@@ -1264,8 +1264,11 @@ class MS_Data_Manager():
                     #current["xic_dict"] = [[self.make_xic_dict(current['xic'][0][0])], [self.make_xic_dict(current['xic'][1][0]), self.make_xic_dict(current['xic'][1][1]), self.make_xic_dict(current['xic'][1][2])], [self.make_xic_dict(current['xic'][2][0])]]
                     #current['xic_lookup']=[]
                     #---------------------------------------------------------------------------------------------
-                    
-                    current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0], current["filter_dict"], current["rt2scan"])]]
+                    try:
+                        current["xic"] = [[current["m"].tic()]]
+                    except AttributeError:
+                        print "TIC failed."
+                        current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0], current["filter_dict"], current["rt2scan"])]]                    
                     current["xic_max"] = [[max([x[1] for x in current["xic"][0][0]])]]
                     current["xic_marks"] = [[{}]]
                     current['mark_boxes'] = []
