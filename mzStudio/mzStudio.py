@@ -512,9 +512,10 @@ class MS_Data_Manager():
                 filter_dict["energy"]="TOF-TOF"
             print filter_dict
         
-        if not filter_dict:
-            wx.MessageBox("Unrecognized Scan Format!\nCopy filter string and open a ticket on Github.\nhttps://github.com/BlaisProteomics/mzStudio/issues")
-        assert filter_dict, filt
+            if not filter_dict:
+                wx.MessageBox("Unrecognized Scan Format!\n\n%s\n\nPlease copy the filter string from the console window and open a bug ticket on Github.\nhttps://github.com/BlaisProteomics/mzStudio/issues" %
+                              filt)
+        assert filter_dict, "Unrecognized filter string:\t"  + filt
         return filter_dict
 
     def getFileNum(self):
