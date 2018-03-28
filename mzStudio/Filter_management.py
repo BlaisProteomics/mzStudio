@@ -169,7 +169,14 @@ def OnSRM(filter_dict, id):
     filter_dict['mr'] = '[%s-%s]' % (ranges[0][0], ranges[-1][1])
     
     return filter_dict
-    
+
+
+def on_corona_ms1(filter_dict, id):
+    filter_dict["mode"]="ms1"
+    filter_dict["analyzer"]=id.groups()[0]
+    filter_dict["data"]= "+cent" if id.groups()[1]== "c" else "+prof"
+    filter_dict["mr"]='[' + id.groups()[2]+'-'+id.groups()[3]+']'
+    return filter_dict
 
 #def OnTOFms2(filter_dict, id):
     #filter_dict['mode'] = 'ms2'

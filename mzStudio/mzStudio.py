@@ -386,7 +386,11 @@ class MS_Data_Manager():
         self.ms1 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         self.lockms1 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full lock ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         self.sim_ms1 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI d? ?SIM ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        #ITMS + p APCI corona Full ms [150.00-2000.00]
+        self.corona_ms1 = re.compile('.*?([FI]TMS) [+] ([cp]) APCI corona Full ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         
+        
+        re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI d? ?SIM ms \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #TOF MS + p NSI Full ms [350-1500] TOF MS + p NSI Full ms [10-600]
         self.qms1 = re.compile('.*?(TOF MS) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         self.qms2 = re.compile('.*?(TOF MS|TOF PI) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@\d+?.\d+? \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
@@ -425,7 +429,9 @@ class MS_Data_Manager():
                                [self.targ_ms3, fm.Ontarg_ms3], [self.sim_ms1, fm.Onsim_ms1], 
                                [self.dd_ms3, fm.Ondd_ms3],
                                [self.Dms, fm.OnDms],
-                               [self.srm, fm.OnSRM], [self.quantiva_QMS, fm.OnQuantivaQMS], [self.quantiva_MS2, fm.OnQuantivaMS2], [self.quantiva_SRM, fm.OnQuantivaSRM]]
+                               [self.srm, fm.OnSRM], [self.quantiva_QMS, fm.OnQuantivaQMS],
+                               [self.quantiva_MS2, fm.OnQuantivaMS2], [self.quantiva_SRM, fm.OnQuantivaSRM],
+                               [self.corona_ms1, fm.on_corona_ms1]]
         
         
         self.abi_filters = [[self.qms1, fm.Onqms1], [self.qms2, fm.Onqms2],
@@ -438,29 +444,30 @@ class MS_Data_Manager():
         # MASS DICT corresponds to the x in .groups()[x] where x gives back first and last mass
         self.mass_dict = {"Thermo_ms2":[self.pa, 5,6],
                           "Thermo_lock_ms2":[self.lockms2, 5,6],
-                              "Thermo_ms1":[self.ms1, 2,3],
-                              "Thermo_lock_ms1":[self.lockms1, 2, 3],
-                              "Thermo_targ_ms2":[self.targ, 6,7], #"Thermo_targ_ms2":[self.targ, 5,6],
-                              "Thermo_targ_ms3":[self.targ_ms3, 8,9],
-                              "Thermo_dd_ms3":[self.dd_ms3, 8,9],
-                              "MGF_ms2":[self.mgf, 1, 2],
-                              "ABI_pi":[self.pi, 2, 3],
-                              "ABI_ms2":[self.tofms2, 4,5],
-                              "ABI_qms2":[self.qms2, 3, 4],
-                              "ABI_ms1":[self.qms1, 2,3],
-                              "ABI_q1ms":[self.q1ms, 2, 3],
-                              "ABI_q3ms":[self.q3ms, 2,3],
-                              "ABI_ems":[self.ems, 2,3],
-                              "ABI_precursor":[self.precursor, 4,5],
-                              "ABI_epi":[self.epi, 4,5],
-                              "ABI_er":[self.erms, 2,3],
-                              "Thermo_etd":[self.etd, 6,7],
-                              "Thermo_sim_ms1":[self.sim_ms1,2,3],
-                              "Agilent":[self.Dms, 4, 5],
-                              "Thermo LTQ SRM":[self.srm, 5,8],
-                              "Quantiva QMS":[self.quantiva_QMS, 3, 4],
-                              "Quantiva QMS2":[self.quantiva_MS2, 4, 5],
-                              "Quantiva SRM":[self.quantiva_SRM, 3, 6]}
+                          "Thermo_ms1":[self.ms1, 2,3],
+                          "Thermo_lock_ms1":[self.lockms1, 2, 3],
+                          "Thermo_targ_ms2":[self.targ, 6,7], #"Thermo_targ_ms2":[self.targ, 5,6],
+                          "Thermo_targ_ms3":[self.targ_ms3, 8,9],
+                          "Thermo_dd_ms3":[self.dd_ms3, 8,9],
+                          "MGF_ms2":[self.mgf, 1, 2],
+                          "ABI_pi":[self.pi, 2, 3],
+                          "ABI_ms2":[self.tofms2, 4,5],
+                          "ABI_qms2":[self.qms2, 3, 4],
+                          "ABI_ms1":[self.qms1, 2,3],
+                          "ABI_q1ms":[self.q1ms, 2, 3],
+                          "ABI_q3ms":[self.q3ms, 2,3],
+                          "ABI_ems":[self.ems, 2,3],
+                          "ABI_precursor":[self.precursor, 4,5],
+                          "ABI_epi":[self.epi, 4,5],
+                          "ABI_er":[self.erms, 2,3],
+                          "Thermo_etd":[self.etd, 6,7],
+                          "Thermo_sim_ms1":[self.sim_ms1,2,3],
+                          "Agilent":[self.Dms, 4, 5],
+                          "Thermo LTQ SRM":[self.srm, 5,8],
+                          "Quantiva QMS":[self.quantiva_QMS, 3, 4],
+                          "Quantiva QMS2":[self.quantiva_MS2, 4, 5],
+                          "Quantiva SRM":[self.quantiva_SRM, 3, 6],
+                          'Corona':[self.corona_ms1, 2, 3]}
         
         #svg.Blit(0,0,size.width,size.height,dc,0,0)
 
