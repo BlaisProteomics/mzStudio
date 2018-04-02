@@ -706,6 +706,13 @@ class MS_Data_Manager():
         #self.parent.parent.Parent.StartGauge(text="Building XIC...")
         assert len(params) == 5
         
+        try:
+            sim_filter = (x for x in filter_dict.values() if 'SIM' in x).next()
+            print "SIM detected."
+            params[4] = sim_filter
+        except StopIteration:
+            pass
+
         params = {'start_time':params[0],
                   'stop_time':params[1],
                   'start_mz':params[2],
@@ -1274,9 +1281,14 @@ class MS_Data_Manager():
                     #---------------------------------------------------------------------------------------------
                     try:
                         current["xic"] = [[current["m"].tic()]]
+                        current['xic_type'] = [['TIC']]
                     except AttributeError:
+                        current['xic_type'] = [['TIC']]
+                        current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0], current["filter_dict"], current["rt2scan"])]]
+                    except (AttributeError, IndexError):
                         print "TIC failed."
-                        current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0], current["filter_dict"], current["rt2scan"])]]                    
+                        current['xic_type'] = [['TIC']]
+                        current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0], current["filter_dict"], current["rt2scan"])]]
                     current["xic_max"] = [[max([x[1] for x in current["xic"][0][0]])]]
                     current["xic_marks"] = [[{}]]
                     current['mark_boxes'] = []
