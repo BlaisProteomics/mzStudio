@@ -1124,7 +1124,11 @@ class MS_Data_Manager():
                     try:
                         current['scan_dict'] = dict([(int(x[1].split('] ')[1]), x[0]) for x in current['m'].filters()])
                     except ValueError:
-                        current['scan_dict'] = dict([(int(multiplierz.mgf.standard_title_parse(x[1].split('] ')[1])['scan']), x[0]) for x in current['m'].filters()])
+                        try:
+                            # Haven't really confirmed that this works.
+                            current['scan_dict'] = dict([(int(standard_title_parse(x[1].split('] ')[1])['scan']), x[0]) for x in current['m'].filters()])
+                        except KeyError:
+                            current['scan_dict'] = dict(current['m'].filters())
                     #current['mgf_rev_dict'] = dict([(x[0], int(x[1].split('] ')[1]) ) for x in current['m'].filters()])
                     current['mgf_rev_dict'] = dict([(v, k) for k, v in current['scan_dict'].items()]) # If you wanna reverse it, just reverse it.  Be honest!
                     
@@ -3197,18 +3201,23 @@ class DrawPanel(wx.Panel):
     def OnJump(self, event):
         dlg = wx.TextEntryDialog(self, 'Scan Number', 'Jump To Scan')
 
+
         if dlg.ShowModal() == wx.ID_OK:
             activeFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
             if activeFile['vendor'] == 'Thermo':
+                scanname = dlg.GetValue()
+                if ',' in scanname:
+                    scanname = tuple(map(int, map(lambda x: x.strip(), scanname.split(',')[:2])))
+                    activeFile['scanNum'] = activeFile['m'].make_implicit[scanname]
                 activeFile["scanNum"]=int(dlg.GetValue())
                 self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
                 self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"])
-            elif activeFile['vendor'] == 'ABI':
-                scan, experiment = dlg.GetValue().split(",")
-                activeFile["scanNum"]=int(scan.strip())
-                activeFile["experiment"]=experiment.strip()
-                self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
-                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"], vendor = 'ABI')
+            #elif activeFile['vendor'] == 'ABI':
+                #scan, experiment = dlg.GetValue().split(",")
+                #activeFile["scanNum"]=int(scan.strip())
+                #activeFile["experiment"]=experiment.strip()
+                #self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
+                #self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"], vendor = 'ABI')
             elif activeFile['vendor'] == 'mgf':
                 scan = int(dlg.GetValue())
                 activeFile['scanNum'] = scan
