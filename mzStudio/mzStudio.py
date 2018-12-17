@@ -1,12 +1,11 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.0.16'
+__version__ = '1.2'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
 #----------------------------------------------------------------------------------------------------------------------
 
 import wxversion
-wxversion.select("4.0")
 import wx, os
 
 import re, sys, cPickle, platform, time, thread, csv, gc
@@ -557,7 +556,7 @@ class MS_Data_Manager():
     def GetAnXIC(self, win, m, params, filter_dict={}, rt2scan={}):
         '''
 
-        Version 0.2 2017-07-04.
+        Version 1.2 2018-12-17
         For thermo files, the "filter" is processed within the XIC function of the COM object.
         For Agilent and ABSciex files, the XIC is first obtained, and then 'filtered' using a list comprehension.
 
@@ -6814,7 +6813,7 @@ class TestPopup(wx.PopupWindow):
 
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.0.16 2017-09-06)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.2 2018-12-17)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -7737,11 +7736,8 @@ if __name__ == '__main__':
     
     import mzAtomicYardstick
 
-    if wx.__version__ == '3.0.2.0':
-        wx.SplashScreen(bmp, wx.SPLASH_CENTER_ON_SCREEN|wx.SPLASH_TIMEOUT, 1000, None, -1)
-    else:
-        import wx.adv
-        wx.adv.SplashScreen(bmp, wx.adv.SPLASH_CENTER_ON_SCREEN|wx.adv.SPLASH_TIMEOUT, 1000, None, -1)
+    import wx.adv
+    wx.adv.SplashScreen(bmp, wx.adv.SPLASH_CENTER_ON_SCREEN|wx.adv.SPLASH_TIMEOUT, 1000, None, -1)
 
     TBFLAGS = ( wx.TB_HORIZONTAL
                 | wx.NO_BORDER

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 
 setup(name = 'mzStudio',
-      version = '0.9.9.1',
+      version = '1.2',
       author = 'Scott Ficarro, William Max Alexander',
       author_email = 'Scott_Ficarro@dfci.harvard.edu',
       packages = ['mzStudio'],
