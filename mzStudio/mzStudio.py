@@ -5,16 +5,8 @@ __version__ = '1.0.16'
 # WELCOME to mzStudio!
 #----------------------------------------------------------------------------------------------------------------------
 
-TRY_VERSION_FOUR = True
-
-
-try:
-    import wxversion
-    if not TRY_VERSION_FOUR:
-        wxversion.select("3.0")
-except:
-    pass    
-
+import wxversion
+wxversion.select("4.0")
 import wx, os
 
 import re, sys, cPickle, platform, time, thread, csv, gc
@@ -7677,10 +7669,6 @@ except:
         dirName = os.path.dirname(os.path.abspath(sys.argv[0]))    
 
 if __name__ == '__main__':
-
-    if wx.__version__[0] != '3':
-        print "WARNING- wxPython version %s may not be fully supported.  Please install wxPython 3." % wx.__version__
-    
     app = wx.App(False)    
 
     #ID_Dict = {}
