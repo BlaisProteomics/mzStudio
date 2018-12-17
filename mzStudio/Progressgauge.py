@@ -62,7 +62,7 @@ class ProgressGauge(wx.PyWindow):
 
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
         #dc.SetPen(wx.Pen(wx.SystemSettings_GetColour(wx.SYS_COLOUR_GRADIENTINACTIVECAPTION)))
-        dc.DrawRectangleRect(self.GetClientRect()) # Was DrawRectangleRect().
+        dc.DrawRectangle(self.GetClientRect()) # Was DrawRectangleRect().
 
 
     def LightColour(self, colour, percent):

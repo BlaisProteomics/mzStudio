@@ -517,7 +517,9 @@ class dbFrame(wx.Panel):
                     if 'MultiplierzMGF' in desc:
                         scan = int(standard_title_parse(desc)['scan'])
                     elif 'Locus' in desc:
-                        scan = (int(desc.split('.')[3]) * self.currentFile['m'].exp_num) + int(desc.split('.')[4].split()[0]-1)# MAY NOT BE CORRECT
+                        #scan = (int(desc.split('.')[3]) * self.currentFile['m'].exp_num) + int(desc.split('.')[4].split()[0])-1# MAY NOT BE CORRECT
+                        scan = self.currentFile['m'].make_implicit[int(desc.split('.')[3]),
+                                                                   int(desc.split('.')[4].split()[0])]
                     else:
                         scan = int(desc.split(".")[1])
                 else:

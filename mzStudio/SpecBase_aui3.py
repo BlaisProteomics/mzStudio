@@ -19,10 +19,10 @@ import time
 import BlaisPepCalcSlim_aui2
 import wx.lib.agw.aui as aui
 
-#import wx.lib.agw.flatmenu as FM
-#from wx.lib.agw.flatmenu import FlatMenu
-import flatmenu_patched as FM
-from flatmenu_patched import FlatMenu
+import wx.lib.agw.flatmenu as FM
+from wx.lib.agw.flatmenu import FlatMenu
+#import flatmenu_patched as FM
+#from flatmenu_patched import FlatMenu
 from wx.lib.agw.artmanager import ArtManager, RendererBase, DCSaver
 from wx.lib.agw.fmresources import ControlFocus, ControlPressed
 from wx.lib.agw.fmresources import FM_OPT_SHOW_CUSTOMIZE, FM_OPT_SHOW_TOOLBAR, FM_OPT_MINIBAR
@@ -277,7 +277,7 @@ class YourDropTarget(wx.PyDropTarget):
                     #Want to add file as a child to that node
                     node = self.window.tc.tree.GetSelection()
                     item = self.window.tc.tree.AppendItem(node, os.path.basename(name))
-                    self.window.tc.tree.SetPyData(item, {"type":"auxfile", "flag":"experiment", "exp":'Title', 'full_path':name})
+                    self.window.tc.tree.SetItemData(item, {"type":"auxfile", "flag":"experiment", "exp":'Title', 'full_path':name})
                     #Node should be added to node dict after treerefresh
                     
                     self.window.TreeRefresh()
@@ -317,7 +317,7 @@ class YourDropTarget(wx.PyDropTarget):
                                scan_type=dropped_obj.scan_type, varmod=dropped_obj.varmod, fixedmod=dropped_obj.fixedmod, mascot_score=dropped_obj.score, 
                                processed_scan_data=dropped_obj.processed_scan_data)
                 
-                    self.window.tc.tree.SetPyData(item, {"type":"specfile", "flag":"experiment", "exp": 'Title', "spectrum_data": be, "raw_spec": dropped_obj})  #self.window.tc.tree.GetItemText(node)
+                    self.window.tc.tree.SetItemData(item, {"type":"specfile", "flag":"experiment", "exp": 'Title', "spectrum_data": be, "raw_spec": dropped_obj})  #self.window.tc.tree.GetItemText(node)
                     #Do we need a base entry?  Why not just pass the spec object?
                     self.window.TreeRefresh()
                 
@@ -330,7 +330,7 @@ class YourDropTarget(wx.PyDropTarget):
                                         xic_mass_ranges=dropped_obj.xic_mass_ranges, xic_filters=dropped_obj.xic_filters, notes='', xic_scale=dropped_obj.xic_scale, 
                                         xic_max=dropped_obj.xic_max, active_xic=dropped_obj.active_xic, xic_view=dropped_obj.xic_view)
                     
-                    self.window.tc.tree.SetPyData(item, {"type":"XIC", "flag":"experiment", "exp":'Title', "xic_data": mxe, "raw_xic": dropped_obj})
+                    self.window.tc.tree.SetItemData(item, {"type":"XIC", "flag":"experiment", "exp":'Title', "xic_data": mxe, "raw_xic": dropped_obj})
                     #Do we need a base entry?  Why not just pass the spec object?
                     self.window.TreeRefresh()                    
                 
@@ -569,7 +569,7 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
              
         item=self.tc.tree.GetSelection()
         try:
-            pid = self.tc.tree.GetPyData(item)['type']    
+            pid = self.tc.tree.GetItemData(item)['type']    
         except wx._core.PyAssertionError:
             messdog = wx.MessageDialog(self, 'No valid data is currently selected', 
                                        'Could access SpecBase data', style = wx.OK)
@@ -577,9 +577,9 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
             messdog.Destroy()
             return            
         
-        data_type = self.tc.tree.GetPyData(item)['type']
+        data_type = self.tc.tree.GetItemData(item)['type']
         if data_type == 'specfile':
-            frame = svl.SpecViewLitePanel(None, self.tc.tree.GetPyData(item)['spectrum_data'])
+            frame = svl.SpecViewLitePanel(None, self.tc.tree.GetItemData(item)['spectrum_data'])
             frame.Show()
             frame.Refresh()       
             wx.Yield()
@@ -594,7 +594,7 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
             App.Quit()                      
         
         if data_type == "XIC":
-            frame = rvlm.RICviewLitePanel(None, self.tc.tree.GetPyData(item)['xic_data'])
+            frame = rvlm.RICviewLitePanel(None, self.tc.tree.GetItemData(item)['xic_data'])
             frame.Show()
             frame.Refresh()       
             wx.Yield()
@@ -675,15 +675,16 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
     def Create_Image_List(self):
         isz = (16,16)
         il = wx.ImageList(*isz)
-        fldridx     = il.AddIcon(wx.ArtProvider.GetIcon(wx.ART_FOLDER,      wx.ART_OTHER, isz))
-        fldropenidx = il.AddIcon(wx.ArtProvider.GetIcon(wx.ART_FOLDER_OPEN, wx.ART_OTHER, isz))
-        fileidx     = il.AddIcon(wx.ArtProvider.GetIcon(wx.ART_NORMAL_FILE, wx.ART_OTHER, isz))
+        fldridx     = il.Add(wx.ArtProvider.GetIcon(wx.ART_FOLDER,      wx.ART_OTHER, isz))
+        fldropenidx = il.Add(wx.ArtProvider.GetIcon(wx.ART_FOLDER_OPEN, wx.ART_OTHER, isz))
+        fileidx     = il.Add(wx.ArtProvider.GetIcon(wx.ART_NORMAL_FILE, wx.ART_OTHER, isz))
         spec = il.Add(wx.Bitmap(os.path.join(bitmapDir, "spectrum.png"), wx.BITMAP_TYPE_PNG))
         xl = il.Add(wx.Bitmap(os.path.join(bitmapDir, "th.png"), wx.BITMAP_TYPE_PNG))
         ppt = il.Add(wx.Bitmap(os.path.join(bitmapDir, "ppt.png"), wx.BITMAP_TYPE_PNG))
         py = il.Add(wx.Bitmap(os.path.join(bitmapDir, "py.png"), wx.BITMAP_TYPE_PNG))
         xic = il.Add(wx.Bitmap(os.path.join(bitmapDir, "x2.png"), wx.BITMAP_TYPE_PNG))
-        onenote = il.Add(wx.Bitmap(os.path.join(bitmapDir, "onenote.png"), wx.BITMAP_TYPE_PNG))
+        #onenote = il.Add(wx.Bitmap(os.path.join(bitmapDir, "onenote.png"), wx.BITMAP_TYPE_PNG))
+        onenote = il.Add(wx.Bitmap(os.path.join(bitmapDir, "x2.png"), wx.BITMAP_TYPE_PNG))
         
         self.tc.tree.SetImageList(il)
         self.il = il        
@@ -697,15 +698,17 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
             self.Create_Image_List()
             #---------------------------------------------------------
             #Add the root
-            self.tc.root = self.tc.tree.AddRoot(dialog.GetValue())
-            self.tc.tree.SetPyData(self.tc.root, {"type":"root", "flag":"root"})
-            self.tc.tree.SetItemImage(self.tc.root, 0, wx.TreeItemIcon_Normal)
-            self.tc.tree.SetItemImage(self.tc.root, 1, wx.TreeItemIcon_Expanded)            
+            #self.tc.root = self.tc.tree.AddRoot(dialog.GetValue())
+            self.tc.tree.SetItemText(self.tc.tree.GetRootItem(), 0, dialog.GetValue())
+            
+            self.tc.tree.SetItemData(self.tc.tree.GetRootItem(), {"type":"root", "flag":"root"})
+            self.tc.tree.SetItemImage(self.tc.tree.GetRootItem(), 0, wx.TreeItemIcon_Normal)
+            self.tc.tree.SetItemImage(self.tc.tree.GetRootItem(), 1, wx.TreeItemIcon_Expanded)            
             
             #self.tc.tree.AddColumn("Info Bar")
             #self.tc.tree.AddColumn("Title")
             #self.tc.tree.AddColumn("Info")
-            self.tc.tree.SetMainColumn(0) # the one with the tree in it...
+            #self.tc.tree.SetMainColumn(0) # the one with the tree in it...
             self.tc.tree.SetColumnWidth(0, 250)
             self.tc.tree.SetColumnWidth(1, 250)                
             
@@ -743,7 +746,7 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
             return
         node = self.tc.tree.GetSelection()
         item = self.tc.tree.AppendItem(node, "New folder")
-        self.tc.tree.SetPyData(item, {"type":"container", "flag":"folder", "exp":'folder'}) 
+        self.tc.tree.SetItemData(item, {"type":"container", "flag":"folder", "exp":'folder'}) 
         icon = 0
         self.tc.tree.SetItemImage(item, icon, wx.TreeItemIcon_Normal)        
         self.TreeRefresh()
@@ -757,8 +760,9 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         a = self.tc.tree.SaveItemsToList(self.tc.tree.GetRootItem())
         self.tc.tree.DeleteAllItems()
 
-        self.root = self.tc.tree.AddRoot(a[0]['label'])
-        self.tc.tree.SetPyData(self.root, {"type":"root"})
+        #self.root = self.tc.tree.AddRoot(a[0]['label'])
+        self.root = self.tc.tree.GetRootItem()
+        self.tc.tree.SetItemData(self.root, {"type":"root"})
         #self.tc.tree.SetItemImage(self.root, 0, wx.TreeItemIcon_Normal)
         #self.tc.tree.SetItemImage(self.root, 1, wx.TreeItemIcon_Expanded)
         #self.tree.SetItemText(self.root, "Sequence", 1)      
@@ -789,7 +793,7 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
         #-----------------------------------------------------
         item=self.tc.tree.GetSelection()
         if item.IsOk():
-            data = self.tc.tree.GetPyData(item)
+            data = self.tc.tree.GetItemData(item)
             if 'spectrum_data' in data.keys():
                 cur_obj = data['spectrum_data']
                 Edit = EditFrame(self, id=-1, obj=cur_obj, item=item)
@@ -805,7 +809,7 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
             wx.MessageBox("Cannot Edit Object!")
 
     def OnLoad(self, event):
-        dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.OPEN, wildcard = "SpecBrary files (*.sbr)|*.sbr|Any|*")
+        dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.FD_OPEN, wildcard = "SpecBrary files (*.sbr)|*.sbr|Any|*")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
             dir = dlg.GetDirectory()
@@ -818,7 +822,7 @@ class SpecFrame(wx.Panel, wx.DropTarget):  #, wx.DropTarget
             self.tc.tree.DeleteAllItems()
             self.Create_Image_List()
             self.root = self.tc.tree.AddRoot(data[0]['label'])
-            self.tc.tree.SetPyData(self.root, {"type":"root"})     
+            self.tc.tree.SetItemData(self.root, {"type":"root"})     
             self.tc.tree.Expand(self.root)
             self.tc.tree.expanditems = []
             self.tc.tree.selected = None
@@ -973,7 +977,7 @@ class EditFrame(wx.Frame):
         #self.db.Rebuild_Order_from_tree(parent)
         #self.FindWindowByName("Experiment").SetValue(obj.experiment)
         self.FindWindowByName("Sequence").SetValue(obj.sequence)
-        data = self.parent.tc.tree.GetPyData(item)
+        data = self.parent.tc.tree.GetItemData(item)
         self.FindWindowByName("Title").SetValue(data['exp'])
         #self.FindWindowByName("Scan").SetValue(str(obj.scan))
         #self.FindWindowByName("Filter").SetValue(obj.filter)
@@ -991,7 +995,7 @@ class EditFrame(wx.Frame):
         #self.obj.rawfile = self.FindWindowByName("Rawfile").GetValue().strip()
         self.obj.varmod = self.FindWindowByName("Varmods").GetValue().strip()
         pid = self.obj.pid
-        data = self.parent.tc.tree.GetPyData(self.item)
+        data = self.parent.tc.tree.GetItemData(self.item)
         data['exp']=self.obj.title
         item = self.parent.tc.tree.GetSelection()
         self.parent.tc.tree.SetItemText(item, self.obj.sequence, 0)
@@ -1021,7 +1025,7 @@ class EditXICFrame(wx.Frame):
         info = self.parent.tc.tree.GetItemText(item, 0)
         #self.FindWindowByName("Sequence").SetValue(obj.sequence)
         self.FindWindowByName("Infobar").SetValue(obj.title)  #Infobar
-        data = parent.tc.tree.GetPyData(item)
+        data = parent.tc.tree.GetItemData(item)
         self.FindWindowByName("Title").SetValue(data['exp']) # Titlebar
         #self.FindWindowByName("Filter").SetValue(obj.filter)
         #self.FindWindowByName("Rawfile").SetValue(obj.rawfile)
@@ -1036,7 +1040,7 @@ class EditXICFrame(wx.Frame):
         #self.obj.rawfile = self.FindWindowByName("Rawfile").GetValue().strip()
         pid = self.obj.pid
         
-        data = self.parent.tc.tree.GetPyData(self.item)
+        data = self.parent.tc.tree.GetItemData(self.item)
         data['exp']=self.FindWindowByName("Title").GetValue().strip()
         item = self.parent.tc.tree.GetSelection()
         self.parent.tc.tree.SetItemText(item, self.obj.title, 0)
@@ -1185,7 +1189,7 @@ class AddAuxFrame(wx.Frame):
             if folder in self.parent.tc.get_folders():
                 node = self.parent.tc.get_tree_item_from_folder_name(folder)
                 item = self.parent.tc.tree.AppendItem(node, os.path.basename(filename))
-                self.parent.tc.tree.SetPyData(item, {"type":"auxfile", "flag":"experiment", "exp":filename, "full_path":filename})
+                self.parent.tc.tree.SetItemData(item, {"type":"auxfile", "flag":"experiment", "exp":filename, "full_path":filename})
                 self.parent.tc.tree.SetItemText(item, os.path.basename(filename))
                 self.parent.TreeRefresh()
         self.Destroy()

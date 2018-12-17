@@ -245,8 +245,8 @@ class TestFrame(wx.Frame):
     
     def SetWindowShape(self, *evt):
         # Use the bitmap's mask to determine the region
-        r = wx.RegionFromBitmap(self.bmp)
-        #r = wx.Region(self.bmp) ---------------This broke it!.
+        #r = wx.RegionFromBitmap(self.bmp)
+        r = wx.Region(self.bmp)
         self.hasShape = self.SetShape(r)
 
 

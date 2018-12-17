@@ -1,7 +1,7 @@
 # Settings page
 
 import wx
-
+import mzAtomicYardstick
 
 '''
 
@@ -17,6 +17,56 @@ class Page(wx.Panel):
     def __init__(self, parent):
         panel = wx.Panel.__init__(self, parent)
 
+
+
+class YardstickSettings(Page):
+    def __init__(self, parent, settings):
+        Page.__init__(self, parent)
+        
+        topLabel = wx.StaticText(self, -1, "Calculate Mass Types:")
+        self.aminoCheck = wx.CheckBox(self, -1, "Oligopeptides")
+        self.chnopsCheck = wx.CheckBox(self, -1, "CHNOPS Formulae")
+        chargeLabel = wx.StaticText(self, -1, "Charge States:")
+        modLabel = wx.StaticText(self, -1, "Peptide PTMs")
+        self.chargeStates = wx.CheckListBox(self, -1, choices = ["+1", "+2", "+3"])
+        self.modStates = wx.CheckListBox(self, -1,
+                                         choices = [x for x in 
+                                                    mzAtomicYardstick.mod_mass_lookup.keys()
+                                                    if x])
+        
+        gbs = wx.GridBagSizer(10, 10)
+        gbs.Add(topLabel, (0, 1))
+        gbs.Add(self.aminoCheck, (1, 1))
+        gbs.Add(self.chnopsCheck, (1, 2))
+        gbs.Add(wx.StaticLine(self, -1, style = wx.LI_HORIZONTAL), (2, 1), span = (1, 2), flag = wx.EXPAND)
+        gbs.Add(chargeLabel, (3, 1), flag = wx.ALIGN_LEFT)
+        gbs.Add(modLabel, (3, 2), flag = wx.ALIGN_RIGHT)
+        gbs.Add(self.chargeStates, (4, 1))
+        gbs.Add(self.modStates, (4, 2), flag = wx.ALIGN_RIGHT)
+        
+        gbs.AddGrowableCol(0)
+        gbs.AddGrowableCol(1)
+        
+        overbox = wx.BoxSizer()
+        overbox.Add(gbs, 0, flag = wx.ALL, border = 30)
+        
+        self.SetSizerAndFit(overbox)
+        
+        get_AAs, get_CHNOPS, get_charges, get_mods = settings
+        self.aminoCheck.SetValue(get_AAs)
+        self.chnopsCheck.SetValue(get_CHNOPS)
+        self.chargeStates.SetCheckedStrings(get_charges)
+        self.modStates.SetCheckedStrings(get_mods)
+        
+
+    def GetValues(self):
+        get_AAs = self.aminoCheck.GetValue()
+        get_CHNOPS = self.chnopsCheck.GetValue()
+        get_charges = self.chargeStates.GetCheckedStrings()
+        get_mods = self.modStates.GetCheckedStrings()
+        return get_AAs, get_CHNOPS, get_charges, get_mods
+
+
 class SettingsFrame(wx.Frame):
     def __init__(self,parent,settings):
         self.settings = settings
@@ -28,16 +78,21 @@ class SettingsFrame(wx.Frame):
         nb.AddPage(self.page_general, "General")   
         self.page_thermo = Page(nb)
         nb.AddPage(self.page_thermo, "Thresholds") 
+        self.page_yardstick = YardstickSettings(nb, settings['yardstick_settings'])
+        nb.AddPage(self.page_yardstick, "Yardstick")
         #self.page_abi = Page(nb)
         #nb.AddPage(self.page_abi, "ABI")   
         #self.page_display = Page(nb)
         #nb.AddPage(self.page_display, "Display")
     
         self.ToggleWindowStyle(wx.STAY_ON_TOP)
-        self.createLabels()
-        self.createTextBoxes()
-        self.createComboBoxes()
-        self.createButtons()
+        try:
+            self.createLabels()
+            self.createTextBoxes()
+            self.createComboBoxes()
+            self.createButtons()
+        except:
+            pass
         #self.page_abi.Hide()
         #self.page_display.Hide()
         
@@ -47,7 +102,7 @@ class SettingsFrame(wx.Frame):
                 ("Label Threshold", (10, 10), (100,20),self.page_thermo), ("Ion label tolerance", (230, 10), (60,30),self.page_thermo),
                 ("Min Charge to Label", (10, 50), (100,30),self.page_general), ("Label Peaks", (230, 50), (60,30),self.page_general),
                 ("Max Charge to Label", (10, 90), (100,30),self.page_general), ("Area Algorithm", (230, 90), (60,30),self.page_general),
-                ("Show resolution", (10, 130), (100,20),self.page_general),
+                ("Show resolution", (10, 130), (100,20),self.page_general), #("Max # Peaks to label", (10, 10), (100,20),self.page_thermo),
                 ("Main Font Size", (10, 170), (100,20),self.page_general),
                 ("Main Font", (10, 210), (100,20),self.page_general),
                 ("Main Font Style", (10, 250), (100,20),self.page_general),
@@ -223,9 +278,30 @@ class SettingsFrame(wx.Frame):
             self.parent.msdb.build_current_ID(self.parent.msdb.Display_ID[self.parent.msdb.active_file], currentFile["scanNum"])
         #if currentFile['vendor']=='ABI':
         #    self.parent.msdb.build_current_ID(self.parent.msdb.Display_ID[self.parent.msdb.active_file], (currentFile["scanNum"], currentFile['experiment']), 'ABI')        
+        
+        yardstick_values = self.page_yardstick.GetValues()
+        if currentFile['settings']['yardstick_settings'] != yardstick_values:
+            mzAtomicYardstick.initialize_masses(*yardstick_values)
+            currentFile['settings']['yardstick_settings'] = yardstick_values
+        
+        
+        
         self.parent.Window.UpdateDrawing()
-        self.parent.Refresh()
+        self.parent.Refresh()        
         
         self.parent.msdb.SaveSettings(currentFile)
         self.Destroy()
+    
+    
+if __name__ == '__main__':
+    class FakeNews(str):
+        def __init__(self):
+            pass
+        def __getitem__(self, key):
+            return FakeNews()
         
+    app = wx.App(0)
+    foo = SettingsFrame(None, FakeNews())
+    foo.Show()
+    app.MainLoop()
+    

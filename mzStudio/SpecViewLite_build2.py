@@ -100,7 +100,7 @@ class BufferedWindow(wx.Window):
                 dc = wx.GCDC(pdc)
                 odc = wx.DCOverlay(self.overlay, pdc)
                 odc.Clear()
-                pos = event.GetPositionTuple()
+                pos = event.GetPosition()
                 found, grid = self.HitTest(pos)
                 #If on the same axis, draw the horizontal line across
                 if not self.parent_window.tb.GetToolState(20):
@@ -137,7 +137,7 @@ class BufferedWindow(wx.Window):
             dc = wx.GCDC(pdc)
             odc = wx.DCOverlay(self.overlay, pdc)
             odc.Clear()
-            pos = event.GetPositionTuple()
+            pos = event.GetPosition()
             print pos
             if self.selected[0] == 'LINE':
                 self.DrawALineOnMotion(self.lines[self.selected[1]], dc, pos, 'LINE')
@@ -325,7 +325,8 @@ class SpecViewLitePanel(wx.Frame):
                         new_bmp = art
                     except:
                         new_bmp = wx.ArtProvider.GetBitmap(wx.ART_CLOSE)
-                tb.AddCheckLabelTool(pos, label, new_bmp, shortHelp=short_help, longHelp=long_help)
+                tb.AddCheckTool(pos, label, new_bmp, shortHelp=short_help, longHelp=long_help)
+                #tb.AddCheckLabelTool(pos, label, new_bmp, shortHelp=short_help, longHelp=long_help)
                 self.Bind(wx.EVT_TOOL, self.OnToolClick, id=evt_id)
             else:
                 tb.AddSeparator()
@@ -587,7 +588,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
     def OnLeftDown(self, event):
         self.SetFocus()
         self.spectrum.notes = self.parent_window.t4.GetValue()
-        pos = event.GetPositionTuple()
+        pos = event.GetPosition()
         self.postup = pos
         #if self.parent.tb.GetToolEnabled(30):
         #    event.Skip()
@@ -616,7 +617,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
         except:
             event.Skip()
         
-        pos = event.GetPositionTuple()
+        pos = event.GetPosition()
         found, grid = self.HitTest(pos)
         if found:
             #---------------------------
@@ -759,7 +760,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
             self.UpdateDrawing()
 
     def OnRightUp(self,event):
-        pos = event.GetPositionTuple()
+        pos = event.GetPosition()
         found, grid = self.HitTest(pos)
         if pos == self.right_down_pos:
             #self.set_mass_ranges()
@@ -768,7 +769,7 @@ class SpecWindow(BufferedWindow):  #wx.Window
         self.UpdateDrawing()
 
     def OnRightDown(self,event):
-        pos = event.GetPositionTuple()
+        pos = event.GetPosition()
         found, grid = self.HitTest(pos)
         self.right_down_pos = pos
         self.Refresh()

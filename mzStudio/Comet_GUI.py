@@ -96,6 +96,178 @@ FixModFields = [('G', 'add_G_glycine'),
 
 
 
+
+
+
+class ModWidget(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent, -1)
+        
+        #self.title = wx.StaticText(self, -1, "Modifications")
+        self.fixmods = wx.ListCtrl(self, -1, name = "Fixed",
+                                   style = wx.LC_REPORT)
+        self.varmods = wx.ListCtrl(self, -1, name = "Variable",
+                                   style = wx.LC_REPORT)
+        self.modSelector = wx.ListCtrl(self, -1, name = "Unimods",
+                                       style = wx.LC_REPORT,
+                                       size = (250, -1))
+        self.addFixed = wx.Button(self, -1, '->', size = (25, -1))
+        self.addVar = wx.Button(self, -1,  '->', size = (25, -1))
+        self.clearFix = wx.Button(self, -1, 'Clr', size = (25, -1))
+        self.clearVar = wx.Button(self, -1, 'Clr', size = (25, -1))
+        self.searchBar = wx.TextCtrl(self, -1, '')
+        
+        self.fixLabel = wx.StaticText(self, -1, "Fixed Modifications")
+        self.varLabel = wx.StaticText(self, -1, "Variable Modifications")
+        
+        self.modSelector.AppendColumn('Mod')
+        self.modSelector.AppendColumn('Site')
+        self.full_mod_data = []
+        for modname in mod_list:
+            words = modname.split(' ')
+            basename = ' '.join(words[:-1])
+            site = words[-1].strip('()')
+            self.modSelector.Append([basename, site])
+            self.full_mod_data.append((basename, site))
+        sitecolsize = self.modSelector.GetColumnWidth(1)
+        self.modSelector.SetColumnWidth(0, 250 - sitecolsize)
+            
+        
+        self.fixmods.AppendColumn('Site')
+        self.fixmods.AppendColumn('Delta')
+        self.varmods.AppendColumn('Site')
+        self.varmods.AppendColumn('Delta')    
+        # Append blank rows to avoid annoying popup error.
+        self.fixmods.Append(['', ''])
+        self.varmods.Append(['', ''])
+    
+        gbs = wx.GridBagSizer(5, 5)
+        gbs.Add(self.searchBar, (0, 0), flag = wx.EXPAND)
+        gbs.Add(self.modSelector, (1, 0), span = (7, 1), flag = wx.EXPAND)
+        gbs.Add(self.addFixed, (1, 1))
+        gbs.Add(self.addVar, (5, 1))
+        gbs.Add(self.clearFix, (3, 1), flag = wx.ALIGN_CENTER)
+        gbs.Add(self.clearVar, (7, 1), flag = wx.ALIGN_CENTER)
+        gbs.Add(self.fixLabel, (0, 2), flag = wx.ALIGN_BOTTOM)
+        gbs.Add(self.varLabel, (4, 2), flag = wx.ALIGN_BOTTOM)
+        gbs.Add(self.fixmods, (1, 2), span = (3, 1), flag = wx.EXPAND)
+        gbs.Add(self.varmods, (5, 2), span = (3, 1), flag = wx.EXPAND)
+        
+        gbs.AddGrowableRow(3)
+        gbs.AddGrowableRow(6)
+        
+        self.Bind(wx.EVT_BUTTON, self.assignFix, self.addFixed)
+        self.Bind(wx.EVT_BUTTON, self.assignVar, self.addVar)
+        self.Bind(wx.EVT_BUTTON, self.clearFixed, self.clearFix)
+        self.Bind(wx.EVT_BUTTON, self.clearVariable, self.clearVar)
+        self.Bind(wx.EVT_TEXT, self.filterMods, self.searchBar)
+        
+        self.SetSizerAndFit(gbs)
+        
+        self.oldFilterString = None
+        
+        self.Show()
+    
+    def updateFromModSelections(self, targetCtrl):    
+        index = self.modSelector.GetFirstSelected()
+        siteDeltas = []
+        while index != -1:
+            modname = self.modSelector.GetItem(index, 0).GetText()
+            sitename = self.modSelector.GetItem(index, 1).GetText()
+            delta = unimod.get_mod_delta(modname)
+            
+            if sitename == 'C-term':
+                findsites = ['C-term']
+            elif sitename == 'N-term':
+                findsites = ['N-term']
+            else:
+                findsites = sitename.split() 
+            
+            siteDeltas.append((findsites, float(delta)))
+            
+            index = self.modSelector.GetNextSelected(index)
+        
+        index = targetCtrl.GetTopItem()
+        ctrlDeltas = defaultdict(float)
+        while index != -1:
+            site = targetCtrl.GetItem(index, 0).GetText()
+            delta = targetCtrl.GetItem(index, 1).GetText()
+            if delta:
+                ctrlDeltas[site] = float(delta)
+            index = targetCtrl.GetNextItem(index)
+        
+        for sites, delta in siteDeltas:
+            for site in sites:
+                ctrlDeltas[site] += delta
+        
+        #targetCtrl.ClearAll()
+        #targetCtrl.AppendColumn('Site')
+        #targetCtrl.AppendColumn('Delta')
+        targetCtrl.DeleteAllItems()
+        for site, delta in sorted(ctrlDeltas.items()):
+            targetCtrl.Append((site, str(delta)))
+        
+        
+    def assignFix(self, event):
+        self.updateFromModSelections(self.fixmods)
+    def assignVar(self, event):
+        self.updateFromModSelections(self.varmods)
+        
+    def clearFixed(self, event):
+        self.fixmods.ClearAll()
+        self.fixmods.AppendColumn('Site')
+        self.fixmods.AppendColumn('Delta') 
+        self.fixmods.Append(['', ''])
+    def clearVariable(self, event):
+        self.varmods.ClearAll()
+        self.varmods.AppendColumn('Site')
+        self.varmods.AppendColumn('Delta')        
+        self.varmods.Append(['', ''])
+        
+    def filterMods(self, event):
+        filterstring = self.searchBar.GetValue().lower()
+        self.modSelector.ClearAll()
+        self.modSelector.AppendColumn('Mod')
+        self.modSelector.AppendColumn('Site')        
+        for name, site in self.full_mod_data:
+            if filterstring in name.lower():
+                self.modSelector.Append([name, site])
+        sitecolsize = self.modSelector.GetColumnWidth(1)
+        self.modSelector.SetColumnWidth(0, 250 - sitecolsize)
+        
+    def readmods(self):
+        varmods = []
+        for i in range(self.varmods.GetItemCount()):
+            site = self.varmods.GetItem(i, 0).GetText()
+            delta = self.varmods.GetItem(i, 1).GetText()
+            varmods.append((site, delta))
+        fixmods = []
+        for i in range(self.fixmods.GetItemCount()):
+            site = self.fixmods.GetItem(i, 0).GetText()
+            delta = self.fixmods.GetItem(i, 1).GetText()
+            fixmods.append((site, delta))        
+        return varmods, fixmods
+    
+    def write_varmods(self, modlist):
+        self.varmods.ClearAll()
+        self.varmods.AppendColumn('Site')
+        self.varmods.AppendColumn('Delta')
+        if not modlist:
+            self.varmods.Append(['', ''])
+        for modsite, modmass in modlist:
+            self.varmods.Append((modsite, modmass))
+            
+    def write_fixmods(self, modlist):
+        self.fixmods.ClearAll()
+        self.fixmods.AppendColumn('Site')
+        self.fixmods.AppendColumn('Delta')
+        if not modlist:
+            self.fixmods.Append(['', ''])
+        for modsite, modmass in modlist:
+            self.fixmods.Append((modsite, modmass))    
+        
+        
+
 class CometGUI(wx.Dialog):
     def textCtrl(self, name, defaultVal = ''):
         label = wx.StaticText(self.pane, -1, name)
@@ -132,9 +304,6 @@ class CometGUI(wx.Dialog):
                                           'update multiplierz settings to '
                                           'indicate the directory of a copy '
                                           'of Comet.' % cometExe)
-        
-        #self.Bind(wx.EVT_CLOSE, self.onClose, self)
-  
         self.pane = wx.Panel(self, -1)
   
          
@@ -154,8 +323,8 @@ class CometGUI(wx.Dialog):
         dbaseLabel, self.dbaseCtrl, self.dbaseBrowse = self.fileCtrl('Database')
         parfileLabel, self.parfileCtrl, self.parfileBrowse = self.fileCtrl('Parameter File', bind = False)
         
-        varmodText, self.varmodCtrl = self.checkCtrl('Variable Modifications', mod_list, (200, -1))
-        fixmodText, self.fixmodCtrl = self.checkCtrl('Fixed Modifications', mod_list, (200, -1))
+        #varmodText, self.varmodCtrl = self.checkCtrl('Variable Modifications', mod_list, (300, -1))
+        #fixmodText, self.fixmodCtrl = self.checkCtrl('Fixed Modifications', mod_list, (300, -1))
         
         precTolLabel, self.precTolCtrl = self.textCtrl('Precursor Tolerance')
         fragTolLabel, self.fragTolCtrl = self.textCtrl('Fragment Bin Width')
@@ -207,20 +376,18 @@ class CometGUI(wx.Dialog):
                 ionctrl.SetValue(True)
             ionSizer.Add(ionctrl, 0, wx.ALL, 5)        
         
-        
+        self.modWidget = ModWidget(self.pane)
         
         gbs = wx.GridBagSizer(10, 10)
         
-        #topSizer = wx.BoxSizer(wx.HORIZONTAL)
-        
-        modSizer = wx.GridBagSizer(10, 10)
-        modSizer.Add(fixmodText, (0, 0), flag = wx.ALIGN_LEFT)
-        modSizer.Add(self.fixmodCtrl, (1, 0), span = (1, 2), flag = wx.EXPAND)
-        modSizer.Add(varmodText, (0, 2), flag = wx.ALIGN_LEFT)
-        modSizer.Add(self.varmodCtrl, (1, 2), span = (1, 2), flag = wx.EXPAND)
-        modSizer.Add(ionSizer, (2, 0), span = (1, 4), flag = wx.ALIGN_CENTRE)
-        modSizer.Add(wx.StaticLine(self.pane, -1, style = wx.LI_VERTICAL),
-                     (0, 4), span = (3, 1), flag = wx.EXPAND)
+        #modSizer = wx.GridBagSizer(10, 10)
+        #modSizer.Add(fixmodText, (0, 0), flag = wx.ALIGN_LEFT)
+        #modSizer.Add(self.fixmodCtrl, (1, 0), span = (1, 2), flag = wx.EXPAND)
+        #modSizer.Add(varmodText, (0, 2), flag = wx.ALIGN_LEFT)
+        #modSizer.Add(self.varmodCtrl, (1, 2), span = (1, 2), flag = wx.EXPAND)
+        #modSizer.Add(ionSizer, (2, 0), span = (1, 4), flag = wx.ALIGN_CENTRE)
+        #modSizer.Add(wx.StaticLine(self.pane, -1, style = wx.LI_VERTICAL),
+                     #(0, 4), span = (3, 1), flag = wx.EXPAND)
         
         scanSizer = wx.GridBagSizer(5, 5)
         scanBox = [(precTolLabel, (0, 0), wx.ALIGN_RIGHT), (self.precTolCtrl, (0, 1), wx.EXPAND),
@@ -280,14 +447,16 @@ class CometGUI(wx.Dialog):
                     widget, pos, flag, span = element
                 sizer.Add(widget, pos = pos, span = span, flag = flag)            
         
-        modSizer.AddGrowableRow(1)
+        #modSizer.AddGrowableRow(1)
         fileSizer.AddGrowableCol(1)        
         fileSizer.AddGrowableCol(2)
         
         #topSizer.Add(modSizer)
         #topSizer.Add()
         gbs.Add(topLabel, (0, 0), span = (1, 3), flag = wx.ALIGN_CENTRE)
-        gbs.Add(modSizer, (1, 0), span = (3, 2), flag = wx.EXPAND | wx.RIGHT)
+        #gbs.Add(modSizer, (1, 0), span = (3, 2), flag = wx.EXPAND | wx.RIGHT)
+        gbs.Add(self.modWidget, (1, 0), span = (3, 2), flag = wx.EXPAND | wx.RIGHT)
+        gbs.Add(ionSizer, (3, 2), flag = wx.ALIGN_RIGHT)
         gbs.Add(scanSizer, (1, 2), flag = wx.EXPAND | wx.LEFT)
         #gbs.Add(ionSizer, (2, 0), flag = wx.EXPAND)
         gbs.Add(pepSizer, (2, 2), flag = wx.ALIGN_CENTRE | wx.LEFT)
@@ -342,24 +511,20 @@ class CometGUI(wx.Dialog):
                 parval = convert[ctrl.GetValue().strip()]
             searchObj[parname] = parval
 
-        varmodstrs = self.varmodCtrl.GetCheckedStrings()
-        fixmodstrs = self.fixmodCtrl.GetCheckedStrings()
-        if len(varmodstrs) > 9:
+        #varmodstrs = self.varmodCtrl.GetCheckedStrings()
+        #fixmodstrs = self.fixmodCtrl.GetCheckedStrings()
+        varmodvalues, fixmodvalues = self.modWidget.readmods()
+        if len(varmodvalues) > 9:
             wx.MessageBox("Comet only supports up to 9 separate variable modifications.")
             # Fixed mods don't havet his limitation, being site-based.
             return
             
         searchObj.varmods = []
-        for varmodstr in varmodstrs:
-            modwords = varmodstr.split()
-            modname, sites = ' '.join(modwords[:-1]), modwords[-1]
-
-            try:
-                modmass = float(modname.strip())
-            except ValueError:
-                modmass = unimod.get_mod_delta(modname)  
+        for site, modmass in varmodvalues:
+            if not modmass: continue
+            modmass = float(modmass.strip())
             mod = {'mass' : float(modmass),
-                   'residues' : sites,
+                   'residues' : site,
                    'binary' : '0',
                    'max_mods_per_peptide' : '5',
                    'term_distance' : '-1',
@@ -368,21 +533,9 @@ class CometGUI(wx.Dialog):
             searchObj.varmods.append(mod)
                 
         fixmodMassBySite = defaultdict(float)
-        for fixmodstr in fixmodstrs:
-            sites = fixmodstr.split()[-1]
-            modname = fixmodstr[:fixmodstr.index(sites)].strip()
-            try:
-                modmass = float(modname)
-            except ValueError:
-                modmass = unimod.get_mod_delta(modname)
-            if 'N-term' in sites:
-                fixmodMassBySite['N-term'] += modmass
-                sites.replace('N-term', '')
-            if 'C-term' in sites:
-                fixmodMassBySite['C-term'] += modmass
-                sites.replace('C-term', '')
-            for site in sites:
-                fixmodMassBySite[site] += modmass
+        for site, modmass in fixmodvalues:
+            modmass = float(modmass)
+            fixmodMassBySite[site] += modmass
         
         for sitename, parname in FixModFields:
             searchObj[parname] = fixmodMassBySite[sitename]
@@ -412,26 +565,31 @@ class CometGUI(wx.Dialog):
             else:
                 ctrl.SetValue(convert[str(searchObj[parname])])
          
+        varmodlist = []
         for varmod in searchObj.varmods:
             modmass = str(varmod['mass'])
             modsites = varmod['residues']
-            modsites = modsites.replace('n', 'N-Term').replace('c', 'C-Term')
-            modstr = '%s (%s)' % (modmass, modsites)
-            self.varmodCtrl.Insert(modstr, 0)
-            self.varmodCtrl.Check(0)            
+            varmodlist.append((modsites, modmass))
+            #modsites = modsites.replace('n', 'N-Term').replace('c', 'C-Term')
+            #modstr = '%s (%s)' % (modmass, modsites)
+            #self.varmodCtrl.Insert(modstr, 0)
+            #self.varmodCtrl.Check(0)     
         
-        fixedMassSites = defaultdict(list)
+        #fixedMassSites = defaultdict(list)
+        fixmodlist = []
         for site, fixmodpar in FixModFields:
             parvalue = searchObj[fixmodpar]
-            if not parvalue:
-                continue
-            fixedMassSites[parvalue].append(site)
+            if parvalue and float(parvalue):
+                fixmodlist.append((site, parvalue))
+            #fixedMassSites[parvalue].append(site)
+        self.modWidget.write_varmods(varmodlist)
+        self.modWidget.write_fixmods(fixmodlist)
             
-        for mass, sitelist in fixedMassSites.items():
-            if float(mass):
-                modstr = '%s (%s)' % (mass, ''.join(sitelist))
-                self.fixmodCtrl.Insert(modstr, 0)
-                self.fixmodCtrl.Check(0)
+        #for mass, sitelist in fixedMassSites.items():
+            #if float(mass):
+                #modstr = '%s (%s)' % (mass, ''.join(sitelist))
+                #self.fixmodCtrl.Insert(modstr, 0)
+                #self.fixmodCtrl.Check(0)
         
     def load_parameters(self, event):
         loadfile = file_chooser(title = 'Open parameter file:',

@@ -13,4 +13,6 @@ class XICObject():
         self.xic_scale= xic_scale
         self.xic_max = xic_max
         self.active_xic = active_xic
-        self.xic_view = xic_view            
+        self.xic_view = xic_view     
+        
+        self.notes = ''

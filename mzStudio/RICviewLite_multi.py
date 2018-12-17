@@ -99,7 +99,7 @@ class BufferedWindow(wx.Window):
                 dc = wx.GCDC(pdc)
                 odc = wx.DCOverlay(self.overlay, pdc)
                 odc.Clear()
-                pos = event.GetPositionTuple()
+                pos = event.GetPosition()
                 found, grid = self.HitTest(pos)
                 if grid == self.grid:
                     if self.parent_window.tb.GetToolState(20):
@@ -128,7 +128,7 @@ class BufferedWindow(wx.Window):
             dc = wx.GCDC(pdc)
             odc = wx.DCOverlay(self.overlay, pdc)
             odc.Clear()
-            pos = event.GetPositionTuple()
+            pos = event.GetPosition()
             print pos
             if self.selected[0] == 'LINE':
                 self.DrawALineOnMotion(self.lines[self.selected[1]], dc, pos, 'LINE')
@@ -306,7 +306,7 @@ class RICviewLitePanel(wx.Frame):
                         new_bmp = art
                     except:
                         new_bmp = wx.ArtProvider.GetBitmap(wx.ART_CLOSE)
-                tb.AddCheckLabelTool(pos, label, new_bmp, shortHelp=short_help, longHelp=long_help)
+                tb.AddCheckTool(pos, label, new_bmp, shortHelp=short_help, longHelp=long_help)
                 self.Bind(wx.EVT_TOOL, self.OnToolClick, id=evt_id)
             else:
                 tb.AddSeparator()
@@ -518,7 +518,7 @@ class RICWindow(BufferedWindow):
     def OnLeftDown(self,event):
         self.SetFocus()
         self.xic.notes = self.parent_window.t4.GetValue()
-        pos = event.GetPositionTuple()
+        pos = event.GetPosition()
         self.postup = pos
         found, grid = self.HitTest(pos)
         self.found = found
@@ -532,7 +532,7 @@ class RICWindow(BufferedWindow):
             print time
 
     def OnRightDown(self,event):
-        pos = event.GetPositionTuple()
+        pos = event.GetPosition()
         found, grid = self.HitTest(pos)
         self.found = found
         self.grid = grid
@@ -540,7 +540,7 @@ class RICWindow(BufferedWindow):
         self.Refresh()
 
     def OnLeftUp(self,event):
-        pos = event.GetPositionTuple()
+        pos = event.GetPosition()
         tfound, ttrace, tgrid = self.HitTestXICBox(pos, 40)
         if tfound:
             #JUST HIT EXTRACT A TRACE.

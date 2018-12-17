@@ -2,7 +2,7 @@
 class SpecObject():
     
     def __init__(self, vendor, profile, detector, scan_type, scan_data, cent_data, processed_scan_data, filt, display_range, mass_ranges, score,
-                 sequence, varmod, fixedmod, scan, charge, rawfile, viewProcData, viewCent):
+                 sequence, varmod, fixedmod, scan, charge, rawfile, viewProcData, viewCent, axes = 1):
         
         self.type = "Spectrum"
         self.vendor = vendor
@@ -26,6 +26,8 @@ class SpecObject():
         self.rawfile = rawfile
         self.viewProcData = viewProcData
         self.viewCent = viewCent
+        self.notes = ''
+        self.axes = axes
         
         
         

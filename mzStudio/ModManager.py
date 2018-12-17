@@ -223,7 +223,7 @@ class ModBank(wx.Frame):
                 self.listb.Populate(token, title, composition, group) 
         for x in range(0, self.listb.ItemCount):
             if x % 2 == 1:
-                print "Set blue..."
+                #print "Set blue..."
                 self.listb.SetItemBackgroundColour(x, "light blue")            
         
     def OnNew(self, evt):

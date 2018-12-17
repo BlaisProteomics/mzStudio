@@ -51,13 +51,18 @@ class MyTreeCtrl(TreeListCtrl):#wx.TreeCtrl  #, listmix.TextEditMixin
     def Traverse(self, func, startNode):
         """Apply 'func' to each node in a branch, beginning with 'startNode'. """
         def TraverseAux(node, depth, func):
-            nc = self.GetChildrenCount(node, 0)
-            child, cookie = self.GetFirstChild(node)
-            # In wxPython 2.5.4, GetFirstChild only takes 1 argument
-            for i in xrange(nc):
-                func(child, depth)
-                TraverseAux(child, depth + 1, func)
-                child, cookie = self.GetNextChild(node, cookie)
+            item = self.GetRootItem() # Could be "GetFirstItem", depending on how root is handled.
+            while item.IsOk():
+                func(item, 1) # What is "depth" for, why, and how?
+                item = self.GetNextItem(item)
+                
+            #nc = self.GetChildrenCount(node, 0)
+            #child, cookie = self.GetFirstChild(node)
+            ## In wxPython 2.5.4, GetFirstChild only takes 1 argument
+            #for i in xrange(nc):
+                #func(child, depth)
+                #TraverseAux(child, depth + 1, func)
+                #child, cookie = self.GetNextChild(node, cookie)
         func(startNode, 0)
         TraverseAux(startNode, 1, func)
 
@@ -90,11 +95,11 @@ class MyTreeCtrl(TreeListCtrl):#wx.TreeCtrl  #, listmix.TextEditMixin
 
             item = {}
             item['label'] = self.GetItemText(node)
-            item['data'] = self.GetItemPyData(node)
-            item['icon-normal'] = self.GetItemImage(node, wx.TreeItemIcon_Normal)
-            item['icon-selected'] = self.IsSelected(node) #self.GetItemImage(node, wx.TreeItemIcon_Selected)
+            item['data'] = self.GetItemData(node)
+            #item['icon-normal'] = self.GetItemImage(node, wx.TreeItemIcon_Normal)
+            #item['icon-selected'] = self.IsSelected(node) #self.GetItemImage(node, wx.TreeItemIcon_Selected)
             item['icon-expanded'] = self.IsExpanded(node)   #self.GetItemImage(node, wx.TreeItemIcon_Expanded)
-            item['icon-selectedexpanded'] = self.GetItemImage(node, wx.TreeItemIcon_SelectedExpanded)
+            #item['icon-selectedexpanded'] = self.GetItemImage(node, wx.TreeItemIcon_SelectedExpanded)
             item['columnLabel'] = self.GetItemText(node, 1)
             #nodeid = self.idextract.match(str(node)).groups()[0]
             #item['node']=nodeid
@@ -242,25 +247,26 @@ class TestTreeCtrlPanel(wx.Panel):
         self.tree.SetImageList(il)
         self.il = il
 
-        self.tree.AddColumn("Infobar")
-        self.tree.AddColumn("Title")
+        self.tree.AppendColumn("Infobar")
+        self.tree.AppendColumn("Title")
         
-        self.tree.SetMainColumn(0) # the one with the tree in it...
+        #self.tree.SetMainColumn(0) # the one with the tree in it...
         self.tree.SetColumnWidth(0, 250)
         self.tree.SetColumnWidth(1, 250)
 
 
-        self.root = self.tree.AddRoot("The Root Item")
+        #self.root = self.tree.AddRoot("The Root Item")
         self.root = self.tree.GetRootItem()
-        self.tree.SetPyData(self.root, {"type":"root"})
+        self.tree.SetItemData(self.root, {"type":"root"})
         self.tree.SetItemImage(self.root, fldridx, wx.TreeItemIcon_Normal)
         self.tree.SetItemImage(self.root, fldropenidx, wx.TreeItemIcon_Expanded)
-        self.tree.SetItemText(self.root, "Sequence", 1)
+        self.tree.SetItemText(self.root, 1, "Sequence")
         
-        self.tree.GetMainWindow().Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
+        # GetView was GetMainWindow, I think they're equivalent?
+        self.tree.GetView().Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
         self.tree.Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
         
-        self.tree.GetMainWindow().Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
+        self.tree.GetView().Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         
         self.tree.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         self.tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.OnActivate)

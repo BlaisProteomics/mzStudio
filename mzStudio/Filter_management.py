@@ -169,14 +169,7 @@ def OnSRM(filter_dict, id):
     filter_dict['mr'] = '[%s-%s]' % (ranges[0][0], ranges[-1][1])
     
     return filter_dict
-
-
-def on_corona_ms1(filter_dict, id):
-    filter_dict["mode"]="ms1"
-    filter_dict["analyzer"]=id.groups()[0]
-    filter_dict["data"]= "+cent" if id.groups()[1]== "c" else "+prof"
-    filter_dict["mr"]='[' + id.groups()[2]+'-'+id.groups()[3]+']'
-    return filter_dict
+    
 
 #def OnTOFms2(filter_dict, id):
     #filter_dict['mode'] = 'ms2'
@@ -251,6 +244,15 @@ def Onems(filter_dict, id):
     filter_dict["data"]= "+cent" if id.groups()[1]== "c" else "+prof"
     filter_dict["mr"]='[' + id.groups()[2]+'-'+id.groups()[3]+']'
     return filter_dict
+
+def onmrmms(filter_dict, id):
+    filter_dict["mode"]="mrm"
+    filter_dict["data"]= "+cent" if id.groups()[1]== "c" else "+prof"
+    #filter_dict["mr"]='[' + id.groups()[2]+'-'+id.groups()[3]+']'
+    #filter_dict["precursor"]='MRM'
+    filter_dict["reaction"]='CAD'
+    return filter_dict
+    #raise NotImplementedError
 
 def Onmgf(filter_dict, id):
     #MGF ms2 542.4232 [100:2000]

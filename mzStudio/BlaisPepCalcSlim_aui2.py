@@ -781,7 +781,7 @@ class BlaisPepCalc(wx.Panel):
             else:
                 nmod = mz_masses.calc_mass(mz_masses.Nterm_dict[nterm])
             mods.append((0, nmod - AW['H'])) # Only one *-term mod at at time.
-            nmodstr = 'N-term: %.5f' % nmod
+            nmodstr = 'N-term: %.5f' % (nmod - AW['H'])
             modstrs.append(nmodstr)
         if cterm:
             if cterm.isdigit() or self.is_number(cterm):
@@ -789,7 +789,7 @@ class BlaisPepCalc(wx.Panel):
             else:
                 cmod = mz_masses.calc_mass(mz_masses.Cterm_dict[cterm])            
             mods.append((len(aminos)+1, cmod  - (AW['H'] + AW['O'])))
-            cmodstr = 'C-term: %.5f' % cmod       
+            cmodstr = 'C-term: %.5f' % (cmod - (AW['H'] + AW['O']))
             modstrs.append(cmodstr)
         
         totalModMass = sum(zip(*mods)[1]) if mods else 0
@@ -938,8 +938,13 @@ class BlaisPepCalc(wx.Panel):
             return
         
         currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
-        currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]           
-        currentFilter = currentFile['filter_dict'][currentFile['scanNum']]
+        currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]
+        
+        if currentFile['spectrum_style'] != 'AVERAGE':
+            currentFilter = currentFile['filter_dict'][currentFile['scanNum']]
+        else:
+            currentFilter = currentFile['filter_dict'][int(currentFile['scanNum'].split('-')[0])]
+            
         if 'ms2' not in currentFilter and 'ms3' not in currentFilter and 'msms' not in currentFilter:
             wx.MessageBox("Not an MS2/MS3 scan, cannot label!")
             return
