@@ -1,6 +1,3 @@
-import wxversion
-#wxversion.select('3')
-#import wx.gizmos as dataview
 import wx
 #from wx.dataview import TreeListCtrl
 from wx.lib.agw.customtreectrl import CustomTreeCtrl as TreeListCtrl
