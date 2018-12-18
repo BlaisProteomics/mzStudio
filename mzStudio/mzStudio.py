@@ -5,7 +5,7 @@ __version__ = '1.2'
 # WELCOME to mzStudio!
 #----------------------------------------------------------------------------------------------------------------------
 
-import wxversion
+#import wxversion
 import wx, os
 
 import re, sys, cPickle, platform, time, thread, csv, gc
