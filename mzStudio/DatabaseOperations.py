@@ -83,6 +83,7 @@ def make_database(file, overwrite=True, vendor='Thermo', parent=None, searchtype
     conn.commit()
     counter = 0
     for i, row in enumerate(rdrdata):
+        if not any(row.values()): continue
         if counter % 50 == 0:
             print counter
             
@@ -133,7 +134,7 @@ def make_database(file, overwrite=True, vendor='Thermo', parent=None, searchtype
                 scan=int(standard_title_parse(mgf_dict[int(query)])['scan'])            
                 line += str(scan) + ', "' + desc+ '");'
             else:
-                line += row['First Scan'] + ', "NA");'
+                line += str(row['First Scan']) + ', "NA");'
         
         c.execute(line)
         
