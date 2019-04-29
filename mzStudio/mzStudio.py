@@ -5,7 +5,6 @@ __version__ = '1.2'
 # WELCOME to mzStudio!
 #----------------------------------------------------------------------------------------------------------------------
 
-#import wxversion
 import wx, os
 
 import re, sys, cPickle, platform, time, thread, csv, gc
@@ -269,7 +268,7 @@ class MS_Data_Manager():
         self.ems = re.compile('.*?(EMS) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         #self.targ = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #self.targ = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI r? ?Full ms2 (\d+?.\d+?)@(hcd|cid|etd)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
-        self.targ = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI (?:sid=35.00 )?(r|r sa)? ?Full ms2 (\d+?.\d+?)@(hcd|cid|etd)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        self.targ = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI (?:sid=35.00 )?(t|r|r sa)? ?Full ms2 (\d+?.\d+?)@(hcd|cid|etd)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #self.targ_etd = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI r Full ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #targms3 FTMS + c NSI Full ms3 566.40@cid35.00 792.50@hcd50.00 [100.00-2000.00]
         self.targ_ms3 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full ms3 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
