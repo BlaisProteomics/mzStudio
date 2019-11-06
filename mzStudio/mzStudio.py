@@ -1,9 +1,26 @@
 __author__ = 'Scott Ficarro, William Max Alexander'
-__version__ = '1.2'
+__version__ = '1.0.16'
 
 #----------------------------------------------------------------------------------------------------------------------
 # WELCOME to mzStudio!
 #----------------------------------------------------------------------------------------------------------------------
+
+# FEATURES TO ADD:
+# 1) CLEAR ALL XICs except TIC
+# 2) REFRESH MOD LIST WITHOUT RESTART (RE_READ TEXT FILE)
+# 3) AREA BANK - select rows or columns paste
+# 4) SELECT FILTER LOCK FROM LIST OF AVAILABLE FILTERS
+
+
+TRY_VERSION_FOUR = True
+
+
+try:
+    import wxversion
+    if not TRY_VERSION_FOUR:
+        wxversion.select("3.0")
+except:
+    pass    
 
 import wx, os
 
@@ -80,6 +97,63 @@ def scaled_euclidean_distance_from(pt1, firstrange, secondrange):
                 abs(pt1[1]*secondfactor - pt2[1]*secondfactor)**2)
     return foobar
 
+
+
+def peaks_mods_to_mascot_mods(p_mods):
+    m_mods = []
+    for mod in p_mods.split(';'):
+        if (not mod) or 'TMT' in mod or 'Carbamidomethylation' in mod:
+            continue
+        mod = mod.split()[0]
+        mod = ': '.join(mod.split(':')[:2])
+        m_mods.append(mod)
+    return '; '.join(m_mods)
+
+
+
+from collections import namedtuple
+
+FILEATTRIBUTES = ['Analytical_Overlay', 'Display', 'FeatureBoxes', 'FileAbs', 'Filename',
+                  'ID', 'ID_Dict', 'MALDIServer', 'NL_ions', 'Processing', 'SILAC', 'SearchType',
+                  'XICinfo', 'abi_centroid', 'active_xic', 'areaCalcOption', 'auto_resize', 
+                  'average_data', 'average_range', 'average_scan_range', 'axco', 'axes', 'combo',
+                  'currently_selected_filter', 'datLink', 'database', 'drawCentroid', 'eliminate_noise',
+                  'errorFlag', 'fd', 'features', 'filter', 'filterLock', 'filter_dict', 'filters',
+                  'fixedmod', 'fm', 'found2theor', 'header', 'img', 'intensity_scaling',
+                  'inter_axis_factor', 'inter_raw_space', 'inter_xic_space', 'ionLabelThresh', 
+                  'is_zooming', 'labelPeaks', 'labelThreshOverride', 'label_dict', 'label_non_id',
+                  'label_res', 'label_threshold', 'line_color', 'line_width', 'lm', 'locked', 'm',
+                  'mainfont', 'maintext', 'mark_boxes', 'mascot_ID', 'mass_ranges', 'master_filter', 
+                  'master_scan', 'max_cg', 'max_int', 'min_cg', 'mode', 'multiFileOption', 'mzSheetcols',
+                  'new_startTime', 'new_stopTime', 'newf', 'newl', 'overlay', 'overlay_sequence',
+                  'peak_min', 'postup', 'precNL_ions', 'processed_data', 'processed_first', 'processed_last',
+                  'ric_spec_indent', 'ric_spec_width', 'rows', 'rt2scan', 'rt_dict', 'scan', 
+                  'scan_high_mass', 'scan_low_mass', 'scanNum', 'scan_dict', 'scan_range', 'score', 
+                  'searchAlgorithm', 'settings', 'space', 'spec_indent', 'spec_width', 'spectrum_style',
+                  'step_length', 'svg', 'targ_check', 'targ_filt', 'threshold_cent_abi', 'ticname', 
+                  'time_ranges', 'total_spec_height', 'total_xic_height', 'unprocessed_data', 'unzF', 
+                  'unzL', 'unzStartTime', 'unzStopTime', 'vendor', 'viewCentroid', 'viewMascot', 'xic', 
+                  'xic_axco', 'xic_charge', 'xic_dict', 'xic_labels', 'xic_lookup', 'xic_marks', 'xic_mass',
+                  'xic_mass_ranges', 'xic_max', 'xic_params', 'xic_scale', 'xic_scan', 'xic_sequence', 
+                  'xic_style', 'xic_title', 'xic_titles', 'xic_type', 'xic_view', 'xr', 'y_marg', 'yardstick_settings']
+# NONEXHAUSTIVE.
+
+    # I've had it with this over-100-element dictionary, Scott!  Someone already
+    # invented object-oriented programming back in the 70s, you don't have to
+    # re-do it all by yourself.
+FileDescriptor = namedtuple("FileDescriptor",
+                            FILEATTRIBUTES)
+def instantiate_file_descriptor():
+    return FileDescriptor(*{att:None for att in FILEATTRIBUTES})
+    
+
+class DescriptorClass():
+    def __init__(self):
+        pass # It's just being used as a syntatically-bearable dict, basically.
+
+
+
+
 class XICLabel:
     '''
 
@@ -139,11 +213,8 @@ class ScanDictThread:
     def Run(self):
         print "Building Scan Dicts (Thread)"
 
-        try:
-            self.scan_dict, self.rt_dict, self.filter_dict, self.rt2scan = mz_core.create_dicts(self.m, start=self.start, stop=self.stop)
-        except Exception as err:
-            self.running = False
-            raise err
+
+        self.scan_dict, self.rt_dict, self.filter_dict, self.rt2scan = mz_core.create_dicts(self.m, start=self.start, stop=self.stop)
 
         print "Done"
 
@@ -268,7 +339,7 @@ class MS_Data_Manager():
         self.ems = re.compile('.*?(EMS) [+] ([cp]) [NE]SI Full ms \[(\d+?.*\d*?)-(\d+?.*\d*?)\]')
         #self.targ = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #self.targ = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI r? ?Full ms2 (\d+?.\d+?)@(hcd|cid|etd)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
-        self.targ = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI (?:sid=35.00 )?(t|r|r sa)? ?Full ms2 (\d+?.\d+?)@(hcd|cid|etd)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
+        self.targ = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI (?:sid=35.00 )?(r|r sa|t)? ?Full ms2 (\d+?.\d+?)@(hcd|cid|etd)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #self.targ_etd = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI r Full ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #targms3 FTMS + c NSI Full ms3 566.40@cid35.00 792.50@hcd50.00 [100.00-2000.00]
         self.targ_ms3 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full ms3 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
@@ -390,14 +461,14 @@ class MS_Data_Manager():
     def getActiveList(self):
         file_list = []
         for i in range(0, self.getFileNum()):
-            if self.files[self.Display_ID[i]]["Display"]:
+            if self.files[self.Display_ID[i]].Display:
                 file_list.append(i)
         return file_list
 
     def getDisplayWindows(self):
         counter = 0
         for i, key in enumerate(self.files.keys()):
-            if self.files[key]["Display"]==True:
+            if self.files[key].Display==True:
                 counter += 1
         return counter
 
@@ -408,7 +479,7 @@ class MS_Data_Manager():
         if direction.lower() == "forward":
             while go:
                 counter += 1
-                if self.files[self.Display_ID[counter]]["Display"]==True:
+                if self.files[self.Display_ID[counter]].Display==True:
                     go = False
                     next = counter
                 if counter == self.getFileNum() - 1:
@@ -416,7 +487,7 @@ class MS_Data_Manager():
         elif direction.lower() == "reverse":
             while go:
                 counter -= 1
-                if self.files[self.Display_ID[counter]]["Display"]==True:
+                if self.files[self.Display_ID[counter]].Display==True:
                     go = False
                     next = counter
                 if counter == 0:
@@ -432,65 +503,65 @@ class MS_Data_Manager():
         If the display locked, will not reset, instead will keep current.
 
         '''
-        if not self.files[filename]['Processing']:
-            vendor = self.files[filename]["vendor"]
+        if not self.files[filename].Processing:
+            vendor = self.files[filename].vendor
             if vendor != "ABI-MALDI":
-                if not self.files[filename]["locked"]:
+                if not self.files[filename].locked:
                     found = False
                     for member in self.mass_dict.keys():
                         pa = self.mass_dict[member][0]
                         if vendor == "Thermo":
 
-                            lookup = self.files[filename]["scanNum"]
+                            lookup = self.files[filename].scanNum
 
-                            #lookup = int(self.files[filename]["scanNum"].split('-')[0])
+                            #lookup = int(self.files[filename].scanNum.split('-')[0])
                         if vendor == "mgf":
-                            lookup = self.files[filename]["scanNum"]    #self.files[filename]["mgf_rev_dict"][    
-                            if lookup not in self.files[filename]["filter_dict"].keys():
-                                lookup = self.files[filename]["mgf_scan_dict"][self.files[filename]["scanNum"]]
+                            lookup = self.files[filename].scanNum    #self.files[filename].mgf_rev_dict[    
+                            if lookup not in self.files[filename].filter_dict.keys():
+                                lookup = self.files[filename].mgf_scan_dict[self.files[filename].scanNum]
                         if vendor == "ABI":
-                            lookup = (self.files[filename]["scanNum"],self.files[filename]["experiment"])
-                        if self.files[filename]['spectrum_style']=='single scan':
-                            id = pa.match(self.files[filename]["filter_dict"][lookup])
+                            lookup = (self.files[filename].scanNum,self.files[filename].experiment)
+                        if self.files[filename].spectrum_style=='single scan':
+                            id = pa.match(self.files[filename].filter_dict[lookup])
                             if id:
                                 low_mass = id.groups()[self.mass_dict[member][1]]
                                 hi_mass = id.groups()[self.mass_dict[member][2]]
                                 found = True
                                 break
                         else: #AVERAGE SCAN
-                            low_mass = self.files[filename]['average_mass_range'][0]
-                            hi_mass = self.files[filename]['average_mass_range'][1]
+                            low_mass = self.files[filename].average_mass_range[0]
+                            hi_mass = self.files[filename].average_mass_range[1]
                             found = True
                     if not found:
                         #raise ValueError("Filter not parsed!  Unrecognized file format!")
                         low_mass = 100.0
                         hi_mass = 101.0
                 #else:
-                #    low_mass = self.files[filename]["newl"]
-                #    hi_mass = self.files[filename]['newf']
-                    self.files[filename]["scan low mass"]=float(low_mass)
-                    self.files[filename]["scan high mass"]=float(hi_mass)
-                    self.files[filename]["mass_ranges"]=[(float(low_mass), float(hi_mass))]
+                #    low_mass = self.files[filename].newl
+                #    hi_mass = self.files[filename].newf
+                    self.files[filename].scan_low_mass=float(low_mass)
+                    self.files[filename].scan_high_mass=float(hi_mass)
+                    self.files[filename].mass_ranges=[(float(low_mass), float(hi_mass))]
             else: #--------------MALDI DATA
-                self.files[filename]["scan low mass"]=self.files[filename]["m"].info()['Range'][0]
-                self.files[filename]["scan high mass"]=self.files[filename]["m"].info()['Range'][1]
-                self.files[filename]["mass_ranges"]=[self.files[filename]["m"].info()['Range']]
+                self.files[filename].scan_low_mass=self.files[filename].m.info()['Range'][0]
+                self.files[filename].scan_high_mass=self.files[filename].m.info()['Range'][1]
+                self.files[filename].mass_ranges=[self.files[filename].m.info()['Range']]
         else: #------------------PROCESSED SCAN
-            if not self.files[filename]["locked"]:
-                self.files[filename]["scan low mass"]=float(self.files[filename]['processed_first'])
-                self.files[filename]["scan high mass"]=float(self.files[filename]['processed_last'])
-                self.files[filename]["mass_ranges"]=[(float(self.files[filename]['processed_first']), float(self.files[filename]['processed_last']))]                 
+            if not self.files[filename].locked:
+                self.files[filename].scan_low_mass=float(self.files[filename].processed_first)
+                self.files[filename].scan_high_mass=float(self.files[filename].processed_last)
+                self.files[filename].mass_ranges=[(float(self.files[filename].processed_first), float(self.files[filename].processed_last))]                 
 
     def GetHiMass(self, filename):
-        return max(t[0] for t in self.files[filename]["scan"])
+        return max(t[0] for t in self.files[filename].scan)
 
     def GetLoMass(self, filename):
-        return min(t[0] for t in self.files[filename]["scan"])
+        return min(t[0] for t in self.files[filename].scan)
 
     def GetMaxInt(self, fm, lm, filename):
-        if not self.files[filename]["Processing"]:
+        if not self.files[filename].Processing:
             sub_scan = []
-            for member in self.files[filename]["scan"]:
+            for member in self.files[filename].scan:
                 if member[0]>=fm and member[0]<=lm:
                     sub_scan.append(member)
             try:
@@ -499,7 +570,7 @@ class MS_Data_Manager():
                 return 0
         else:
             sub_scan = []
-            for member in self.files[filename]["processed_data"]:
+            for member in self.files[filename].processed_data:
                 if member[0]>=fm and member[0]<=lm:
                     sub_scan.append(member)
             try:
@@ -519,7 +590,7 @@ class MS_Data_Manager():
 
     def GetMaxSignal(self, startTime, stopTime, key, filename, xic):
         sub_xic = []
-        for member in self.files[filename]["xic"][key][xic]:
+        for member in self.files[filename].xic[key][xic]:
             if member[0]>=startTime and member[0]<=stopTime:
                 sub_xic.append(member)
         try:
@@ -555,7 +626,7 @@ class MS_Data_Manager():
     def GetAnXIC(self, win, m, params, filter_dict={}, rt2scan={}):
         '''
 
-        Version 1.2 2018-12-17
+        Version 0.2 2017-07-04.
         For thermo files, the "filter" is processed within the XIC function of the COM object.
         For Agilent and ABSciex files, the XIC is first obtained, and then 'filtered' using a list comprehension.
 
@@ -565,15 +636,16 @@ class MS_Data_Manager():
         #self.parent.parent.Parent.StartGauge(text="Building XIC...")
         assert len(params) == 5
         
-        if 'ms2' not in params[4].lower():
-            try:
-                sim_filter = (x for x in filter_dict.values() if 'SIM' in x).next()
-                print "SIM detected."
-                params_ = list(params)
-                params_[4] = sim_filter
-                params = tuple(params_)
-            except StopIteration:
-                pass
+        #if 'ms2' not in params[4].lower():
+            #try:
+                ##sim_filter = (x for x in filter_dict.values() if 'SIM' in x).next()
+                #sim_filter= params[4]
+                #print "SIM detected."
+                #params_ = list(params)
+                #params_[4] = sim_filter
+                #params = tuple(params_)
+            #except StopIteration:
+                #pass
 
         params = {'start_time':params[0],
                   'stop_time':params[1],
@@ -726,21 +798,23 @@ class MS_Data_Manager():
 
         for key, val in settings.items():
             if isinstance(val, dict):
-                if key not in current:
-                    current[key] = val
+                if key not in current.__dict__:
+                    current.__dict__[key] = val
                 else:
                     for subkey, subval in val.items():
-                        current[key][subkey] = subval
+                        current.__dict__[key][subkey] = subval
             else:
-                current[key] = val
+                current.__dict__[key] = val
 
         #Set Font
         settings['font1'] = eval('wx.Font('+str(settings['mainfont']['size'])+
                                  ', wx.' + settings['mainfont']['font'] + 
                                  ', wx.' + settings['mainfont']['style']+
                                  ', wx.' + settings['mainfont']['weight']+', False)')
+        import cPickle
+        import base64        
         try:
-            settings['yardstick_settings'] = pickle.loads(base64.b64decode(settings['yardstick_settings']))
+            settings['yardstick_settings'] = cPickle.loads(base64.b64decode(settings['yardstick_settings']))
         except (IndexError, TypeError):
             settings['yardstick_settings'] = True, False, ['+1'], []
 
@@ -792,7 +866,7 @@ class MS_Data_Manager():
                     ['ionLabelThresh'],
                     ['areaCalcOption']]
         settingsfile = open(os.path.join(installdir, r'settings\settings.txt'), 'w')
-        settings = current['settings']
+        settings = current.settings
 
         for keys in saveKeys:
             if len(keys) == 1:
@@ -801,7 +875,7 @@ class MS_Data_Manager():
                 settingsfile.write('%s\t%s\t%s\n' % (keys[0], keys[1],
                                                      settings[keys[0]][keys[1]]))
         settingsfile.write('%s\t%s\n' % ('yardstick_settings',
-                                         base64.b64encode(pickle.dumps(settings['yardstick_settings']))))
+                                         base64.b64encode(cPickle.dumps(settings['yardstick_settings']))))
         settingsfile.close()
 
 
@@ -823,7 +897,7 @@ class MS_Data_Manager():
 
         display_key = self.getFileNum()
         self.Display_ID[display_key]=filename
-        current = {}
+        current = DescriptorClass()
 
         #---------------------EVALUATE VENDOR
         vendor = None
@@ -835,90 +909,94 @@ class MS_Data_Manager():
             vendor = "ABI-MALDI"
         elif filename.lower().endswith(".mgf"):
             vendor = "mgf"        
-        current["vendor"] = vendor
+        current.vendor = vendor
 
-        #current['multiFileOption'] = 'SEQUENTIAL' # SHOULD BE EITHER SEQUENTIAL, OR LOAD ALL.  For multifile searches. # NOW IN SETTINGS FILE
-        #current['multiFileOption'] = 'LOAD ALL' 
-        current["processed_data"] = None #-----Holds a processed scan for custom processing scripts
-        current['processed_first'] = 100
-        current['processed_last']=101
-        current["spectrum_style"] = "single scan" # "single scan" or "average"
-        current["features"] = False
+        #current.multiFileOption = 'SEQUENTIAL' # SHOULD BE EITHER SEQUENTIAL, OR LOAD ALL.  For multifile searches. # NOW IN SETTINGS FILE
+        #current.multiFileOption = 'LOAD ALL' 
+        current.processed_data = None #-----Holds a processed scan for custom processing scripts
+        current.processed_first = 100
+        current.processed_last=101
+        current.spectrum_style = "single scan" # "single scan" or "average"
+        current.features = False
 
         #-----------FOR SPECTRUM AVERAGING
-        current["average_data"] = None
-        current['average_range']=[]
-        current['average_scan_range']=[]
+        current.average_data = None
+        current.average_range=[]
+        current.average_scan_range=[]
 
-        current["max_int"]={}
-        current['intensity_scaling']=0
-        current['labelThreshOverride']=0.5
-        current['filterLock']=None # IF filter locked, when +/- through data will skip to the next scan with this filter
-        current['score']=None # Database search score if there is an ID with this scan
-        current['label_non_id']=True
-        current['NL_ions']={}
-        current['precNL_ions']={}
-        current['errorFlag']=True #Display ppm error if accurate mass instrument
-        current['currently_selected_filter']=None
-        current['XICinfo']=None
-        current["FileAbs"] = filename
-        current["FeatureBoxes"] = []
-        current["Filename"] = os.path.basename(filename)
-        current["ID"] = False #Is the current scan identified
-        current["img"] = None #Bitmap to be stored if command issued
-        current["fixedmod"] = ""  #,iTRAQ4plex (K),iTRAQ4plex (N-term)
-        current["header"] = {}
-        current["mascot_ID"] = {}
-        current["mode"] = "RIC-SPEC"
-        current["ID_Dict"] = {}
-        current["SILAC"]={"mode":False, "peaks":(), "method":None} 
-        current["scanNum"] = 1
-        current["datLink"] = False
-        current["xic_style"] = 'NEWTRACE'
-        current["viewMascot"] = False
-        #current["viewCentroid"] = False
-        current["settings"] = self.LoadSettings(current)
-        current["locked"] = False
-        current["mzSheetcols"] = []
-        current["postup"] = (0,0) #temp position tuple
-        #current["filters"] =[[""]]
-        current["xic_title"]=[["TIC"]]
-        current["rows"] = []
-        current["overlay"]={}
-        current["overlay_sequence"]={}
-        current["combo"] = []
-        current["database"]=None
-        current["Display"]=True
-        current["SearchType"]=None
-        current["axes"] = 1
-        current["newf"] = 0
-        current["newl"] = 0
-        current["new_stopTime"] = 0
-        current["new_startTime"] = 0
-        current['Processing'] = None
-        current['is_zooming'] = False
-        current['processed_data'] = []
-        current['unprocessed_data'] = []
-        current['Analytical_Overlay'] = False
+        current.max_int={}
+        current.intensity_scaling=0
+        current.labelThreshOverride=0.5
+        current.filterLock=None # IF filter locked, when +/- through data will skip to the next scan with this filter
+        current.score=None # Database search score if there is an ID with this scan
+        current.label_non_id=True
+        current.NL_ions={}
+        current.precNL_ions={}
+        current.errorFlag=True #Display ppm error if accurate mass instrument
+        current.currently_selected_filter=None
+        current.XICinfo=None
+        current.FileAbs = filename
+        current.FeatureBoxes = []
+        current.Filename = os.path.basename(filename)
+        current.ID = False #Is the current scan identified
+        current.img = None #Bitmap to be stored if command issued
+        current.fixedmod = ""  #,iTRAQ4plex (K),iTRAQ4plex (N-term)
+        current.header = {}
+        current.mascot_ID = {}
+        current.mode = "RIC-SPEC"
+        current.ID_Dict = {}
+        current.SILAC={"mode":False, "peaks":(), "method":None} 
+        current.scanNum = 1
+        current.datLink = False
+        current.xic_style = 'NEWTRACE'
+        current.viewMascot = False
+        #current.viewCentroid = False
+        current.settings = self.LoadSettings(current)
+        current.locked = False
+        current.mzSheetcols = []
+        current.postup = (0,0) #temp position tuple
+        #current.filters =[[""]]
+        current.xic_title=[["TIC"]]
+        current.rows = []
+        current.overlay={}
+        current.overlay_sequence={}
+        current.combo = []
+        current.database=None
+        current.Display=True
+        current.SearchType=None
+        current.axes = 1
+        current.newf = 0
+        current.newl = 0
+        current.new_stopTime = 0
+        current.new_startTime = 0
+        current.Processing = None
+        current.is_zooming = False
+        current.processed_data = []
+        current.Analytical_Overlay = False
+        
+        current.scan = []
+        current.profile_scan = []
         
         # May as well put it here, I guess?  Requires settings to be loaded.
         if not mzAtomicYardstick.masslist:
-            mzAtomicYardstick.initialize_masses(*current['settings']['yardstick_settings'])
+            mzAtomicYardstick.initialize_masses(*current.settings['yardstick_settings'])
         
         #print vendor
         t1 = time.time()
-        if vendor == "Thermo":
-            if filename.lower().endswith('.d'): busy = PBI.PyBusyInfo("Loading agilent File...", parent=None, title="Building Scan dictionary...")
-            current["m"] = mzAPI.mzFile(filename, compatible_mode = True)
-            if filename.lower().endswith('.d'): del busy
+        if vendor == "Thermo" and filename.lower().endswith('.d'):
+            busy = PBI.PyBusyInfo("Loading Bruker File...", parent=None, title="")
+            current.m = mzBrukerWrapped(filename)
+            del busy
+        elif vendor == "Thermo":
+            current.m = mzAPI.mzFile(filename, compatible_mode = True)
         elif vendor == 'mgf':
-            current["m"] = mgf.mzFile(filename)
+            current.m = mgf.mzFile(filename)
         elif vendor == "ABI":
             busy = PBI.PyBusyInfo("Loading wiff File...", parent=None, title="Building Scan dictionary...")
-            current["m"] = mzAPI.mzFile(filename, compatible_mode = True)
+            current.m = mzAPI.mzFile(filename, compatible_mode = True)
             del busy
             vendor = "Thermo"
-            current["vendor"] = "Thermo"  #Vendor is really ABI of course, but mzAPI structures wiff files like raw.
+            current.vendor = "Thermo"  #Vendor is really ABI of course, but mzAPI structures wiff files like raw.
 
         elif vendor == "ABI-MALDI":
             '''
@@ -927,105 +1005,105 @@ class MS_Data_Manager():
 
 
             '''
-            current['scanNum']=1
-            current['mark_boxes'] = []
-            current['filter_dict']={}
-            current['m']=mzAPI.mzFile(filename)
-            #current['m'].open_file(filename)
-            current["mode"] = "SPEC"
-            current["scan"] = current['m'].scan()
-            current["label_dict"] = {}
-            current["xic_labels"] = []
-            current["found2theor"] = {}            
-            current["svg"] = defaultdict(list)
+            current.scanNum=1
+            current.mark_boxes = []
+            current.filter_dict={}
+            current.m=mzAPI.mzFile(filename)
+            #current.m.open_file(filename)
+            current.mode = "SPEC"
+            current.scan = current.m.scan()
+            current.label_dict = {}
+            current.xic_labels = []
+            current.found2theor = {}            
+            current.svg = defaultdict(list)
             self.files[filename] = current
-            self.files[filename]["scan low mass"]=current["m"].info()['Range'][0]
-            self.files[filename]["scan high mass"]=current["m"].info()['Range'][1]
-            self.files[filename]["mass_ranges"]=[current['m'].info()['Range']]
+            self.files[filename].scan_low_mass=current.m.info()['Range'][0]
+            self.files[filename].scan_high_mass=current.m.info()['Range'][1]
+            self.files[filename].mass_ranges=[current.m.info()['Range']]
             self.set_axes()
-            self.files[filename]["unzF"] = self.files[filename]["scan low mass"]
-            self.files[filename]["unzL"] = self.files[filename]["scan high mass"]
-            self.files[filename]["fm"] = self.files[filename]["scan low mass"]
-            self.files[filename]["lm"] = self.files[filename]["scan high mass"]         
-            self.files[filename]['filter_dict'][None]=' + p MALDI TOF: ' + current['Filename'] + '|' + str(self.files[filename]["scan low mass"]) + ',' + str(self.files[filename]["scan high mass"])
-            self.files[filename]['fd'] = self.Create_Filter_Info(self.files[filename]['filter_dict'][None], 'ABI-MALDI')
-            #current["scan_range"] = current['m'].info()['Range']
-            current["scan_range"] = (None, None)
-            self.files[filename]['viewCentroid']=False
+            self.files[filename].unzF = self.files[filename].scan_low_mass
+            self.files[filename].unzL = self.files[filename].scan_high_mass
+            self.files[filename].fm = self.files[filename].scan_low_mass
+            self.files[filename].lm = self.files[filename].scan_high_mass     
+            self.files[filename].filter_dict[None]=' + p MALDI TOF: ' + current.Filename + '|' + str(self.files[filename].scan_low_mass) + ',' + str(self.files[filename].scan_high_mass)
+            self.files[filename].fd = self.Create_Filter_Info(self.files[filename].filter_dict[None], 'ABI-MALDI')
+            #current.scan_range = current.m.info()['Range']
+            current.scan_range = (None, None)
+            self.files[filename].viewCentroid=False
 
         if vendor in ['Thermo', 'ABI', 'mgf']:
             #NEED TO ADD scan_range to mzAPI.t2d
-            current["scan_range"] = current["m"].scan_range()
+            current.scan_range = current.m.scan_range()
 
-        current['scanNum'] = current['scan_range'][0]
+        current.scanNum = current.scan_range[0]
 
-        if current['vendor'] in ['Thermo', 'ABI', 'mgf']:
+        if current.vendor in ['Thermo', 'ABI', 'mgf']:
             dict_file = filename.replace(".raw", '').replace(".wiff", '') + '.dicts'
-            if os.path.exists(dict_file) and current['vendor'] != 'mgf':
+            if os.path.exists(dict_file) and current.vendor != 'mgf':
             #print "Ignoring possible dict file."
             #if False: 
-                #pickle_list = [current["m"]._headers, current["m"].precursor_info, current["m"].MS1_data, current["m"].MS1_modes, current["m"].MS2_modes, current["m"].associated_MS2, current["m"].precursor_info]                
+                #pickle_list = [current.m._headers, current.m.precursor_info, current.m.MS1_data, current.m.MS1_modes, current.m.MS2_modes, current.m.associated_MS2, current.m.precursor_info]                
                 pickle_file = open(dict_file, "r")
-                current["scan_dict"] = cPickle.load(pickle_file)
-                current["rt_dict"] = cPickle.load(pickle_file)
-                current["filter_dict"] = cPickle.load(pickle_file)
-                current["rt2scan"] = cPickle.load(pickle_file)
-                if current['vendor'] in ['Thermo', 'ABI']:
-                    current["m"]._headers = cPickle.load(pickle_file)
-                if current["vendor"]=='ABI':
-                    current["rt2exp"] = cPickle.load(pickle_file)
-                    current["m"].precursor_info = cPickle.load(pickle_file)
-                    current["m"].MS1_data = cPickle.load(pickle_file)
-                    current["m"].MS1_modes = cPickle.load(pickle_file)
-                    current["m"].MS2_modes = cPickle.load(pickle_file)
-                    current["m"].associated_MS2 = cPickle.load(pickle_file)
-                    current['rt2exp'] = cPickle.load(pickle_file)    
+                current.scan_dict = cPickle.load(pickle_file)
+                current.rt_dict = cPickle.load(pickle_file)
+                current.filter_dict = cPickle.load(pickle_file)
+                current.rt2scan = cPickle.load(pickle_file)
+                if current.vendor in ['Thermo', 'ABI']:
+                    current.m._headers = cPickle.load(pickle_file)
+                if current.vendor=='ABI':
+                    current.rt2exp = cPickle.load(pickle_file)
+                    current.m.precursor_info = cPickle.load(pickle_file)
+                    current.m.MS1_data = cPickle.load(pickle_file)
+                    current.m.MS1_modes = cPickle.load(pickle_file)
+                    current.m.MS2_modes = cPickle.load(pickle_file)
+                    current.m.associated_MS2 = cPickle.load(pickle_file)
+                    current.rt2exp = cPickle.load(pickle_file)    
 
                 pickle_file.close()
             else:
                 #--------------NO DICTIONARY FILE FOUND, MUST CREATE DICTIONARY.
                 #--------------THE SCAN DICTIONARY HELPS NAVIGATE A RAW FILE BY ALLOWING QUICK CONVERSION OF
                 #--------------SCAN # to RT and vice versa and quick filter lookup.
-                if current['vendor']=='Thermo':
-                    current["scan_dict"], current["rt_dict"], current["filter_dict"], current["rt2scan"] = self.GetScanDicts(current["m"], start=0, stop=99999)                
+                if current.vendor=='Thermo':
+                    current.scan_dict, current.rt_dict, current.filter_dict, current.rt2scan = self.GetScanDicts(current.m, start=0, stop=99999)                
 
-                if current['vendor']=='mgf':
-                    current['scan_dict']=dict([(i, i) for i in range(1, current['m'].scan_number+1)])
-                    current["rt_dict"] = current['scan_dict']
-                    current['rt2scan']=current['scan_dict']
-                    current['filter_dict']=dict(current['m'].filters())
+                if current.vendor=='mgf':
+                    current.scan_dict=dict([(i, i) for i in range(1, current.m.scan_number+1)])
+                    current.rt_dict = current.scan_dict
+                    current.rt2scan=current.scan_dict
+                    current.filter_dict=dict(current.m.filters())
                     try:
-                        current['scan_dict'] = dict([(int(x[1].split('] ')[1]), x[0]) for x in current['m'].filters()])
+                        current.scan_dict = dict([(int(x[1].split('] ')[1]), x[0]) for x in current.m.filters()])
                     except ValueError:
-                        current['scan_dict'] = dict([(int(multiplierz.mgf.standard_title_parse(x[1].split('] ')[1])['scan']), x[0]) for x in current['m'].filters()])
-                    #current['mgf_rev_dict'] = dict([(x[0], int(x[1].split('] ')[1]) ) for x in current['m'].filters()])
-                    current['mgf_rev_dict'] = dict([(v, k) for k, v in current['scan_dict'].items()]) # If you wanna reverse it, just reverse it.  Be honest!
+                        current.scan_dict = dict([(int(multiplierz.mgf.standard_title_parse(x[1].split('] ')[1])['scan']), x[0]) for x in current.m.filters()])
+                    #current.mgf_rev_dict = dict([(x[0], int(x[1].split('] ')[1]) ) for x in current.m.filters()])
+                    current.mgf_rev_dict = dict([(v, k) for k, v in current.scan_dict.items()]) # If you wanna reverse it, just reverse it.  Be honest!
 
 
-                #if current['vendor']=='ABI':
-                    #current["scan_dict"], current["rt_dict"], current["filter_dict"], current["rt2scan"] = self.GetScanDicts(current["m"], start=0, stop=99999)
+                #if current.vendor=='ABI':
+                    #current.scan_dict, current.rt_dict, current.filter_dict, current.rt2scan = self.GetScanDicts(current.m, start=0, stop=99999)
                     #rt2exp = {}
-                    #for key in current["rt2scan"].keys():
+                    #for key in current.rt2scan.keys():
                         #rt2exp[key[0]]=key[1]
-                    #current['rt2exp']=rt2exp
+                    #current.rt2exp=rt2exp
                 try:
                     pickle_file = open(dict_file, "w")
-                    cPickle.dump(current["scan_dict"], pickle_file)
-                    cPickle.dump(current["rt_dict"], pickle_file)
-                    cPickle.dump(current["filter_dict"], pickle_file)
-                    cPickle.dump(current["rt2scan"], pickle_file)
+                    cPickle.dump(current.scan_dict, pickle_file)
+                    cPickle.dump(current.rt_dict, pickle_file)
+                    cPickle.dump(current.filter_dict, pickle_file)
+                    cPickle.dump(current.rt2scan, pickle_file)
                     pickle_list = []
-                    if current["vendor"]=='ABI':
-                        cPickle.dump(current['rt2exp'], pickle_file)
-                        pickle_list = [current["m"]._headers, current["m"].precursor_info, current["m"].MS1_data, current["m"].MS1_modes, current["m"].MS2_modes, current["m"].associated_MS2, current['rt2exp']]
-                    elif current["vendor"]=='Thermo':
-                        pickle_list = [current["m"].headers()]
+                    if current.vendor=='ABI':
+                        cPickle.dump(current.rt2exp, pickle_file)
+                        pickle_list = [current.m._headers, current.m.precursor_info, current.m.MS1_data, current.m.MS1_modes, current.m.MS2_modes, current.m.associated_MS2, current.rt2exp]
+                    elif current.vendor=='Thermo':
+                        pickle_list = [current.m.headers()]
                     for data in pickle_list:
                         cPickle.dump(data, pickle_file)
                     pickle_file.close()           
                 except IOError:
                     print "Could not write dict cache.  Check that you have write permissions to this directory."
-            current["ticname"] = filename[:-4]+'.tic'
+            current.ticname = filename[:-4]+'.tic'
 
             #--------------------------------------------------------------------------------------
             #  THIS CODE EVALUATES THE TYPE OF DATA FILE for the purposes of displaying a general TIC
@@ -1035,32 +1113,32 @@ class MS_Data_Manager():
 
             t2 = time.time()
 
-            minFilterKey = min(current['filter_dict'].keys())
+            minFilterKey = min(current.filter_dict.keys())
             if vendor in ["Thermo", 'mgf']:
-                if current["filter_dict"][minFilterKey].lower().find("full ms2") > -1:
-                    current["master_scan"]="ms2"
-                    current['master_filter']="Full ms2"
-                elif current["filter_dict"][minFilterKey].lower().find("full pr") > -1:
-                    current["master_scan"]="ms2"
-                    current['master_filter']="Full pr"   
-                elif current["filter_dict"][minFilterKey].lower().find("srm ms2") > -1:
-                    current["master_scan"]="ms2"
-                    current['master_filter']="SRM ms2"                   
-                elif current["filter_dict"][minFilterKey].lower().find("precursor") > -1:
-                    current["master_scan"]="Precursor"
-                    current['master_filter']="Exp 1 (Precursor)"                
-                elif current["filter_dict"][minFilterKey].lower().find("srm ms2") > -1:
-                    current["master_scan"]="ms2"
-                    current['master_filter']="SRM ms2"                
-                elif current["filter_dict"][minFilterKey].lower().find("mgf ms2") > -1:
-                    current["master_scan"]="ms2"
-                    current['master_filter']="MGF ms2"                
+                if current.filter_dict[minFilterKey].lower().find("full ms2") > -1:
+                    current.master_scan="ms2"
+                    current.master_filter="Full ms2"
+                elif current.filter_dict[minFilterKey].lower().find("full pr") > -1:
+                    current.master_scan="ms2"
+                    current.master_filter="Full pr"   
+                elif current.filter_dict[minFilterKey].lower().find("srm ms2") > -1:
+                    current.master_scan="ms2"
+                    current.master_filter="SRM ms2"                   
+                elif current.filter_dict[minFilterKey].lower().find("precursor") > -1:
+                    current.master_scan="Precursor"
+                    current.master_filter="Exp 1 (Precursor)"                
+                elif current.filter_dict[minFilterKey].lower().find("srm ms2") > -1:
+                    current.master_scan="ms2"
+                    current.master_filter="SRM ms2"                
+                elif current.filter_dict[minFilterKey].lower().find("mgf ms2") > -1:
+                    current.master_scan="ms2"
+                    current.master_filter="MGF ms2"                
                 else:
-                    current['master_scan']='ms1'
-                    current['master_filter'] = u'Full ms '
-                current["filters"] = [[current['master_filter']]]
+                    current.master_scan='ms1'
+                    current.master_filter = u'Full ms '
+                current.filters = [[current.master_filter]]
 
-                fd = self.Create_Filter_Info(current["filter_dict"][minFilterKey], vendor)
+                fd = self.Create_Filter_Info(current.filter_dict[minFilterKey], vendor)
                 id = self.mass_extract.match(fd['mr'])
 
                 fm = float(id.groups()[0]) # Might revise encoding scheme
@@ -1070,184 +1148,184 @@ class MS_Data_Manager():
                 pass
 
             if vendor == "Thermo": #MARK_XIC
-                current["filter"] = current["filter_dict"][minFilterKey]
-                current["xic_params"] = [[(fm, lm, current['master_filter'])]]
-                current["xic_mass_ranges"] = [[(fm, lm)]]
-                current["xic_scale"] = [[-1]]
-                current["xic_type"] = [['XIC']]
-                current["xic_mass"] = [[None]]  
-                current["xic_charge"] = [[None]]
-                current["xic_sequence"] = [[None]]
-                current['xic_scan'] = [[None]]
-                current["active_xic"] = [0]
-                current["xic_view"] = [[1]]                
+                current.filter = current.filter_dict[minFilterKey]
+                current.xic_params = [[(fm, lm, current.master_filter)]]
+                current.xic_mass_ranges = [[(fm, lm)]]
+                current.xic_scale = [[-1]]
+                current.xic_type = [['XIC']]
+                current.xic_mass = [[None]]  
+                current.xic_charge = [[None]]
+                current.xic_sequence = [[None]]
+                current.xic_scan = [[None]]
+                current.active_xic = [0]
+                current.xic_view = [[1]]                
 
             elif vendor == 'mgf':
-                current['filters'] = [['MGF ms2']] # I think?
+                current.filters = [['MGF ms2']] # I think?
 
-                current['filter_dict'] = dict(current['m'].filters())
-                current["filter"] = current["filter_dict"][minFilterKey]
-                fm = self.mgf.match(current['filter']).groups()[1]
-                lm = self.mgf.match(current['filter']).groups()[0]
+                current.filter_dict = dict(current.m.filters())
+                current.filter = current.filter_dict[minFilterKey]
+                fm = self.mgf.match(current.filter).groups()[1]
+                lm = self.mgf.match(current.filter).groups()[0]
 
-                current["xic_params"] = [[(fm, lm, u'Full ms ')]]
-                current["xic_mass_ranges"] = [[(fm, lm)]]
-                current["xic_scale"] = [[-1]]
-                current["xic_type"] = [['XIC']]
-                current["xic_mass"] = [[None]]  
-                current["xic_charge"] = [[None]]
-                current["xic_sequence"] = [[None]]
-                current['xic_scan'] = [[None]]
-                current["active_xic"] = [0]
-                current["xic_view"] = [[1]] 
+                current.xic_params = [[(fm, lm, u'Full ms ')]]
+                current.xic_mass_ranges = [[(fm, lm)]]
+                current.xic_scale = [[-1]]
+                current.xic_type = [['XIC']]
+                current.xic_mass = [[None]]  
+                current.xic_charge = [[None]]
+                current.xic_sequence = [[None]]
+                current.xic_scan = [[None]]
+                current.active_xic = [0]
+                current.xic_view = [[1]] 
 
-                current['master_scan'] = 'ms2'
+                current.master_scan = 'ms2'
 
             elif vendor == "ABI":
-                #a= current["filter_dict"][(1,"0")]
-                current["filter"] = current["filter_dict"][(1,"0")]
+                #a= current.filter_dict[(1,"0")]
+                current.filter = current.filter_dict[(1,"0")]
 
                 for filt in [self.qms1, self.erms, self.precursor, self.epi, self.ems, self.q3ms, self.pi]:
-                    match = filt.match(current["filter"])
+                    match = filt.match(current.filter)
                     if match:
                         fm = float(match.groups()[2])
                         lm = float(match.groups()[3])
 
                         break
 
-                current["filter"] = current["filter_dict"][(1, "0")]
-                current["experiment"] = "0"
-                current["xic_params"] = [[(fm, lm, u'Full ms ')]]
-                current["xic_mass_ranges"] = [[(fm, lm)]]
-                current["xic_scale"] = [[-1]]
-                current["xic_view"] = [[1]]
-                current["active_xic"] = [0]
-                current["xic_params"] = [[(fm, lm, u'Full ms ')]]
-                current["xic_type"] = [['XIC']]
-                current["xic_mass"] = [[None]]  
-                current["xic_charge"] = [[None]]
-                current["xic_sequence"] = [[None]]
-                current['xic_scan'] = [[None]]
+                current.filter = current.filter_dict[(1, "0")]
+                current.experiment = "0"
+                current.xic_params = [[(fm, lm, u'Full ms ')]]
+                current.xic_mass_ranges = [[(fm, lm)]]
+                current.xic_scale = [[-1]]
+                current.xic_view = [[1]]
+                current.active_xic = [0]
+                current.xic_params = [[(fm, lm, u'Full ms ')]]
+                current.xic_type = [['XIC']]
+                current.xic_mass = [[None]]  
+                current.xic_charge = [[None]]
+                current.xic_sequence = [[None]]
+                current.xic_scan = [[None]]
 
-            if 'master_filter' in current:
-                current["xr"] = [[current["m"].time_range() + (fm, lm, current['master_filter'])]]
-            #print current["xr"]
-            if os.path.exists(current['ticname']):
+            if hasattr(current, 'master_filter'):
+                current.xr = [[current.m.time_range() + (fm, lm, current.master_filter)]]
+            #print current.xr
+            if os.path.exists(current.ticname):
                 #print "loading xic..."
-                pickle_file = open(current["ticname"], "r")
-                current["xic"] = cPickle.load(pickle_file)
+                pickle_file = open(current.ticname, "r")
+                current.xic = cPickle.load(pickle_file)
                 pickle_file.close()
             else:
                 print "Building xic..."
 
                 if vendor == "Thermo":
                     #--------------FOR TESTING-----------------TEST BLOCK
-                    #current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0])], [self.GetAnXIC(self, current["m"], current["xr"][1][0]), self.GetAnXIC(self, current["m"], current["xr"][1][1]), self.GetAnXIC(self, current["m"], current["xr"][1][2])], [Peptigram.GetAPeptigram(current, 8353, 913.96900, 2, tolerance=0.02)]]
-                    #current["xic_max"] = [[max([x[1] for x in current["xic"][0][0]])], [max([x[1] for x in current["xic"][1][0]]), max([x[1] for x in current["xic"][1][1]]), max([x[1] for x in current["xic"][1][2]])], [max([x[1] for x in current["xic"][2][0]])]]
-                    ##current["xic_marks"] = {1:{1:{current["rt_dict"][9187]:"PEPTIDE", current["rt_dict"][4473]:"PEPTIDE"}}}
-                    ##current["xic_marks"] = [[{}],[{},{current["rt_dict"][9187]:["PEPTIDE", 9188], current["rt_dict"][4473]:["PEPTIDE", 4474]},{}],[{}]]
-                    #current["xic_marks"] = [[{}],[{},{9187:XICLabel(current['m'].timeForScan(9187), 9187, "Peptide", current['xic'][1][1])},{}],[{}]]
-                    ##current["xic_marks"] = {1:{1:{current["rt_dict"][9187]:"PEPTIDE", current["rt_dict"][4473]:"PEPTIDE"}}}
-                    #current['mark_boxes'] = []
-                    #current["xic_dict"] = [[self.make_xic_dict(current['xic'][0][0])], [self.make_xic_dict(current['xic'][1][0]), self.make_xic_dict(current['xic'][1][1]), self.make_xic_dict(current['xic'][1][2])], [self.make_xic_dict(current['xic'][2][0])]]
-                    #current['xic_lookup']=[]
+                    #current.xic = [[self.GetAnXIC(self, current.m, current.xr[0][0])], [self.GetAnXIC(self, current.m, current.xr[1][0]), self.GetAnXIC(self, current.m, current.xr[1][1]), self.GetAnXIC(self, current.m, current.xr[1][2])], [Peptigram.GetAPeptigram(current, 8353, 913.96900, 2, tolerance=0.02)]]
+                    #current.xic_max = [[max([x[1] for x in current.xic[0][0]])], [max([x[1] for x in current.xic[1][0]]), max([x[1] for x in current.xic[1][1]]), max([x[1] for x in current.xic[1][2]])], [max([x[1] for x in current.xic[2][0]])]]
+                    ##current.xic_marks = {1:{1:{current.rt_dict[9187]:"PEPTIDE", current.rt_dict[4473]:"PEPTIDE"}}}
+                    ##current.xic_marks = [[{}],[{},{current.rt_dict[9187]:["PEPTIDE", 9188], current.rt_dict[4473]:["PEPTIDE", 4474]},{}],[{}]]
+                    #current.xic_marks = [[{}],[{},{9187:XICLabel(current.m.timeForScan(9187), 9187, "Peptide", current.xic[1][1])},{}],[{}]]
+                    ##current.xic_marks = {1:{1:{current.rt_dict[9187]:"PEPTIDE", current.rt_dict[4473]:"PEPTIDE"}}}
+                    #current.mark_boxes = []
+                    #current.xic_dict = [[self.make_xic_dict(current.xic[0][0])], [self.make_xic_dict(current.xic[1][0]), self.make_xic_dict(current.xic[1][1]), self.make_xic_dict(current.xic[1][2])], [self.make_xic_dict(current.xic[2][0])]]
+                    #current.xic_lookup=[]
                     #---------------------------------------------------------------------------------------------
 
                     try:
-                        current["xic"] = [[current["m"].tic()]]
-                        current['xic_type'] = [['TIC']]
-                        current['xic'][0][0][0]
+                        current.xic = [[current.m.tic()]]
+                        current.xic_type = [['TIC']]
+                        current.xic[0][0][0]
                     except AttributeError:
-                        current['xic_type'] = [['TIC']]
-                        current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0], current["filter_dict"], current["rt2scan"])]]
+                        current.xic_type = [['TIC']]
+                        current.xic = [[self.GetAnXIC(self, current.m, current.xr[0][0], current.filter_dict, current.rt2scan)]]
                     except (AttributeError, IndexError):
                         print "TIC failed."
-                        current['xic_type'] = [['TIC']]
-                        current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0], current["filter_dict"], current["rt2scan"])]]
-                    current["xic_max"] = [[max([x[1] for x in current["xic"][0][0]])]]
-                    current["xic_marks"] = [[{}]]
-                    current['mark_boxes'] = []
-                    current["xic_dict"] = [[self.make_xic_dict(current['xic'][0][0])]]
-                    current['xic_lookup']=[]       
+                        current.xic_type = [['TIC']]
+                        current.xic = [[self.GetAnXIC(self, current.m, current.xr[0][0], current.filter_dict, current.rt2scan)]]
+                    current.xic_max = [[max([x[1] for x in current.xic[0][0]])]]
+                    current.xic_marks = [[{}]]
+                    current.mark_boxes = []
+                    current.xic_dict = [[self.make_xic_dict(current.xic[0][0])]]
+                    current.xic_lookup=[]       
 
                 elif vendor == 'mgf':
-                    current['xic'] = [[current['m'].xic(1, current['m'].scan_number, 0, 100000)]] 
-                    current["xic_max"] = [[max([x[1] for x in current["xic"][0][0]])]]
-                    current["xic_marks"] = [[{}]]
-                    current['mark_boxes'] = []
-                    current["xic_dict"] = [[self.make_xic_dict(current['xic'][0][0])]]
-                    current['xic_lookup']=[]                    
+                    current.xic = [[current.m.xic(1, current.m.scan_number, 0, 100000)]] 
+                    current.xic_max = [[max([x[1] for x in current.xic[0][0]])]]
+                    current.xic_marks = [[{}]]
+                    current.mark_boxes = []
+                    current.xic_dict = [[self.make_xic_dict(current.xic[0][0])]]
+                    current.xic_lookup=[]                    
 
                 elif vendor == "ABI":
                     print "ABI"
-                    xic_params = current["m"].time_range() + (fm, lm)
-                    current["m"].set_sample(0)
-                    current["m"].set_experiment("0")
-                    current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0])]]
+                    xic_params = current.m.time_range() + (fm, lm)
+                    current.m.set_sample(0)
+                    current.m.set_experiment("0")
+                    current.xic = [[self.GetAnXIC(self, current.m, current.xr[0][0])]]
 
-                    current["xic_max"] = [[max([x[1] for x in current["xic"][0][0]])]]
-                    current["xic_marks"] = [[{}]]
-                    current['mark_boxes'] = []
-                    current["xic_dict"] = [[self.make_xic_dict(current['xic'][0][0])]]
-                    current['xic_lookup']=[]          
-                    print current["xic"]
-                #pickle_file = open(current["ticname"], "w")
-                #cPickle.dump(current["xic"], pickle_file)
+                    current.xic_max = [[max([x[1] for x in current.xic[0][0]])]]
+                    current.xic_marks = [[{}]]
+                    current.mark_boxes = []
+                    current.xic_dict = [[self.make_xic_dict(current.xic[0][0])]]
+                    current.xic_lookup=[]          
+                    print current.xic
+                #pickle_file = open(current.ticname, "w")
+                #cPickle.dump(current.xic, pickle_file)
                 #pickle_file.close()
                 #del busy
-            #current["filterRe"] = self.pa.match(current["filter"])
-            current["time_ranges"] = [current['m'].time_range()]
+            #current.filterRe = self.pa.match(current.filter)
+            current.time_ranges = [current.m.time_range()]
             if vendor == "Thermo":
-                if current["viewCentroid"]:
+                if current.viewCentroid:
                     try:
-                        current["scan"] = current["m"].rscan(1)
+                        current.scan = current.m.rscan(1)
                     except AttributeError:
-                        current['scan'] = mz_centroid(current["m"].scan(1))
+                        current.scan = mz_centroid(current.m.scan(1))
                 else:
-                    current["scan"] = current["m"].scan(1)
+                    current.scan = current.m.scan(1)
             if vendor == 'mgf':
-                current['scan']=current['m'].scan(current['m'].scan_range()[0])
+                current.scan=current.m.scan(current.m.scan_range()[0])
             if vendor == "ABI":
-                if current["viewCentroid"]: 
-                    current["scan"] = current["m"].cscan(current["m"].scan_time_from_scan_name(1), current["experiment"], algorithm=current['settings']['abi_centroid'], eliminate_noise = current['settings']['eliminate_noise'], step_length = current['settings']['step_length'], peak_min = current['settings']['peak_min'], cent_thresh = current['settings']['threshold_cent_abi'])
+                if current.viewCentroid: 
+                    current.scan = current.m.cscan(current.m.scan_time_from_scan_name(1), current.experiment, algorithm=current.settings['abi_centroid'], eliminate_noise = current.settings['eliminate_noise'], step_length = current.settings['step_length'], peak_min = current.settings['peak_min'], cent_thresh = current.settings['threshold_cent_abi'])
                 else:
-                    current["scan"] = current["m"].scan(current["m"].scan_time_from_scan_name(1), current["experiment"])
+                    current.scan = current.m.scan(current.m.scan_time_from_scan_name(1), current.experiment)
 
             self.set_axes()
 
-            current["unzStartTime"] = current["time_ranges"][0][0]
-            current["unzStopTime"] = current["time_ranges"][0][1]
-            current["xic_labels"] = []
-            current["label_dict"] = {}
-            current["found2theor"] = {}
-            current["svg"] = defaultdict(list)
+            current.unzStartTime = current.time_ranges[0][0]
+            current.unzStopTime = current.time_ranges[0][1]
+            current.xic_labels = []
+            current.label_dict = {}
+            current.found2theor = {}
+            current.svg = defaultdict(list)
 
             #--------------CREATES FILTER DICTIONARY
-            if current['vendor']=='Thermo':
-                current['fd'] = self.Create_Filter_Info(current["filter_dict"][current["scanNum"]], 'Thermo')
-            if current['vendor']=='mgf':
-                current['fd'] = self.Create_Filter_Info(current["filter_dict"][current["scanNum"]], 'mgf')            
-            if current['vendor']=='ABI':
-                current['fd'] = self.Create_Filter_Info(current["filter_dict"][(current["scanNum"],current['experiment'])], 'ABI')
+            if current.vendor=='Thermo':
+                current.fd = self.Create_Filter_Info(current.filter_dict[current.scanNum], 'Thermo')
+            if current.vendor=='mgf':
+                current.fd = self.Create_Filter_Info(current.filter_dict[current.scanNum], 'mgf')            
+            if current.vendor=='ABI':
+                current.fd = self.Create_Filter_Info(current.filter_dict[(current.scanNum,current.experiment)], 'ABI')
 
             self.files[filename] = current
             self.set_mass_ranges(filename)
             self.set_axes()
 
             #--------------------------------BUILDS CURRENT ID
-            if current["vendor"]=='Thermo':
-                self.build_current_ID(filename, self.files[filename]["scanNum"])
-            if current["vendor"]=='mgf':
-                self.build_current_ID(filename, self.files[filename]["scanNum"], 'mgf')            
-            if current["vendor"]=='ABI':
-                self.build_current_ID(filename, (self.files[filename]["scanNum"],self.files[filename]["experiment"]), 'ABI')
+            if current.vendor=='Thermo':
+                self.build_current_ID(filename, self.files[filename].scanNum)
+            if current.vendor=='mgf':
+                self.build_current_ID(filename, self.files[filename].scanNum, 'mgf')            
+            if current.vendor=='ABI':
+                self.build_current_ID(filename, (self.files[filename].scanNum,self.files[filename].experiment), 'ABI')
 
-            self.files[filename]["unzF"] = self.files[filename]["scan low mass"]
-            self.files[filename]["unzL"] = self.files[filename]["scan high mass"]
-            self.files[filename]["fm"] = self.files[filename]["scan low mass"]
-            self.files[filename]["lm"] = self.files[filename]["scan high mass"]
-            self.files[filename]["targ_check"] = False
-            self.files[filename]["targ_filt"] = []
+            self.files[filename].unzF = self.files[filename].scan_low_mass
+            self.files[filename].unzL = self.files[filename].scan_high_mass
+            self.files[filename].fm = self.files[filename].scan_low_mass
+            self.files[filename].lm = self.files[filename].scan_high_mass
+            self.files[filename].targ_check = False
+            self.files[filename].targ_filt = []
 
 
 
@@ -1282,7 +1360,7 @@ class MS_Data_Manager():
         sz = self.parent.parent.notebook.GetClientSize() #
         for c, i in enumerate(self.getActiveList()):
             print "R:" + str(c)
-            _set = self.files[self.Display_ID[i]]['settings']
+            _set = self.files[self.Display_ID[i]].settings
             _set["auto_resize"]=True
             if _set["auto_resize"]==True:
                 #--------------------TOTAL HEIGHT OF THE XIC
@@ -1293,10 +1371,10 @@ class MS_Data_Manager():
                 #if num_rawFiles > 2:
                 #    xic_total_height -= 90
                 try:
-                    number_xics = len(self.files[self.Display_ID[i]]["xic_params"])
+                    number_xics = len(self.files[self.Display_ID[i]].xic_params)
                 except:
                     number_xics = 1
-                self.files[self.Display_ID[i]]["xic_axco"] = []
+                self.files[self.Display_ID[i]].xic_axco = []
                 #-----------------Height is PER XIC
                 g = {0:10, 1:10, 2:10, 3:10, 4:8, 5:7, 6:6, 7:5, 8:4.5, 9:4.5, 10:4.5}
                 height =  (float(sz[1]-100)/float(num_rawFiles)/float(number_xics))-(g[number_xics]*number_xics)  #1 = 15, 2=10, 3=5
@@ -1308,25 +1386,25 @@ class MS_Data_Manager():
                     yco = 35+(_set['space']*k)+(height*k)+(xic_total_height*c)+(_set['inter_xic_space']*c)
                     #if num_rawFiles >2:
                     #    yco += (scale*c) * 1.2#/(float(1.2))
-                    self.files[self.Display_ID[i]]["xic_axco"].append(((_set['y_marg'],yco+height,(float(sz[0])/float(2))-50,yco+height),(_set['y_marg'],yco,_set['y_marg'],yco+height)))
+                    self.files[self.Display_ID[i]].xic_axco.append(((_set['y_marg'],yco+height,(float(sz[0])/float(2))-50,yco+height),(_set['y_marg'],yco,_set['y_marg'],yco+height)))
             else:
                 xic_total_height = float(_set['total_xic_height'])/float(num_rawFiles)
                 try:
-                    number_xics = len(self.files[self.Display_ID[i]]["xic_params"])
+                    number_xics = len(self.files[self.Display_ID[i]].xic_params)
                 except:
                     number_xics = 1
-                self.files[self.Display_ID[i]]["xic_axco"] = []
+                self.files[self.Display_ID[i]].xic_axco = []
                 height = (float(_set['total_xic_height'])/float(num_rawFiles)/float(number_xics))-(15*number_xics)
                 for k in range(0, number_xics):
                     #YCO is the 'y-coordinate'
                     yco = _set['y_marg']+(_set['space']*k)+(height*k)+(xic_total_height*c)+(_set['inter_raw_space']*c)
-                    self.files[self.Display_ID[i]]["xic_axco"].append(((_set['y_marg'],yco+height,500,yco+height),(_set['y_marg'],yco,_set['y_marg'],yco+height)))
+                    self.files[self.Display_ID[i]].xic_axco.append(((_set['y_marg'],yco+height,500,yco+height),(_set['y_marg'],yco,_set['y_marg'],yco+height)))
         indent = 0
         for c, i in enumerate(self.getActiveList()):
-            _set = self.files[self.Display_ID[i]]['settings']
+            _set = self.files[self.Display_ID[i]].settings
             if _set["auto_resize"]==True:            
-                num_axes = self.files[self.Display_ID[i]]["axes"]
-                mode = self.files[self.Display_ID[i]]["mode"]
+                num_axes = self.files[self.Display_ID[i]].axes
+                mode = self.files[self.Display_ID[i]].mode
                 spec_total_height = (float(sz[1])-100)/float(num_rawFiles)
                 height = (float(sz[1])-100)/float(num_axes)/float(num_rawFiles)-50*(num_rawFiles-1)
                 if num_axes > 0 and num_axes <3:
@@ -1342,21 +1420,21 @@ class MS_Data_Manager():
                 if mode == "RIC-SPEC":
                     indent = (float(sz[0])/float(2))
                     width = (float(sz[0])/float(2))-100
-                self.files[self.Display_ID[i]]["axco"] = []
-                mr = self.files[self.Display_ID[i]]["mass_ranges"]
+                self.files[self.Display_ID[i]].axco = []
+                mr = self.files[self.Display_ID[i]].mass_ranges
                 fm = mr[0][0]
                 current_fm = fm
                 lm = mr[len(mr) - 1][1]
                 step = float(lm - fm)/float(num_axes)
-                self.files[self.Display_ID[i]]["mass_ranges"]=[]
+                self.files[self.Display_ID[i]].mass_ranges=[]
                 for k in range(0, num_axes):
                     yco = y_marg+(space*k)+(height*k)+(inter_raw_space*c)+(spec_total_height*c)
-                    self.files[self.Display_ID[i]]["axco"].append(((indent,yco+height,indent + width,yco+height),(indent,yco,indent,yco+height)))
-                    self.files[self.Display_ID[i]]["mass_ranges"].append((current_fm, current_fm + step))
+                    self.files[self.Display_ID[i]].axco.append(((indent,yco+height,indent + width,yco+height),(indent,yco,indent,yco+height)))
+                    self.files[self.Display_ID[i]].mass_ranges.append((current_fm, current_fm + step))
                     current_fm += step
             else:
-                num_axes = self.files[self.Display_ID[i]]["axes"]
-                mode = self.files[self.Display_ID[i]]["mode"]
+                num_axes = self.files[self.Display_ID[i]].axes
+                mode = self.files[self.Display_ID[i]].mode
                 spec_total_height = float(_set['total_spec_height'])/float(num_rawFiles)
                 height = float(_set['total_spec_height'])/float(num_axes)/float(num_rawFiles)
                 if num_axes > 1:
@@ -1368,17 +1446,17 @@ class MS_Data_Manager():
                 if mode == "RIC-SPEC":
                     indent = 600
                     width = 550
-                self.files[self.Display_ID[i]]["axco"] = []
-                mr = self.files[self.Display_ID[i]]["mass_ranges"]
+                self.files[self.Display_ID[i]].axco = []
+                mr = self.files[self.Display_ID[i]].mass_ranges
                 fm = mr[0][0]
                 current_fm = fm
                 lm = mr[len(mr) - 1][1]
                 step = float(lm - fm)/float(num_axes)
-                self.files[self.Display_ID[i]]["mass_ranges"]=[]
+                self.files[self.Display_ID[i]].mass_ranges=[]
                 for k in range(0, num_axes):
                     yco = y_marg+(space*k)+(height*k)+(inter_raw_space*c)+(spec_total_height*c)
-                    self.files[self.Display_ID[i]]["axco"].append(((indent,yco+height,indent + width,yco+height),(indent,yco,indent,yco+height)))
-                    self.files[self.Display_ID[i]]["mass_ranges"].append((current_fm, current_fm + step))
+                    self.files[self.Display_ID[i]].axco.append(((indent,yco+height,indent + width,yco+height),(indent,yco,indent,yco+height)))
+                    self.files[self.Display_ID[i]].mass_ranges.append((current_fm, current_fm + step))
                     current_fm += step
 
     def HitTestFeatures(self, pos):
@@ -1390,7 +1468,7 @@ class MS_Data_Manager():
         index = None
         for i in self.getActiveList():  #NUMBER OF DISPLAYED FILES
             currentFile = self.files[self.Display_ID[i]]
-            for j, feature_box in enumerate(currentFile["FeatureBoxes"]):
+            for j, feature_box in enumerate(currentFile.FeatureBoxes):
                 currentx1 = feature_box[0]
                 currentx2 = feature_box[2]
                 currenty1 = feature_box[1]
@@ -1414,8 +1492,8 @@ class MS_Data_Manager():
         file = None
         for i in self.getActiveList():  #NUMBER OF DISPLAYED FILES
             currentFile = self.files[self.Display_ID[i]]
-            if currentFile['mode'] != 'SPEC':
-                for k, coord in enumerate(currentFile['xic_axco']): #COORD = Coordinates for each "Window" or XIC
+            if currentFile.mode != 'SPEC':
+                for k, coord in enumerate(currentFile.xic_axco): #COORD = Coordinates for each "Window" or XIC
                     currentx1 = coord[0][0] - offset
                     currentx2 = currentx1 + 10
                     currenty1 = coord[1][1] + yoffset
@@ -1439,13 +1517,13 @@ class MS_Data_Manager():
         file = None
         trace = None
         #xaxis[0]-10, (yaxis[1]+10)+ (20*xic),10,10
-        #xaxis = currentFile['xic_axco'][key][0]
-        #yaxis = currentFile['xic_axco'][key][1]        
+        #xaxis = currentFile.xic_axco[key][0]
+        #yaxis = currentFile.xic_axco[key][1]        
         for i in self.getActiveList():  #NUMBER OF DISPLAYED FILES
             currentFile = self.files[self.Display_ID[i]]
-            if currentFile['mode'] != 'SPEC':
-                for k, coord in enumerate(currentFile['xic_axco']): #COORD = Coordinates for each "Window" or XIC
-                    traces = len(currentFile['xic_params'][k]) #TRACES DISPLAYED in each window
+            if currentFile.mode != 'SPEC':
+                for k, coord in enumerate(currentFile.xic_axco): #COORD = Coordinates for each "Window" or XIC
+                    traces = len(currentFile.xic_params[k]) #TRACES DISPLAYED in each window
                     if traces > 1:
                         for j in range(0, traces):
                             currentx1 = coord[0][0] - offset
@@ -1479,7 +1557,7 @@ class MS_Data_Manager():
         e = None
         for i in self.getActiveList():
             currentFile = self.files[self.Display_ID[i]]
-            #if currentFile['mode'] != 'SPEC':
+            #if currentFile.mode != 'SPEC':
                 #----------------------------NEED TO FIND THRESHHOLD BOX COORDS
             currentx1, currenty1, currentx2, currenty2 = self.parent.thresh_box
             if hitx > currentx1 and hitx < currentx2 and hity > currenty1 and hity < currenty2:
@@ -1488,7 +1566,7 @@ class MS_Data_Manager():
                 file = i
                 e = "Thr"
                 break
-            #if currentFile['mode'] == 'SPEC':
+            #if currentFile.mode == 'SPEC':
                 #pass
         if not found:
             file = -1
@@ -1514,8 +1592,8 @@ class MS_Data_Manager():
         e = None
         for i in self.getActiveList():
             currentFile = self.files[self.Display_ID[i]]
-            if currentFile['mode'] != 'SPEC':
-                for k, coord in enumerate(currentFile['xic_axco']):
+            if currentFile.mode != 'SPEC':
+                for k, coord in enumerate(currentFile.xic_axco):
                     #print coord
                     currentx1 = coord[0][0]
                     currentx2 = coord[0][2]
@@ -1528,7 +1606,7 @@ class MS_Data_Manager():
                         grid = k
                         file = i
                         break
-                for k, coord in enumerate(currentFile['axco']):
+                for k, coord in enumerate(currentFile.axco):
                     currentx1 = coord[0][0]
                     currentx2 = coord[0][2]
                     currenty1 = coord[1][1]
@@ -1539,8 +1617,8 @@ class MS_Data_Manager():
                         grid = k
                         file = i
                         break
-            elif currentFile['mode'] == 'SPEC':
-                for k, coord in enumerate(currentFile['axco']):
+            elif currentFile.mode == 'SPEC':
+                for k, coord in enumerate(currentFile.axco):
                     currentx1 = coord[0][0]
                     currentx2 = coord[0][2]
                     currenty1 = coord[1][1]
@@ -1565,62 +1643,69 @@ class MS_Data_Manager():
 
         #---------------------------------------------
         #If not overridden by "overlay", look in ID_Dict from search result
-        if not self.files[filename]["scanNum"] in self.files[filename]["overlay"].keys():
+        if not self.files[filename].scanNum in self.files[filename].overlay.keys():
             key = None
             if vendor in ['Thermo', 'mgf']:
-                key = self.files[filename]["scanNum"]
+                key = self.files[filename].scanNum
             elif vendor == 'ABI':
-                key = (self.files[filename]["scanNum"], self.files[filename]["experiment"])
-            a= self.files[filename]["ID_Dict"]
-            if key in self.files[filename]["ID_Dict"].keys():
-                self.files[filename]["ID"] = True
-                if self.files[filename]["SearchType"]=="Mascot":
+                key = (self.files[filename].scanNum, self.files[filename].experiment)
+            a= self.files[filename].ID_Dict
+            if key in self.files[filename].ID_Dict.keys():
+                self.files[filename].ID = True
+                if self.files[filename].SearchType=="Mascot":
                     # ID_Dict keys are ints when this is a RAW file.
-                    seq = self.files[filename]["ID_Dict"][scan]["Peptide Sequence"]
-                    cg = self.files[filename]["ID_Dict"][scan]["Charge"]
-                    varmod = self.files[filename]["ID_Dict"][scan]["Variable Modifications"]
-                    fixedmod = self.files[filename]["fixedmod"]
-                elif self.files[filename]["SearchType"]=="COMET":
-                    seq = self.files[filename]["ID_Dict"][scan]["Peptide Sequence"]
-                    varmod = self.files[filename]["ID_Dict"][scan]["Variable Modifications"]
-                    cg = self.files[filename]["ID_Dict"][scan]["Charge"]
+                    seq = self.files[filename].ID_Dict[scan]["Peptide Sequence"]
+                    cg = self.files[filename].ID_Dict[scan]["Charge"]
+                    varmod = self.files[filename].ID_Dict[scan]["Variable Modifications"]
+                    fixedmod = self.files[filename].fixedmod
+                elif self.files[filename].SearchType=="COMET":
+                    seq = self.files[filename].ID_Dict[scan]["Peptide Sequence"]
+                    varmod = self.files[filename].ID_Dict[scan]["Variable Modifications"]
+                    cg = self.files[filename].ID_Dict[scan]["Charge"]
                     fixedmod = ''
-                elif self.files[filename]["SearchType"]=="X!Tandem":
-                    seq = self.files[filename]["ID_Dict"][scan]["Peptide Sequence"]
-                    varmod = self.files[filename]["ID_Dict"][scan]["Variable Modifications"]
-                    cg = self.files[filename]["ID_Dict"][scan]["Charge"]
+                elif self.files[filename].SearchType=="X!Tandem":
+                    seq = self.files[filename].ID_Dict[scan]["Peptide Sequence"]
+                    varmod = self.files[filename].ID_Dict[scan]["Variable Modifications"]
+                    cg = self.files[filename].ID_Dict[scan]["Charge"]
                     fixedmod = ''                
-                elif self.files[filename]["SearchType"]=="Proteome Discoverer":
-                    seq = self.files[filename]["ID_Dict"][scan]["Annotated Sequence"].upper()
-                    varmod = self.files[filename]["ID_Dict"][scan]["Modifications"]
-                    cg = self.files[filename]["ID_Dict"][scan]["Charge"]
-                    fixedmod = ''                                
+                elif self.files[filename].SearchType=="Proteome Discoverer":
+                    seq = self.files[filename].ID_Dict[scan]["Annotated Sequence"].upper()
+                    varmod = self.files[filename].ID_Dict[scan]["Modifications"]
+                    cg = self.files[filename].ID_Dict[scan]["Charge"]
+                    fixedmod = ''  
+                elif self.files[filename].SearchType=="PEAKS":
+                    modpep = self.files[filename].ID_Dict[scan]["Peptide"].upper()
+                    seq = ''.join(x for x in modpep if x.isalpha() and x.isupper())
+                    varmod = peaks_mods_to_mascot_mods(self.files[filename].ID_Dict[scan]["AScore"]) # Not correct?
+                    cg = self.files[filename].ID_Dict[scan]["Z"]
+                    fixedmod = ''
                 else: #if not varmod:
                     varmod = ''
-                self.files[filename]["seq"] = seq
-                self.files[filename]["label_dict"]={}
+                    fixedmod = ''
+                self.files[filename].seq = seq
+                self.files[filename].label_dict={}
                 _ions = 'b/y'
-                if self.files[filename]['fd']['mode']=='ms2':
-                    if self.files[filename]['fd']['reaction']=='etd':
+                if self.files[filename].fd['mode']=='ms2':
+                    if self.files[filename].fd['reaction']=='etd':
                         _ions = 'c/z'
-                if not self.files[filename]["viewMascot"]:
+                if not self.files[filename].viewMascot:
                     for i in range(1, int(cg+1)):
-                        self.files[filename]["mz"], self.files[filename]["b_ions"], self.files[filename]["y_ions"] = mz_core.calc_pep_mass_from_residues(seq, i, varmod, fixedmod, ions=_ions)
+                        self.files[filename].mz, self.files[filename].b_ions, self.files[filename].y_ions = mz_core.calc_pep_mass_from_residues(seq, i, varmod, fixedmod, ions=_ions)
                         if varmod.find("Fucosylation") > -1 or varmod.find("Phospho") >-1 or varmod.find("Hex") > - 1 or varmod.find("Xyl") > -1 or seq.find("p") >-1 or varmod.find("SML") > -1:
-                            self.files[filename]["NL_ions"] = mz_core.get_fragment_neutral_losses(seq, self.files[filename]["b_ions"], self.files[filename]["y_ions"], varmod, i)
-                            self.files[filename]["precNL_ions"] = mz_core.get_precursor_neutral_losses(self.files[filename]["mz"], i, varmod) 
-                            #print self.files[filename]["NL_ions"]
+                            self.files[filename].NL_ions = mz_core.get_fragment_neutral_losses(seq, self.files[filename].b_ions, self.files[filename].y_ions, varmod, i)
+                            self.files[filename].precNL_ions = mz_core.get_precursor_neutral_losses(self.files[filename].mz, i, varmod) 
+                            #print self.files[filename].NL_ions
                         print "Building label dict"
                         self.build_label_dict(i, filename)
                 else:
                     self.build_mascot_label_dict(filename)
             else:
-                self.files[filename]["ID"] = False
+                self.files[filename].ID = False
         else:
             #If there is an overlay, apply it.
-            self.files[filename]["label_dict"]={}
-            self.files[filename]["y_ions"]=self.files[filename]["overlay"][self.files[filename]["scanNum"]][0]
-            self.files[filename]["b_ions"]=self.files[filename]["overlay"][self.files[filename]["scanNum"]][1]
+            self.files[filename].label_dict={}
+            self.files[filename].y_ions=self.files[filename].overlay[self.files[filename].scanNum][0]
+            self.files[filename].b_ions=self.files[filename].overlay[self.files[filename].scanNum][1]
             self.build_label_dict(1, filename)
 
     def search_for_mass(self, mz, scan, filename, vendor = 'Thermo'): #scan is the list of mz, intensity
@@ -1634,11 +1719,11 @@ class MS_Data_Manager():
         #---------------------------------------------------------------------
         # Should clean up this code for cleaner instrument --> Default tolerance settings
         #---------------------------------------------------------------------
-        labelTol = self.files[filename]['settings']['ionLabelThresh']
+        labelTol = self.files[filename].settings['ionLabelThresh']
         if not labelTol:
             tolerance = 0.02
             if vendor == 'Thermo':
-                if self.files[filename]["filter_dict"][self.files[filename]["scanNum"]].find("ITMS")>-1:
+                if self.files[filename].filter_dict[self.files[filename].scanNum].find("ITMS")>-1:
                     tolerance = 0.5
             elif vendor == 'mgf':
                 tolerance = 0.5
@@ -1650,7 +1735,7 @@ class MS_Data_Manager():
         found = False
         found_mz = 0
         found_int = 0
-        #if self.files[filename]['labelThreshOverride']: tolerance=self.files[filename]['labelThreshOverride']
+        #if self.files[filename].labelThreshOverride: tolerance=self.files[filename].labelThreshOverride
         #for j, member in enumerate(scan):
             #if mz > member[0] - tolerance and mz < member[0] + tolerance:
                 #found = True
@@ -1680,90 +1765,95 @@ class MS_Data_Manager():
         '''
         currentFile = self.files[self.Display_ID[file_number]]
 
-        if currentFile['vendor'] == 'mgf':
-            #assert scanNum in currentFile['m'].mgf_data
-            scanNum = min(currentFile['m'].mgf_data.keys(), key = lambda x: abs(int(scanNum) - int(x)))
+        if currentFile.vendor == 'mgf':
+            #assert scanNum in currentFile.m.mgf_data
+            scanNum = min(currentFile.m.mgf_data.keys(), key = lambda x: abs(int(scanNum) - int(x)))
 
 
-        currentFile["scanNum"] = scanNum
-        if currentFile['vendor'] in ['Thermo']:
-            filt = currentFile["filter_dict"][currentFile["scanNum"]]
-        elif currentFile['vendor'] in ['mgf']:
-            filt = currentFile["filter_dict"][currentFile["scanNum"]]  #[currentFile["mgf_scan_dict"]
-        elif currentFile['vendor']=='ABI':
-            filt = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])]
-        elif currentFile['vendor']=='ABI-MALDI':
-            filt = currentFile["filter_dict"].values()[0]
-        if filt.find("FTMS") > -1 or filt.find("TOF MS") > -1 or filt.find("TOF PI") > -1 or filt.find("Q3") >-1 or filt.find("EMS") > -1 or filt.find("PI ") > -1 or filt.find("ER MS ") > -1 or filt.find("ITMS + p ESI Full ms ") > -1 or filt.find("Precursor") > -1 or filt.find("EPI") > -1:
-            if currentFile["viewCentroid"]:
-                if currentFile['vendor']=='Thermo':
-                    try:
-                        currentFile["scan"] = currentFile["m"].rscan(currentFile["scanNum"])
-                    except AttributeError:
-                        if ' c ' not in filt and 'cent' not in filt:
-                            try:
-                                precentroidscan = currentFile['m'].scan(currentFile['scanNum'])
-                                threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
-                                currentFile['scan'] = mz_centroid(precentroidscan, threshold = threshold)
-                            except:
-                                currentFile['scan'] = currentFile['m'].scan(currentFile['scanNum'])
-                        else:
-                            currentFile['scan'] = currentFile['m'].scan(currentFile['scanNum'])
-                #elif currentFile['vendor']=='ABI':
-                    #currentFile["scan"] = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = currentFile['settings']['threshold_cent_abi'])
-                #print "Pulled cent!"
-            else:
-                if currentFile['vendor']=='Thermo':
-                    currentFile["scan"] = currentFile["m"].scan(currentFile["scanNum"])
-                elif currentFile['vendor']=='ABI':
-                    currentFile["scan"] = currentFile["m"].scan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'])
+        currentFile.scanNum = scanNum
+        if currentFile.vendor == 'Thermo':
+            filt = currentFile.filter_dict[currentFile.scanNum]
+        elif currentFile.vendor == 'mgf':
+            filt = currentFile.filter_dict[currentFile.scanNum]  #[currentFile.mgf_scan_dict
+        elif currentFile.vendor=='ABI':
+            filt = currentFile.filter_dict[(currentFile.scanNum, currentFile.experiment)]
+        elif currentFile.vendor=='ABI-MALDI':
+            filt = currentFile.filter_dict.values()[0]
+
+        if currentFile.m.file_type == "Bruker":
+            k0_start, k0_stop = None, None
+            if self.parent.parent.parent.k0Tool != None: # Eek.
+                rangestr = self.parent.parent.parent.k0Tool.k0Ctrl.GetValue()
+                try:
+                    k0_start, k0_stop = map(float, rangestr.split('-'))
+                except ValueError:
+                    messdog = wx.MessageDialog(self, "Invalid k0 range string ignored: %s" % rangestr)
+                    messdog.ShowModal()
+                    messdog.Destroy()
+            if 'FTMS' in filt: # MS1
+                precentroidscan = currentFile.m.scan(currentFile.scanNum,
+                                                     k0_start, k0_stop)
+                threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
+                currentFile.scan = mz_centroid(precentroidscan, threshold = threshold)                
+            elif 'ITMS' in filt: # MS2
+                currentFile.scan = currentFile.m.scan(currentFile.scanNum,
+                                                      k0_start, k0_stop)          
         elif filt.find("MGF") > -1:        
-            currentFile["scan"] = currentFile["m"].scan(currentFile["scanNum"])  #currentFile['mgf_scan_dict'][
+            currentFile.scan = currentFile.m.scan(currentFile.scanNum)  #currentFile.mgf_scan_dict[                
+        #elif any(x in filt for x in ["FTMS", "TOF MS", "TOF PI", "Q3", "EMS", "PI ", "ER MS ", "ITMS + p ESI Full ms ", "Precursor", "EPI"]):
+            ## any() conditional is refactor of above; is it a list of scan types which could be centroided?  (Relace with "ITMS" not in filt?)
+        #if currentFile.settings['viewCentroid']: # Or drawCentroid?
         else:
-            currentFile["scan"] = currentFile["m"].scan(currentFile["scanNum"])
+            currentFile.profile_scan = currentFile.m.scan(currentFile.scanNum)
+            if currentFile.FileAbs.lower().endswith('raw'):
+                currentFile.scan = currentFile.m.scan(currentFile.scanNum, centroid = True)
+            else:
+                threshold = average(zip(*self.profile_scan)[1]) * CENTROID_SCALE
+                currentFile.scan = mz_centroid(self.profile_scan, threshold = threshold)
+
         self.set_mass_ranges(self.Display_ID[file_number])
         self.set_axes()
-        if currentFile['vendor']=='Thermo':
-            currentFile['fd'] = self.Create_Filter_Info(currentFile["filter_dict"][currentFile["scanNum"]], 'Thermo')
-        if currentFile['vendor']=='mgf':
-            currentFile['fd'] = self.Create_Filter_Info(currentFile["filter_dict"][currentFile["scanNum"]], 'mgf')        
-        if currentFile['vendor']=='ABI':
-            currentFile['fd'] = self.Create_Filter_Info(currentFile["filter_dict"][(currentFile["scanNum"],currentFile['experiment'])], 'ABI')
-        if currentFile['vendor']=='ABI-MALDI':
-            currentFile['fd']= self.Create_Filter_Info(currentFile["filter_dict"][currentFile["scanNum"]], 'ABI-MALDI')
+        if currentFile.vendor=='Thermo':
+            currentFile.fd = self.Create_Filter_Info(currentFile.filter_dict[currentFile.scanNum], 'Thermo')
+        if currentFile.vendor=='mgf':
+            currentFile.fd = self.Create_Filter_Info(currentFile.filter_dict[currentFile.scanNum], 'mgf')        
+        if currentFile.vendor=='ABI':
+            currentFile.fd = self.Create_Filter_Info(currentFile.filter_dict[(currentFile.scanNum,currentFile.experiment)], 'ABI')
+        if currentFile.vendor=='ABI-MALDI':
+            currentFile.fd= self.Create_Filter_Info(currentFile.filter_dict[currentFile.scanNum], 'ABI-MALDI')
 
     def set_average_scan(self, start, stop, filt, file_number):
         currentFile = self.files[self.Display_ID[file_number]]
         try:
-            startscan, stopscan = map(currentFile['m'].scanForTime, (start, stop))
-            spectrum = currentFile['m'].average_scan(startscan, stopscan, filt)
+            startscan, stopscan = map(currentFile.m.scanForTime, (start, stop))
+            spectrum = currentFile.m.average_scan(startscan, stopscan, filt)
         except AttributeError:
             wx.MessageBox('Averaged scan display is only supported for RAW-format files.')
             return False
 
-        currentFile['scanNum'] = str(startscan) + '-' + str(stopscan) # Sort of arbitrary.
-        #currentFile['fd'] = self.Create_Filter_Info(filt, 'Thermo')
+        currentFile.scanNum = str(startscan) + '-' + str(stopscan) # Sort of arbitrary.
+        #currentFile.fd = self.Create_Filter_Info(filt, 'Thermo')
 
         #if "ms1" in filt:
-        #    currentFile['fd'] = {'mode':"ms1", 'analyzer':'average', 'data':'average' , 'mr':'[t1-t2]'}
+        #    currentFile.fd = {'mode':"ms1", 'analyzer':'average', 'data':'average' , 'mr':'[t1-t2]'}
         #elif "ms2" in filt:
-        #    currentFile['fd'] = {'mode':"ms1", 'analyzer':'average', 'precursor':'average', 'data':'average', 'reaction':'average', 'mr':'[t1-t2]', 'energy':'average'}
+        #    currentFile.fd = {'mode':"ms1", 'analyzer':'average', 'precursor':'average', 'data':'average', 'reaction':'average', 'mr':'[t1-t2]', 'energy':'average'}
 
-        currentFile["spectrum_style"] ='AVERAGE'
-        currentFile['scan'] = spectrum
+        currentFile.spectrum_style ='AVERAGE'
+        currentFile.scan = spectrum
         masses = [x[0] for x in spectrum]
-        currentFile['average_mass_range']=[min(masses), max(masses)]
+        currentFile.average_mass_range=[min(masses), max(masses)]
 
         return True
 
 
 
     def build_mascot_label_dict(self, filename):
-        vendor = self.files[filename]["vendor"]
+        vendor = self.files[filename].vendor
         scan_data = None
-        scan = self.files[filename]["scanNum"]
+        scan = self.files[filename].scanNum
         if vendor == 'ABI':
-            exp = self.files[filename]['experiment']
+            exp = self.files[filename].experiment
         key = None
         if vendor == 'Thermo':
             key = scan
@@ -1771,17 +1861,17 @@ class MS_Data_Manager():
             key = scan        
         if vendor == 'ABI':
             key = (scan, exp)
-        if self.files[filename]["filter_dict"][key].find("+ p")>-1:
+        if self.files[filename].filter_dict[key].find("+ p")>-1:
             if vendor == 'Thermo':
-                scan_data = self.files[filename]['m'].rscan(self.files[filename]['scanNum'])
+                scan_data = self.files[filename].m.rscan(self.files[filename].scanNum)
             if vendor == 'ABI':
-                scan_data = self.files[filename]['m'].rscan(self.files[filename]['m'].scan_time_from_scan_name(scan), exp)
+                scan_data = self.files[filename].m.rscan(self.files[filename].m.scan_time_from_scan_name(scan), exp)
         else:
-            scan_data = self.files[filename]['scan']        
+            scan_data = self.files[filename].scan        
         #((175.11825999999999, 'y(1) [175.12]'), (282.65723000000003, 'b(3)-98++ [282.66]'),
-        ##print self.files[filename]["mascot_ID"]
+        ##print self.files[filename].mascot_ID
         if vendor != "mgf":
-            mascot_ID_dict = self.files[filename]["mascot_ID"][self.files[filename]["scanNum"]]#[self.files[filename]["scan"]]
+            mascot_ID_dict = self.files[filename].mascot_ID[self.files[filename].scanNum]#[self.files[filename].scan]
         else:
             curfile = self.files[filename]
             scan_var = curfile["scanNum"]
@@ -1796,24 +1886,24 @@ class MS_Data_Manager():
             #print found
             #print found_mz
             if found:
-                if found_mz in self.files[filename]["label_dict"].keys():
-                    self.files[filename]["label_dict"][found_mz] += ', ' + member[1].split("[")[0].strip()
+                if found_mz in self.files[filename].label_dict.keys():
+                    self.files[filename].label_dict[found_mz] += ', ' + member[1].split("[")[0].strip()
                 else:
-                    self.files[filename]["label_dict"][found_mz] = member[1].split("[")[0].strip()
-                    self.files[filename]["found2theor"][found_mz] = float(member[1].split(" ")[1][1:-1])
-        print self.files[filename]["label_dict"]
+                    self.files[filename].label_dict[found_mz] = member[1].split("[")[0].strip()
+                    self.files[filename].found2theor[found_mz] = float(member[1].split(" ")[1][1:-1])
+        print self.files[filename].label_dict
 
     def build_label_dict(self, cg, filename):
         '''
         Loops through y and b ions.  For each ion, look for it in the scan.  If it finds it, add it to the label_dict
         {225.43 : y5}
         '''
-        vendor = self.files[filename]["vendor"]
+        vendor = self.files[filename].vendor
         scan_data = None
-        scan = self.files[filename]["scanNum"]
+        scan = self.files[filename].scanNum
 
         if vendor == 'ABI':
-            exp = self.files[filename]['experiment']
+            exp = self.files[filename].experiment
         key = None
         if vendor in ['Thermo', 'mgf']:
             key = scan
@@ -1822,35 +1912,62 @@ class MS_Data_Manager():
             print key
         if vendor == 'ABI-MALDI':
             key = None
-            if self.files[filename]["fd"]['mode'] == 'ms1':
+            if self.files[filename].fd['mode'] == 'ms1':
                 return
 
-        currentFilter = self.files[filename]["filter_dict"][key]
+        currentFilter = self.files[filename].filter_dict[key]
 
-        if currentFilter.find("+ p")>-1:
+        # THIS IS CONFUSING, SEEMS INVALID, AND DOES VERY LITTLE, SO FORGET THAT.
+        #if currentFilter.find("+ p")>-1:
+        if "+ p" in currentFilter:
             if currentFilter.find("FTMS")>-1:
-                scan_data = self.files[filename]['m'].rscan(self.files[filename]['scanNum'])
-            elif currentFilter.find("TOF PI + p NSI Full ms2")>-1:
+                scan_data = self.files[filename].m.rscan(self.files[filename].scanNum)
+            
+            elif currentFilter.find("TOF PI + p NSI Full ms2")>-1 or currentFilter.find("EPI + p NSI Full ms2")>-1:
             #if vendor == 'ABI':
-                #scan_data = self.files[filename]['m'].cscan(self.files[filename]['m'].scan_time_from_scan_name(scan), exp, algorithm="new", eliminate_noise = True, step_length = 0.025, peak_min = 3)
-                scan_data = self.files[filename]['m'].scan(self.files[filename]['scanNum'], centroid=True)   
+                #scan_data = self.files[filename].m.cscan(self.files[filename].m.scan_time_from_scan_name(scan), exp, algorithm="new", eliminate_noise = True, step_length = 0.025, peak_min = 3)
+                scan_data = self.files[filename].m.scan(self.files[filename].scanNum, centroid=True)   
             else:
-                try:
-                    precentroidscan = self.files[filename]['m'].scan()
-                    threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
-                    scan_data = mz_centroid(precentroidscan, threshold)
-                except:
-                    scan_data = mz_centroid(self.files[filename]['m'].scan())
+                if self.files[filename].m.file_type == 'Bruker':
+                    # Bruker MS2s shouldn't be centroided.
+                    scan_data = self.files[filename].m.scan(self.files[filename].scanNum)
+                else:
+                    try:
+                        precentroidscan = self.files[filename].m.scan()
+                        threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
+                        scan_data = mz_centroid(precentroidscan, threshold)
+                    except:
+                        scan_data = mz_centroid(self.files[filename].m.scan())
         else:
-            scan_data = self.files[filename]['scan']
+            scan_data = self.files[filename].scan
+            
+        #scanNum = self.files[filename].scanNum
+        #try:
+            #scan_data = self.files[filename].m.scan(scanNum, centroid = True)
+        #except TypeError:
+            #try:
+                #pre_centroid = self.files[filename].m.scan(scanNum)
+            #except TypeError:
+                #pre_centroid = self.files[filename].m.scan()
+                
+            #try:
+                #threshold = average(zip(*pre_centroid)[1]) * CENTROID_SCALE
+                #scan_data = mz_centroid(pre_centroid, threshold)
+                #assert scan_data
+            #except AssertionError:
+                #scan_data = pre_centoid
 
-        if self.files[filename]['Processing']:
+        assert sorted([x[:2] for x in scan_data]) == sorted(self.files[filename].scan)        
+                
+                
+
+        if self.files[filename].Processing:
             scan_data = self.parent.parent.parent.custom_spectrum_process(scan_data)
 
 
         y_label = 'y'
         b_label = 'b'
-        if 'reaction' in self.files[filename]["fd"] and self.files[filename]["fd"]['reaction']=='etd':
+        if 'reaction' in self.files[filename].fd and self.files[filename].fd['reaction']=='etd':
             y_label = 'z'
             b_label = 'c'
 
@@ -1861,54 +1978,54 @@ class MS_Data_Manager():
             if found:
                 #print "FOUND"
                 #print member[1]
-                self.files[filename]["label_dict"][found_mz] = member[1]
-                self.files[filename]["found2theor"][found_mz] = 0.0     
+                self.files[filename].label_dict[found_mz] = member[1]
+                self.files[filename].found2theor[found_mz] = 0.0     
 
-        for i, member in enumerate(self.files[filename]["y_ions"]):
+        for i, member in enumerate(self.files[filename].y_ions):
             found, found_mz, found_int = self.search_for_mass(member, scan_data, filename, vendor)
             if found:
-                if found_mz in self.files[filename]["label_dict"].keys():
-                    self.files[filename]["label_dict"][found_mz] += ', ' + y_label + str(i+1)
-                    #self.files[filename]["found2theor"][found_mz] = member
+                if found_mz in self.files[filename].label_dict.keys():
+                    self.files[filename].label_dict[found_mz] += ', ' + y_label + str(i+1)
+                    #self.files[filename].found2theor[found_mz] = member
                     if cg > 1:
-                        self.files[filename]["label_dict"][found_mz] += ' ' + str(cg) + '+'
+                        self.files[filename].label_dict[found_mz] += ' ' + str(cg) + '+'
                 else:
-                    self.files[filename]["label_dict"][found_mz] = y_label + str(i+1)
-                    self.files[filename]["found2theor"][found_mz] = member
+                    self.files[filename].label_dict[found_mz] = y_label + str(i+1)
+                    self.files[filename].found2theor[found_mz] = member
                     if cg > 1:
-                        self.files[filename]["label_dict"][found_mz] += ' ' + str(cg) + '+'
+                        self.files[filename].label_dict[found_mz] += ' ' + str(cg) + '+'
 
-        for i, member in enumerate(self.files[filename]["b_ions"]):
+        for i, member in enumerate(self.files[filename].b_ions):
             found, found_mz, found_int = self.search_for_mass(member, scan_data, filename, vendor)
             if found:
-                if found_mz in self.files[filename]["label_dict"].keys():
-                    self.files[filename]["label_dict"][found_mz] += ', ' + b_label + str(i+1)
+                if found_mz in self.files[filename].label_dict.keys():
+                    self.files[filename].label_dict[found_mz] += ', ' + b_label + str(i+1)
                     if cg > 1:
-                        self.files[filename]["label_dict"][found_mz] += ' ' + str(cg) + '+'
+                        self.files[filename].label_dict[found_mz] += ' ' + str(cg) + '+'
                 else:
-                    self.files[filename]["label_dict"][found_mz] = b_label + str(i+1)
-                    self.files[filename]["found2theor"][found_mz] = member
+                    self.files[filename].label_dict[found_mz] = b_label + str(i+1)
+                    self.files[filename].found2theor[found_mz] = member
                     if cg > 1:
-                        self.files[filename]["label_dict"][found_mz] += ' ' + str(cg) + '+'
+                        self.files[filename].label_dict[found_mz] += ' ' + str(cg) + '+'
 
-        for i, member in enumerate(self.files[filename]["NL_ions"].keys()):
+        for i, member in enumerate(self.files[filename].NL_ions.keys()):
             found, found_mz, found_int = self.search_for_mass(member, scan_data, filename, vendor)
             if found:
-                if found_mz in self.files[filename]["label_dict"].keys():
-                    self.files[filename]["label_dict"][found_mz] += ', ' + self.files[filename]["NL_ions"][member]
+                if found_mz in self.files[filename].label_dict.keys():
+                    self.files[filename].label_dict[found_mz] += ', ' + self.files[filename].NL_ions[member]
                 else:
-                    self.files[filename]["label_dict"][found_mz] = self.files[filename]["NL_ions"][member]
-                    self.files[filename]["found2theor"][found_mz] = member
+                    self.files[filename].label_dict[found_mz] = self.files[filename].NL_ions[member]
+                    self.files[filename].found2theor[found_mz] = member
 
-        for i, member in enumerate(self.files[filename]["precNL_ions"].keys()):
+        for i, member in enumerate(self.files[filename].precNL_ions.keys()):
             found, found_mz, found_int = self.search_for_mass(member, scan_data, filename, vendor)
             if found:
-                if found_mz in self.files[filename]["label_dict"].keys():
-                    self.files[filename]["label_dict"][found_mz] += ', ' + self.files[filename]["precNL_ions"][member]
+                if found_mz in self.files[filename].label_dict.keys():
+                    self.files[filename].label_dict[found_mz] += ', ' + self.files[filename].precNL_ions[member]
                 else:
-                    self.files[filename]["label_dict"][found_mz] = self.files[filename]["precNL_ions"][member]
-                    self.files[filename]["found2theor"][found_mz] = member  
-        print self.files[filename]["label_dict"]
+                    self.files[filename].label_dict[found_mz] = self.files[filename].precNL_ions[member]
+                    self.files[filename].found2theor[found_mz] = member  
+        print self.files[filename].label_dict
 
 class BufferedWindow(wx.Window):
 
@@ -2002,12 +2119,12 @@ class BufferedWindow(wx.Window):
         elif found:
             currentFile = self.parent.msdb.files[self.parent.msdb.Display_ID[file]]
             #----------------------------If a mark box is active, and the mouse has moved off, remove it
-            for i, member in enumerate(currentFile['mark_boxes']):
+            for i, member in enumerate(currentFile.mark_boxes):
                 if pos[0] > member[1][0] and pos[0] < member[1][1] and pos[1] > member[1][2] and pos[1] < member[1][3]:
                     pass
                 else:
                     member[0].Destroy()
-                    del currentFile['mark_boxes'][i]   
+                    del currentFile.mark_boxes[i]   
             #---------------------------If the mouse moves over the spectrum, report mz and intensity
             if e == 'SPEC':
                 current_mz = self.parent.ConvertPixelToMass(pos[0], grid, file)
@@ -2017,13 +2134,13 @@ class BufferedWindow(wx.Window):
             #_---------------------------Check to see if over XIC mark.
             #----------------------------If over, make a popup window
             if e[1] == 'I':
-                for member in currentFile['xic_lookup']:
+                for member in currentFile.xic_lookup:
                     x1 = member[0]-5
                     x2 = member[0]+5
                     y1 = member[1]-5
                     y2 = member[1]+5
                     box_already_there = False
-                    for box in currentFile['mark_boxes']:
+                    for box in currentFile.mark_boxes:
                         if (x1, x2, y1, y2) == box[1]:
                             box_already_there = True
                     if pos[0] > x1 and pos[0] <x2 and pos[1] > y1 and pos[1] < y2 and not box_already_there:
@@ -2038,7 +2155,7 @@ class BufferedWindow(wx.Window):
                         win = TestPopup(self, wx.SIMPLE_BORDER, sequence, member)
                         win.Position((pos[0]+20,pos[1]-20), (0, 100))
                         win.Show(True)
-                        currentFile['mark_boxes'].append([win, (x1, x2, y1, y2)])
+                        currentFile.mark_boxes.append([win, (x1, x2, y1, y2)])
         else:
             self.parent.parent.parent.statusbar.SetStatusText("")
 
@@ -2062,11 +2179,11 @@ class BufferedWindow(wx.Window):
                                     if wx.GetKeyState(67):
                                         cursorMZ = self.parent.ConvertPixelToMass(pos[0], grid, file)
                                         cursorInt = self.parent.ConvertPixelToIntensity(pos[1], grid, file)
-                                        mzrange = currentFile['mass_ranges'][grid][1] - currentFile['mass_ranges'][grid][0]
-                                        nearPt = min(currentFile['unprocessed_data'],
+                                        mzrange = currentFile.mass_ranges[grid][1] - currentFile.mass_ranges[grid][0]
+                                        nearPt = min(currentFile.scan,
                                                      #key = lambda x: abs(x[0] - cursorMZ))
                                                      key = scaled_euclidean_distance_from((cursorMZ, cursorInt),
-                                                                                          mzrange, currentFile['max_int'][grid]))
+                                                                                          mzrange, currentFile.max_int[grid]))
                                         startmz = self.parent.ConvertPixelToMass(self.parent.postup[0], grid, file) 
                                         mz_delta = abs(startmz - nearPt[0])                                          
                                         string = mzAtomicYardstick.analyze_delta(mz_delta, 0.01)
@@ -2116,9 +2233,9 @@ class BufferedWindow(wx.Window):
                                     dc.DrawText("XIC",pos[0]+50, pos[1]+25)
                                     #currentFile = self.msdb.files[self.msdb.Display_ID[rawID]]
                                     #GET SUB BIT MAP    
-                                    #active_xic = currentFile['active_xic'][grid]
-                                    #xaxis = currentFile['xic_axco'][grid][0]
-                                    #yaxis = currentFile['xic_axco'][grid][1]                                 
+                                    #active_xic = currentFile.active_xic[grid]
+                                    #xaxis = currentFile.xic_axco[grid][0]
+                                    #yaxis = currentFile.xic_axco[grid][1]                                 
                                     #sb = self._Buffer.GetSubBitmap(wx.Rect(10, 10, 100, 100))
                                     #self._Buffer.SaveFile("D:\SBF\img1.bmp", wx.BITMAP_TYPE_BMP)
                                     #sb = self._Buffer.GetSubBitmap(0, 0, 500, 500)
@@ -2141,8 +2258,8 @@ class BufferedWindow(wx.Window):
                         pos = event.GetPosition()  
                         #--------------Use y value of pos to drawline from axco-7, y to axco, y 
                         currentFile = self.parent.msdb.files[self.parent.msdb.Display_ID[self.parent.file]]
-                        xaxis = currentFile['axco'][0][0]
-                        yaxis = currentFile['axco'][0][1]
+                        xaxis = currentFile.axco[0][0]
+                        yaxis = currentFile.axco[0][1]
                         dc.DrawLine(yaxis[0]-7, pos[1], xaxis[2], pos[1])
                         del odc
                         self.Refresh()
@@ -2440,19 +2557,36 @@ class DrawPanel(wx.Panel):
     def AddToParentMenuBar(self):
         mb = self.parent.parent.MakeMenuBar(full=True)
         self.parent.parent.SetMenuBar(mb)    
+        
+    def ClearXICs(self, event):
+        print "Clear XICs"
+        currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
+        self.xicFrame = xicFrame(self, self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]], self.msdb.active_file)
+        entries = self.xicFrame.GetXICEntries()
+        
+        if entries > 1:
+            
+            for i in range(1, entries):
+                self.xicFrame.grid.SetCellValue(i, 4, "1")
+                    
+
+        self.xicFrame.OnClick(None)
+        self.xicFrame.Destroy()
+                
+                       
 
     def OnXICAddTraceStyle(self, event):
         tsize = (24,24)
         active = self.msdb.active_file
         currentFile = self.msdb.files[self.msdb.Display_ID[active]]        
-        if currentFile['xic_style'] == 'NEWTRACE':
-            currentFile['xic_style'] = 'OVERLAY'
+        if currentFile.xic_style == 'NEWTRACE':
+            currentFile.xic_style = 'OVERLAY'
             self.parent.parent.tb.SetToolNormalBitmap(150, wx.BitmapFromImage(wx.Image(installdir + r'\image\Overlay.png').Rescale(*tsize)))  
             help_string = "XIC overlays on last trace"
             self.parent.parent.tb.SetToolLongHelp(150, help_string)
             self.parent.parent.tb.SetToolShortHelp(150, help_string)
-        elif currentFile['xic_style'] == 'OVERLAY':
-            currentFile['xic_style'] = 'NEWTRACE'        
+        elif currentFile.xic_style == 'OVERLAY':
+            currentFile.xic_style = 'NEWTRACE'        
             self.parent.parent.tb.SetToolNormalBitmap(150, wx.BitmapFromImage(wx.Image(installdir + r'\image\Add new trace.png').Rescale(*tsize)))
             help_string = "XIC adds to new window"
             self.parent.parent.tb.SetToolLongHelp(150, help_string)
@@ -2476,7 +2610,7 @@ class DrawPanel(wx.Panel):
     def OnChangeSettings(self, event):
         active = self.msdb.active_file
         currentFile = self.msdb.files[self.msdb.Display_ID[active]]
-        settings_frame = Settings.SettingsFrame(self, currentFile["settings"])
+        settings_frame = Settings.SettingsFrame(self, currentFile.settings)
         settings_frame.Show()
 
     def OnOpen(self, event):
@@ -2544,8 +2678,8 @@ class DrawPanel(wx.Panel):
 
     def OnOpenSpecBase(self, event):
         print self
-        if SpecBase_aui3.SpecFrame not in self.parent.ObjectOrganizer.ActiveObjects:
-            self.sb = SpecBase_aui3.SpecFrame(self.parent.parent, -1, self.parent.ObjectOrganizer)
+        if SpecBase.SpecFrame not in self.parent.ObjectOrganizer.ActiveObjects:
+            self.sb = SpecBase.SpecFrame(self.parent.parent, -1, self.parent.ObjectOrganizer)
             self.parent.parent._mgr.AddPane(self.sb, aui.AuiPaneInfo().Name("SpecBase").MaximizeButton(True).MinimizeButton(True).
                                             Caption("SpecStylus").Right().
                                             MinSize(wx.Size(300, 210)))
@@ -2554,17 +2688,17 @@ class DrawPanel(wx.Panel):
             self.parent.parent._mgr.Update() 
             #self.parent.parent._mgr.Bind(aui.EVT_AUI_PANE_CLOSE, self.sb.OnClose)
         else:
-            self.sb = self.parent.ObjectOrganizer.ActiveObjects[SpecBase_aui3.SpecFrame]
+            self.sb = self.parent.ObjectOrganizer.ActiveObjects[SpecBase.SpecFrame]
 
     def OnSendXICToSpecBase(self,event):
-        if SpecBase_aui3.SpecFrame not in self.parent.ObjectOrganizer.ActiveObjects:
+        if SpecBase.SpecFrame not in self.parent.ObjectOrganizer.ActiveObjects:
             messdog = wx.MessageDialog(self, 'SpecBase is not currently active', 
                                        'Could not send to SpecBase', style = wx.OK)
             messdog.ShowModal()
             messdog.Destroy()            
             return        
 
-        elif not self.parent.ObjectOrganizer.ActiveObjects[SpecBase_aui3.SpecFrame].tree.base:
+        elif not self.parent.ObjectOrganizer.ActiveObjects[SpecBase.SpecFrame].tree.base:
             messdog = wx.MessageDialog(self, 'No SpecStylus database has been opened', 
                                        'Could not send to SpecBase', style = wx.OK)
             messdog.ShowModal()
@@ -2573,7 +2707,7 @@ class DrawPanel(wx.Panel):
 
         xic = self.make_xic_object(None)
 
-        SpecStylus = self.parent.ObjectOrganizer.getObjectOfType(SpecBase_aui3.SpecFrame)
+        SpecStylus = self.parent.ObjectOrganizer.getObjectOfType(SpecBase.SpecFrame)
 
         #node = SpecStylus.tc.tree.GetSelection()
 
@@ -2592,10 +2726,10 @@ class DrawPanel(wx.Panel):
     def On_Set_Ion_Label_Tolerance(self, event):
         currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]] 
 
-        dlg = wx.TextEntryDialog(self, 'Enter label threshold (Da) \n(0 to go by instrument default)', 'Set fragment ion label threshold', str(currentFile['settings']['ionLabelThresh']))
+        dlg = wx.TextEntryDialog(self, 'Enter label threshold (Da) \n(0 to go by instrument default)', 'Set fragment ion label threshold', str(currentFile.settings['ionLabelThresh']))
         if dlg.ShowModal() == wx.ID_OK:
             try:
-                currentFile['settings']['ionLabelThresh'] = float(dlg.GetValue())
+                currentFile.settings['ionLabelThresh'] = float(dlg.GetValue())
             except:
                 wx.MessageBox("Enter a floating point value")      
             self.msdb.set_axes()
@@ -2613,7 +2747,7 @@ class DrawPanel(wx.Panel):
             wx.TheClipboard.Close()
 
 
-        #activeFile["mode"] = "SPEC"
+        #activeFile.mode = "SPEC"
         #self.msdb.set_axes()        
 
 
@@ -2657,13 +2791,13 @@ class DrawPanel(wx.Panel):
             for k, file_member in enumerate(pg.msdb.files.keys()): #------Go through each file in each page
                 currentFile = pg.msdb.files[pg.msdb.Display_ID[k]]
                 #----- FILE, FILTER, MZ RANGE, TITLE,  PEAK HEIGHT
-                filters = currentFile['filters']
-                ranges = currentFile['xic_mass_ranges']
-                titles = currentFile['xic_title']
+                filters = currentFile.filters
+                ranges = currentFile.xic_mass_ranges
+                titles = currentFile.xic_title
                 intens = pg.max_tables
                 for j in range(0, len(intens)):
                     for t in range(0, len(intens[j])):
-                        text += currentFile['Filename'] + '\t' + filters[j][t] + '\t' + str(ranges[j][t]) + '\t' + titles[j][t] + '\t' + str(intens[j][t]) + '\n'
+                        text += currentFile.Filename + '\t' + filters[j][t] + '\t' + str(ranges[j][t]) + '\t' + titles[j][t] + '\t' + str(intens[j][t]) + '\n'
                         print text
         data = wx.TextDataObject()
         data.SetText(str(text))
@@ -2733,21 +2867,21 @@ class DrawPanel(wx.Panel):
 
         '''                
         currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
-        #if currentFile['Filename'].lower().endswith('mgf'):
+        #if currentFile.Filename.lower().endswith('mgf'):
         #    wx.MessageBox('XIC operations are not supported on MGF files.')
         #    print "Not making XIC object for MGF file."
         #    return
 
-        data = currentFile["xic"]
-        xr = currentFile["xr"]
-        xic_filters = currentFile["filters"]
-        xic_mass_ranges = currentFile["xic_mass_ranges"]
-        tr = currentFile["time_ranges"][0]
-        xic_view = currentFile['xic_view']
-        active_xic = currentFile['active_xic']
-        xic_max = currentFile['xic_max']
-        xic_scale = currentFile['xic_scale']
-        rawfile = currentFile["FileAbs"]
+        data = currentFile.xic
+        xr = currentFile.xr
+        xic_filters = currentFile.filters
+        xic_mass_ranges = currentFile.xic_mass_ranges
+        tr = currentFile.time_ranges[0]
+        xic_view = currentFile.xic_view
+        active_xic = currentFile.active_xic
+        xic_max = currentFile.xic_max
+        xic_scale = currentFile.xic_scale
+        rawfile = currentFile.FileAbs
 
         xic = XICObject.XICObject(rawfile, data, xr, tr, xic_mass_ranges, xic_filters, xic_scale, xic_max, active_xic, xic_view)
 
@@ -2761,13 +2895,13 @@ class DrawPanel(wx.Panel):
 
         '''
         currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
-        if currentFile['vendor'] in ['Thermo', 'mgf', 'ABI-MALDI']:
-            filt = currentFile["filter_dict"][currentFile["scanNum"]]
-        #elif currentFile['vendor'] == 'ABI':
-        #    filt = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])
+        if currentFile.vendor in ['Thermo', 'mgf', 'ABI-MALDI']:
+            filt = currentFile.filter_dict[currentFile.scanNum]
+        #elif currentFile.vendor == 'ABI':
+        #    filt = currentFile.filter_dict[(currentFile.scanNum, currentFile.experiment)
         else:
             filt = ''
-        vendor = currentFile['vendor']
+        vendor = currentFile.vendor
 
         profile = False
         if filt.find("+ p")>-1: profile = True
@@ -2797,29 +2931,29 @@ class DrawPanel(wx.Panel):
             else:
                 scan_type = "MS1"
 
-        scanNum = currentFile["scanNum"]
+        scanNum = currentFile.scanNum
 
         # GETS SCAN DATA HERE
 
         if vendor == "Thermo":
             if profile:
                 if filt.find('FTMS')>-1:
-                    scan_data = currentFile["m"].scan(scanNum)
-                    cent_data = currentFile['m'].rscan(scanNum)
+                    scan_data = currentFile.m.scan(scanNum)
+                    cent_data = currentFile.m.rscan(scanNum)
                 elif any([filt.find(x) for x in ['TOF', 'Q1', 'Q3']]):
-                    scan_data= currentFile["m"].scan(scanNum)
-                    cent_data = currentFile['m'].scan(scanNum, centroid=True)
+                    scan_data= currentFile.m.scan(scanNum)
+                    cent_data = currentFile.m.scan(scanNum, centroid=True)
             else:
-                scan_data = currentFile["m"].scan(scanNum)
+                scan_data = currentFile.m.scan(scanNum)
                 cent_data = None
         elif vendor == 'mgf':
-            scan_data = currentFile["m"].scan(scanNum)
-            cent_data = currentFile["m"].scan(scanNum)
+            scan_data = currentFile.m.scan(scanNum)
+            cent_data = currentFile.m.scan(scanNum)
         elif vendor == 'ABI':
-            scan_data = currentFile["m"].scan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'])
-            cent_data = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = current['settings']['threshold_cent_abi'])
+            scan_data = currentFile.m.scan(currentFile.m.scan_time_from_scan_name(currentFile.scanNum), currentFile.experiment)
+            cent_data = currentFile.m.cscan(currentFile.m.scan_time_from_scan_name(currentFile.scanNum), currentFile.experiment, algorithm=currentFile.settings['abi_centroid'], eliminate_noise = currentFile.settings['eliminate_noise'], step_length = currentFile.settings['step_length'], peak_min = currentFile.settings['peak_min'], cent_thresh = current.settings['threshold_cent_abi'])
         elif vendor == "ABI-MALDI":
-            scan_data = currentFile["scan"]
+            scan_data = currentFile.scan
             threshold = average(zip(*scan_data)[1]) * CENTROID_SCALE
             cent_data = mz_centroid(scan_data, threshold)            
 
@@ -2827,36 +2961,39 @@ class DrawPanel(wx.Panel):
             scan_data = None
             cent_data = None
 
-        processed_scan_data = currentFile["processed_data"] 
+        processed_scan_data = currentFile.processed_data 
         charge = None
         varmod = ''
         fixedmod = ''
         if scan_type in ['MS2', 'etd']:
             seqkey = 'Peptide Sequence'
             varmodkey = 'Variable Modifications'
-            if currentFile['SearchType'] not in ['Mascot', 'X!Tandem', 'COMET']:
+            if currentFile.SearchType == 'PEAKS':
+                seqkey = 'Sequence' # But that has mod masses!
+                varmodkey = "AScore" # But that has whatever ascores are!
+            elif currentFile.SearchType not in ['Mascot', 'X!Tandem', 'COMET']:
                 seqkey = 'Annotated Sequence'
                 varmodkey = 'Modifications'
             try:
                 if vendor in ['Thermo', 'mgf','ABI-MALDI', 'ABI']:
-                    seq = currentFile["ID_Dict"][currentFile["scanNum"]][seqkey]
-                    varmod = currentFile["ID_Dict"][currentFile["scanNum"]][varmodkey]
-                    fixedmod = currentFile["fixedmod"]
+                    seq = currentFile.ID_Dict[currentFile.scanNum][seqkey]
+                    varmod = currentFile.ID_Dict[currentFile.scanNum][varmodkey]
+                    fixedmod = currentFile.fixedmod
                 elif vendor == 'ABI':
-                    seq = currentFile["ID_Dict"][(currentFile["scanNum"], currentFile["experiment"])][seqkey]
-                    varmod = currentFile["ID_Dict"][(currentFile["scanNum"], currentFile["experiment"])][varmodkey]
-                    fixedmod = currentFile["fixedmod"]                    
+                    seq = currentFile.ID_Dict[(currentFile.scanNum, currentFile.experiment)][seqkey]
+                    varmod = currentFile.ID_Dict[(currentFile.scanNum, currentFile.experiment)][varmodkey]
+                    fixedmod = currentFile.fixedmod                    
             except:
                 try:
-                    seq = currentFile['overlay_sequence'][currentFile['scanNum']]
+                    seq = currentFile.overlay_sequence[currentFile.scanNum]
                     varmod = ''
                     fixedmod = ''
                 except:
                     seq = ''
                     varmod = ''
                     fixedmod = ''       
-            if currentFile['scanNum'] in currentFile['overlay'].keys():
-                seq = currentFile['overlay_sequence'][currentFile['scanNum']]
+            if currentFile.scanNum in currentFile.overlay.keys():
+                seq = currentFile.overlay_sequence[currentFile.scanNum]
                 #Need to get N-term mods from overlay?  For now, use fixed mods?
                 #cTMT
                 #TMT
@@ -2869,41 +3006,41 @@ class DrawPanel(wx.Panel):
             for member in peptide_container:
                 sequence += member
             try:
-                charge = currentFile["ID_Dict"][currentFile["scanNum"]]["Charge"]
+                charge = currentFile.ID_Dict[currentFile.scanNum]["Charge"]
             except:
                 charge = 2
             if vendor == "ABI-MALDI":
                 charge = 1
         elif scan_type == "MS1":
-            sequence = 'MS1, scan: ' + str(currentFile["scanNum"])
+            sequence = 'MS1, scan: ' + str(currentFile.scanNum)
             varmod = ''
         else:
-            sequence = str(currentFile['scanNum'])
+            sequence = str(currentFile.scanNum)
             #if not sequence:
-            #sequence = 'MS2, scan: ' + str(currentFile["scanNum"])        
+            #sequence = 'MS2, scan: ' + str(currentFile.scanNum)        
 
-        display_range = (currentFile['scan low mass'],currentFile['scan high mass'])
-        mass_ranges = currentFile["mass_ranges"]
+        display_range = (currentFile.scan_low_mass,currentFile.scan_high_mass)
+        mass_ranges = currentFile.mass_ranges
         score = None
         try:
-            score = currentFile['score']
+            score = currentFile.score
         except:
             score = 0
 
-        scan = currentFile["scanNum"]
+        scan = currentFile.scanNum
 
-        if currentFile['vendor'] in ['Thermo', 'mgf']:
-            filt = currentFile["filter_dict"][currentFile["scanNum"]]
-        elif currentFile['vendor'] == 'ABI':
-            filt = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])]       
+        if currentFile.vendor in ['Thermo', 'mgf']:
+            filt = currentFile.filter_dict[currentFile.scanNum]
+        elif currentFile.vendor == 'ABI':
+            filt = currentFile.filter_dict[(currentFile.scanNum, currentFile.experiment)]       
 
-        rawfile = currentFile["FileAbs"]
+        rawfile = currentFile.FileAbs
 
         #need view centroid
         #need view processed data
 
-        view_processed_data = currentFile['Processing']
-        view_centroid = currentFile['settings']['viewCentroid']
+        view_processed_data = currentFile.Processing
+        view_centroid = currentFile.settings['viewCentroid']
 
         spec = SpecObject.SpecObject(vendor, profile, detector, scan_type, scan_data, cent_data, processed_scan_data, filt, display_range, mass_ranges, score,
                                      sequence, varmod, fixedmod, scan, charge, rawfile, view_processed_data, view_centroid)
@@ -2918,14 +3055,14 @@ class DrawPanel(wx.Panel):
 
         '''
 
-        if (SpecBase_aui3.SpecFrame not in self.parent.ObjectOrganizer.ActiveObjects):
+        if (SpecBase.SpecFrame not in self.parent.ObjectOrganizer.ActiveObjects):
             messdog = wx.MessageDialog(self, 'SpecStylus is not currently active', 
                                        'Could not send to SpecBase', style = wx.OK)
             messdog.ShowModal()
             messdog.Destroy()
             return
         #elif not self.parent.ObjectOrganizer.ActiveObjects[SpecBase_aui3.SpecFrame].tc.tree.GetRootItem().IsOk():
-        elif not self.parent.ObjectOrganizer.ActiveObjects[SpecBase_aui3.SpecFrame].tree.base:
+        elif not self.parent.ObjectOrganizer.ActiveObjects[SpecBase.SpecFrame].tree.base:
             messdog = wx.MessageDialog(self, 'No SpecStylus database has been opened', 
                                        'Could not send to SpecBase', style = wx.OK)
             messdog.ShowModal()
@@ -2935,7 +3072,7 @@ class DrawPanel(wx.Panel):
         spec = self.make_spectrum_object(None)
         ##print "Spectrum object created."        
 
-        SpecStylus = self.parent.ObjectOrganizer.getObjectOfType(SpecBase_aui3.SpecFrame)
+        SpecStylus = self.parent.ObjectOrganizer.getObjectOfType(SpecBase.SpecFrame)
 
         ##node = SpecStylus.tc.tree.GetSelection()
 
@@ -3041,29 +3178,33 @@ class DrawPanel(wx.Panel):
 
     def LoadDb(self,event,xlsfile,searchType):
         currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
-        currentFile["SearchType"]=searchType
-        currentFile["xlsSource"]=xlsfile
+        currentFile.SearchType=searchType
+        currentFile.xlsSource=xlsfile
         if not os.path.exists(xlsfile[:-4] + '.db'):
             busy = PBI.PyBusyInfo("Making database, please wait...", parent=None, title="Processing...")
             wx.Yield()
-            dbase = self.MakeDatabase(xlsfile, currentFile["SearchType"])
+            dbase = self.MakeDatabase(xlsfile, currentFile.SearchType)
             del busy
         else:
             dbase = xlsfile[:-4] + '.db'
-        currentFile["database"] = dbase
+        currentFile.database = dbase
         busy = PBI.PyBusyInfo("Reading database, please wait...", parent=None, title="Processing...")
         wx.Yield()
-        currentFile["mzSheetcols"] = db.get_columns(dbase, table = 'peptides' if currentFile["SearchType"] == "Mascot" else 'fdr')
-        if currentFile["SearchType"] == "Mascot":
-            currentFile["rows"] = db.pull_data_dict(dbase, 'select * from "peptides"')
+        currentFile.mzSheetcols = db.get_columns(dbase, table = 'peptides' if currentFile.SearchType == "Mascot" else 'fdr')
+        if currentFile.SearchType == "Mascot":
+            currentFile.rows = db.pull_data_dict(dbase, 'select * from "peptides"')
 
-        for row in currentFile['rows']:
-            if currentFile['vendor']=='Thermo':
-                if currentFile["SearchType"] == "Mascot":
-                    row['scan']=int(row['Spectrum Description'].split(".")[1])
-                if currentFile["SearchType"] == "Pilot":
+        is_locus_based = 'Locus:' in currentFile.rows[0]
+        for row in currentFile.rows:
+            if currentFile.vendor=='Thermo':
+                if currentFile.SearchType == "Mascot":
+                    if is_locus_based:
+                        raise Exception
+                    else:
+                        row['scan']=int(row['Spectrum Description'].split(".")[1])
+                if currentFile.SearchType == "Pilot":
                     row['scan']=int(row['Spectrum'].split(".")[3])
-            elif currentFile['vendor']=='ABI':
+            elif currentFile.vendor=='ABI':
                 row['scan']=int(row['Spectrum Description'].split(".")[3])-1
                 try:
                     row['experiment']=int(row['Spectrum Description'].split(".")[4])-1
@@ -3073,17 +3214,17 @@ class DrawPanel(wx.Panel):
         del busy
         busy = PBI.PyBusyInfo("Reading Header & creating ID List, please wait...", parent=None, title="Processing...")
         wx.Yield()
-        if currentFile["SearchType"] == "Mascot":
+        if currentFile.SearchType == "Mascot":
             #print "PULLING FIXED MODS..."
             self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["header"] = mz_core.pull_mods_from_mascot_header(xlsfile)
             if "Quantitation method" in self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["header"].keys():
                 print "Quant method detected!"
-                currentFile["SILAC"]["mode"]=True
-                currentFile["SILAC"]["method"]=currentFile["header"]["Quantitation method"]
-                print currentFile["SILAC"]["method"]
+                currentFile.SILAC["mode"]=True
+                currentFile.SILAC["method"]=currentFile.header["Quantitation method"]
+                print currentFile.SILAC["method"]
             self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["fixedmod"] = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["header"]["Fixed modifications"]
         #print "Building ID list..."
-        currentFile["ID_Dict"]= self.build_ID_dict(currentFile["rows"], currentFile["mzSheetcols"], currentFile["Filename"],currentFile["vendor"])
+        currentFile.ID_Dict= self.build_ID_dict(currentFile.rows, currentFile.mzSheetcols, currentFile.Filename,currentFile.vendor)
         del busy
         self.Refresh()
         self.dbFrame = dbFrame.dbFrame(self)
@@ -3104,25 +3245,26 @@ class DrawPanel(wx.Panel):
 
         if dlg.ShowModal() == wx.ID_OK:
             activeFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
-            if activeFile['vendor'] == 'Thermo':
+            if activeFile.vendor == 'Thermo':
                 scanname = dlg.GetValue()
                 if ',' in scanname:
                     scanname = tuple(map(int, map(lambda x: x.strip(), scanname.split(',')[:2])))
-                    activeFile['scanNum'] = activeFile['m'].make_implicit[scanname]
-                activeFile["scanNum"]=int(dlg.GetValue())
-                self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
-                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"])
-            elif activeFile['vendor'] == 'ABI':
+                    activeFile.scanNum = activeFile.m.make_implicit[scanname]
+                else:
+                    activeFile.scanNum=int(dlg.GetValue())
+                self.msdb.set_scan(activeFile.scanNum, self.msdb.active_file)
+                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile.scanNum)
+            elif activeFile.vendor == 'ABI':
                 scan, experiment = dlg.GetValue().split(",")
-                activeFile["scanNum"]=int(scan.strip())
-                activeFile["experiment"]=experiment.strip()
-                self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
-                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"], vendor = 'ABI')
-            elif activeFile['vendor'] == 'mgf':
+                activeFile.scanNum=int(scan.strip())
+                activeFile.experiment=experiment.strip()
+                self.msdb.set_scan(activeFile.scanNum, self.msdb.active_file)
+                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile.scanNum, vendor = 'ABI')
+            elif activeFile.vendor == 'mgf':
                 scan = int(dlg.GetValue())
-                activeFile['scanNum'] = scan
-                self.msdb.set_scan(activeFile['scanNum'], self.msdb.active_file)
-                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"])
+                activeFile.scanNum = scan
+                self.msdb.set_scan(activeFile.scanNum, self.msdb.active_file)
+                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile.scanNum)
             else:
                 raise Exception
             self.Window.UpdateDrawing()
@@ -3133,20 +3275,20 @@ class DrawPanel(wx.Panel):
     def JumpToPrecursor(self, event):
         activeFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
         
-        filt = activeFile['filter_dict'][activeFile['scanNum']]
+        filt = activeFile.filter_dict[activeFile.scanNum]
         if 'ms2' in filt.lower() and '@' in filt:
             mz = float(filt.split('@')[0].split()[-1])
-            scanNum = max([x for x in activeFile['filter_dict'].keys() if
-                           'Full ms ' in activeFile['filter_dict'][x]
-                           and x < activeFile['scanNum']])
+            scanNum = max([x for x in activeFile.filter_dict.keys() if
+                           'Full ms ' in activeFile.filter_dict[x]
+                           and x < activeFile.scanNum])
             
-            activeFile['scanNum'] = scanNum
+            activeFile.scanNum = scanNum
             
             
             self.msdb.set_scan(scanNum, self.msdb.active_file)
-            self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"])
-            activeFile['is_zooming'] = True
-            activeFile['mass_ranges'] = [[mz - 10, mz + 10]]
+            self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile.scanNum)
+            activeFile.is_zooming = True
+            activeFile.mass_ranges = [[mz - 10, mz + 10]]
             
         print "FOO"
         self.Window.UpdateDrawing()
@@ -3167,7 +3309,7 @@ class DrawPanel(wx.Panel):
                 return
             start = float(entry[0].strip())
             stop = float(entry[1].strip())
-            activeFile["time_ranges"]=[(start, stop)]
+            activeFile.time_ranges=[(start, stop)]
             self.Window.UpdateDrawing()
             self.Refresh()
         dlg.Destroy()
@@ -3186,13 +3328,13 @@ class DrawPanel(wx.Panel):
                 width = float(entry[1].strip())
                 hi_mass = center + width
                 low_mass = center - width
-            activeFile["newl"]=hi_mass #LAST MASS
-            activeFile['newf']=low_mass #FIRST MASS
-            activeFile["mass_ranges"]=[]
+            activeFile.newl=hi_mass #LAST MASS
+            activeFile.newf=low_mass #FIRST MASS
+            activeFile.mass_ranges=[]
             current_mz = low_mass
-            step = float(activeFile["newl"]-activeFile["newf"])/float(activeFile["axes"])
-            for i in range(0, activeFile["axes"]):
-                activeFile["mass_ranges"].append((current_mz, current_mz + step))
+            step = float(activeFile.newl-activeFile.newf)/float(activeFile.axes)
+            for i in range(0, activeFile.axes):
+                activeFile.mass_ranges.append((current_mz, current_mz + step))
                 current_mz += step
             self.Window.UpdateDrawing()
             self.Refresh()
@@ -3209,90 +3351,104 @@ class DrawPanel(wx.Panel):
         if dlg.ShowModal() == wx.ID_OK:
 
             if dlg.GetValue() == '*':
-                activeFile["intensity_scaling"]=0
+                activeFile.intensity_scaling=0
             else:
                 activeFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
                 intensity = float(dlg.GetValue())
-                activeFile["intensity_scaling"]=intensity
+                activeFile.intensity_scaling=intensity
 
             self.Window.UpdateDrawing()
             self.Refresh()
 
         dlg.Destroy()    
 
-    def build_ID_dict(self, rows, cols, filename, vendor = 'Thermo'):
+    def build_ID_dict(self, rows, cols, filename, vendor = 'Thermo',
+                      file_object = None):
         '''
 
         Makes a dictionary of scans to ID (i.e. search result info).
 
         '''
-        try:
+        # It looks like there's two separate "MS_Data_Manager" objects
+        # between here and dbFrame (multi-file-from-report code.)  That's
+        # probably not supposed to be the case, and it's not clear 
+        # how integrating FileDescriptor objects between both will
+        # work.  Uh???
+        #try:
+        if file_object:
+            currentFile = file_object
+        else:
             currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
-            spec_lookup = "Spectrum Description" if currentFile['SearchType']=='Mascot' else "Spectrum"
-            spec_index = 0 if currentFile['SearchType']=='Mascot' else 3
-            ID_Dict = {}
-            counter = 0
-            for row in rows:
-                if counter % 1000 == 0:
-                    print counter
-                counter += 1
-                scan = row["scan"]
-                if vendor == 'ABI':
-                    exp = str(row['experiment'])
-                if vendor == 'mgf':
-                    ID_Dict[currentFile['scan_dict'][scan]]={}
-                    for col in cols:
-                        ID_Dict[currentFile['scan_dict'][scan]][col]=row[col]
-                if vendor == 'Thermo':
-                    if "File" not in cols or ("File" in cols and filename.lower()==row[spec_lookup].split(".")[spec_index].lower().replace('_RECAL','')+'.raw'):
-                        ID_Dict[scan]={}
-                        if "Scan Type" not in cols: #Logic implemented to label CAD/HCD pair with same ID.
-                            for col in cols:
-                                ID_Dict[scan][col]=row[col]
-                        else:
-                            for col in cols:
-                                ID_Dict[scan][col]=row[col]                        
-                            if row['Scan Type'] == "HCD":
-                                ID_Dict[scan-1]={}
-                                for col in cols:
-                                    ID_Dict[scan-1][col]=row[col] 
-                            else:
-                                ID_Dict[scan+1]={}
-                                for col in cols:
-                                    ID_Dict[scan+1][col]=row[col]                            
-                if vendor == 'ABI':
-                    if "File" not in cols or ("File" in cols and filename.lower()==row[spec_lookup].split(".")[spec_index].lower().replace('_RECAL','')+'.raw'):
-                        ##print "Found!"
-                        ID_Dict[(scan, exp)]={}
+        spec_lookup = "Spectrum Description" if currentFile.SearchType=='Mascot' else "Spectrum"
+        spec_index = 0 if currentFile.SearchType=='Mascot' else 3
+        ID_Dict = {}
+        counter = 0
+        for row in rows:
+            if counter % 1000 == 0:
+                print counter
+            counter += 1
+            scan = row["scan"]
+            if vendor == 'ABI':
+                exp = str(row['experiment'])
+            if vendor == 'mgf':
+                ID_Dict[currentFile.scan_dict[scan]]={}
+                for col in cols:
+                    ID_Dict[currentFile.scan_dict[scan]][col]=row[col]
+            if vendor == 'Thermo':
+                if (("Source File" not in cols and "File" not in cols) or 
+                    ("File" in cols and filename.lower()==row[spec_lookup].split(".")[spec_index].lower().replace('_RECAL','')+'.raw') or
+                    ("Source File" in cols and filename.lower().split('.')[0] == row["Source File"].lower().split('.')[0])):
+                    ID_Dict[scan]={}
+                    if "Scan Type" not in cols: #Logic implemented to label CAD/HCD pair with same ID.
                         for col in cols:
-                            ID_Dict[(scan, exp)][col]=row[col]
-            return ID_Dict
-        except:
-            wx.MessageBox("Error building ID dictionary!\nAre you sure the report matches your file?")
-            return {}
+                            ID_Dict[scan][col]=row[col]
+                    else:
+                        for col in cols:
+                            ID_Dict[scan][col]=row[col]                        
+                        if row['Scan Type'] == "HCD":
+                            ID_Dict[scan-1]={}
+                            for col in cols:
+                                ID_Dict[scan-1][col]=row[col] 
+                        else:
+                            ID_Dict[scan+1]={}
+                            for col in cols:
+                                ID_Dict[scan+1][col]=row[col]                            
+            if vendor == 'ABI':
+                if "File" not in cols or ("File" in cols and filename.lower()==row[spec_lookup].split(".")[spec_index].lower().replace('_RECAL','')+'.raw'):
+                    ##print "Found!"
+                    ID_Dict[(scan, exp)]={}
+                    for col in cols:
+                        ID_Dict[(scan, exp)][col]=row[col]
+        return ID_Dict
+        #except:
+            #wx.MessageBox("Error building ID dictionary!")
+            #return {}
 
     def dump_ID_Dict(self, dict):
-        IDList = dict.keys()
-        IDList.sort()
-        for member in IDList:
-            print str(member) + ' ' + dict[member]["Peptide Sequence"]
-
+        try:
+            IDList = dict.keys()
+            IDList.sort()
+            for member in IDList:
+                print str(member) + ' ' + dict[member]["Peptide Sequence"]
+        except:
+            pass # What even is this function?  Why would we want it?
+        
     def build_ID_list(self, currentFile):
-        currentFile["ID_Dict"] = {}
+        currentFile.ID_Dict = {}
         counter = 0
-        for row in currentFile["rows"]:
+        for row in currentFile.rows:
             if counter % 100 == 0:
                 print counter
             counter += 1
-            if "File" not in currentFile["mzSheetcols"] or ("File" in currentFile["mzSheetcols"] and currentFile["Filename"].lower()==row["Spectrum Description"].split(".")[0].lower()+'.raw'):
-                currentFile["ID_Dict"][scan]={}
-                for col in currentFile["mzSheetcols"]:
+            if "File" not in currentFile.mzSheetcols or ("File" in currentFile.mzSheetcols and currentFile.Filename.lower()==row["Spectrum Description"].split(".")[0].lower()+'.raw'):
+                currentFile.ID_Dict[scan]={}
+                for col in currentFile.mzSheetcols:
                     scan = row["scan"]
-                    currentFile["ID_Dict"][scan][col]=row[col]
+                    currentFile.ID_Dict[scan][col]=row[col]
 
-    def MakeDatabase(self, xlsfile, searchtype="Mascot", mgf_dict={}):
+    def MakeDatabase(self, xlsfile, searchtype="Mascot", scan_convert = None, mgf_dict={}):
         #self.parent.StartGauge(text="Building Database...", color=wx.RED)
-        dbase = db.make_database(xlsfile, parent=self, searchtype=searchtype, mgf_dict=mgf_dict)
+        dbase = db.make_database(xlsfile, parent=self, searchtype=searchtype, scan_convert = scan_convert, mgf_dict=mgf_dict)
         #self.parent.StopGauge()
         #self.parent.HideAdjGauge()
         return dbase
@@ -3308,11 +3464,11 @@ class DrawPanel(wx.Panel):
         del busy
         g.gauge1.SetRange(len(rdr._data))
         g.Update()
-        currentFile["mzSheetcols"] = rdr.columns
+        currentFile.mzSheetcols = rdr.columns
         counter = 0
         busy = PBI.PyBusyInfo("Processing xls, please wait...", parent=None, title="Processing...")
         wx.Yield()
-        vendor = currentFile["vendor"]
+        vendor = currentFile.vendor
         for row in rdr:
             if vendor == 'Thermo':
                 scan = int(row["Spectrum Description"].split(".")[1])
@@ -3321,7 +3477,7 @@ class DrawPanel(wx.Panel):
                 exp = int(row["Spectrum Description"].split(".")[4])
                 row['experiment']= exp-1
             row["scan"] = scan
-            currentFile["rows"].append(row)
+            currentFile.rows.append(row)
             if counter % 50 == 0:
                 #print counter
                 g.gauge1.SetValue(counter)
@@ -3337,12 +3493,12 @@ class DrawPanel(wx.Panel):
         self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["header"] = mz_core.pull_mods_from_mascot_header(xlsfile)
         if "Quantitation method" in self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["header"].keys():
             print "Quant method detected!"
-            currentFile["SILAC"]["mode"]=True
-            currentFile["SILAC"]["method"]=currentFile["header"]["Quantitation method"]
-            print currentFile["SILAC"]["method"]        
+            currentFile.SILAC["mode"]=True
+            currentFile.SILAC["method"]=currentFile.header["Quantitation method"]
+            print currentFile.SILAC["method"]        
         self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["fixedmod"] = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["header"]["Fixed modifications"]
         #print "Building ID list..."
-        currentFile["ID_Dict"]= self.build_ID_dict(currentFile["rows"], currentFile["mzSheetcols"], currentFile["Filename"], vendor)
+        currentFile.ID_Dict= self.build_ID_dict(currentFile.rows, currentFile.mzSheetcols, currentFile.Filename, vendor)
         g.Destroy()
         del busy
         ##print self.ID_Dict.keys()
@@ -3370,40 +3526,40 @@ class DrawPanel(wx.Panel):
 
     def ConvertPixelToIntensity(self, pixel, axis, file_number):
         currentFile = self.msdb.files[self.msdb.Display_ID[file_number]]
-        lastMass = currentFile["mass_ranges"][axis][1]
-        firstMass = currentFile["mass_ranges"][axis][0]        
+        lastMass = currentFile.mass_ranges[axis][1]
+        firstMass = currentFile.mass_ranges[axis][0]        
         #yaxis = self.spectrum.axco[axis][1]
-        yaxis = currentFile["axco"][axis][1]
-        max_int = currentFile["max_int"][axis]
+        yaxis = currentFile.axco[axis][1]
+        max_int = currentFile.max_int[axis]
         inten = (float(yaxis[3]-pixel)/float((yaxis[3]-yaxis[1])))*float(max_int)
         return inten    
 
     def ConvertPixelToTime(self, pixel, file_number):
         currentFile = self.msdb.files[self.msdb.Display_ID[file_number]]
-        stop_time = currentFile["time_ranges"][0][1]
-        start_time = currentFile["time_ranges"][0][0]
-        time = (((pixel - currentFile["xic_axco"][0][0][0])/float(currentFile["xic_axco"][0][0][2]-currentFile["xic_axco"][0][0][0])) * float(stop_time-start_time)) + start_time
+        stop_time = currentFile.time_ranges[0][1]
+        start_time = currentFile.time_ranges[0][0]
+        time = (((pixel - currentFile.xic_axco[0][0][0])/float(currentFile.xic_axco[0][0][2]-currentFile.xic_axco[0][0][0])) * float(stop_time-start_time)) + start_time
         return time
 
     def ConvertPixelToMass(self, pixel, axis, file_number):
         currentFile = self.msdb.files[self.msdb.Display_ID[file_number]]
-        lm = currentFile["mass_ranges"][axis][1]
-        fm = currentFile["mass_ranges"][axis][0]
+        lm = currentFile.mass_ranges[axis][1]
+        fm = currentFile.mass_ranges[axis][0]
         mr = lm - fm
-        pr = currentFile["axco"][0][0][2] - currentFile["axco"][0][0][0]
+        pr = currentFile.axco[0][0][2] - currentFile.axco[0][0][0]
         mpp = float(mr)/float(pr)
-        #mass = (((pixel - currentFile["axco"][0][0][0])/float(currentFile["axco"][0][0][2])) * float(lm-fm)) + fm
-        mass = ((pixel - currentFile["axco"][0][0][0]) * mpp)+ fm
+        #mass = (((pixel - currentFile.axco[0][0][0])/float(currentFile.axco[0][0][2])) * float(lm-fm)) + fm
+        mass = ((pixel - currentFile.axco[0][0][0]) * mpp)+ fm
         return mass
 
     def ConvertMassToPixel(self, mass, axis, file_number):
         currentFile = self.msdb.files[self.msdb.Display_ID[file_number]]
-        firstmass, lastmass = currentFile["mass_ranges"][axis]
+        firstmass, lastmass = currentFile.mass_ranges[axis]
         massrange = lastmass - firstmass
-        pr = currentFile["axco"][0][0][2] - currentFile["axco"][0][0][0]
+        pr = currentFile.axco[0][0][2] - currentFile.axco[0][0][0]
         massperpixel = float(massrange)/float(pr)
         pixelpermass = float(pr)/float(massrange)
-        pixel = ((mass - firstmass) * pixelpermass) + currentFile["axco"][0][0][0]
+        pixel = ((mass - firstmass) * pixelpermass) + currentFile.axco[0][0][0]
         return pixel
     
     
@@ -3516,21 +3672,21 @@ class DrawPanel(wx.Panel):
             self.file=file
             self.e = e            
             if e == "RIC":
-                self.msdb.files[self.msdb.Display_ID[file]]['currently_selected_filter']=self.msdb.files[self.msdb.Display_ID[file]]['filters'][grid]
-                self.msdb.files[self.msdb.Display_ID[file]]['XICinfo']=[self.msdb.files[self.msdb.Display_ID[file]]['filters'][grid], e, grid, file]
+                self.msdb.files[self.msdb.Display_ID[file]].currently_selected_filter = self.msdb.files[self.msdb.Display_ID[file]].filters[grid]
+                self.msdb.files[self.msdb.Display_ID[file]].XICinfo = [self.msdb.files[self.msdb.Display_ID[file]].filters[grid], e, grid, file]
                 #print "FILTER:"
                 #print self.msdb.files[self.msdb.Display_ID[file]]['currently_selected_filter']
                 time = self.ConvertPixelToTime(pos[0], file)
                 self.new_startTime = time
                 #print time
-                self.yaxco = self.msdb.files[self.msdb.Display_ID[file]]['xic_axco'][grid][1]
+                self.yaxco = self.msdb.files[self.msdb.Display_ID[file]].xic_axco[grid][1]
                 self.e = "XIC"
             if e == "SPEC":
                 #print grid
                 mz = self.ConvertPixelToMass(pos[0], grid, file)
                 #print "mz " + str(mz)
-                self.msdb.files[self.msdb.Display_ID[file]]["newf"] = mz
-                self.yaxco = self.msdb.files[self.msdb.Display_ID[file]]['axco'][grid][1]
+                self.msdb.files[self.msdb.Display_ID[file]].newf = mz
+                self.yaxco = self.msdb.files[self.msdb.Display_ID[file]].axco[grid][1]
                 self.e = "SPEC"
         else:
             found, e, file = self.msdb.HitTestThr(pos)
@@ -3541,17 +3697,17 @@ class DrawPanel(wx.Panel):
         event.Skip()        
 
     def set_scan(self, currentFile, file, grid, trace):
-        scanNum = currentFile["rt2scan"][self.f(self.new_startTime, currentFile["rt2scan"].keys())]
-        prev_scan = mz_core.find_MS1(currentFile['scan_dict'], scanNum, "Reverse")
+        scanNum = currentFile.rt2scan[self.f(self.new_startTime, currentFile.rt2scan.keys())]
+        prev_scan = mz_core.find_MS1(currentFile.scan_dict, scanNum, "Reverse")
         self.msdb.set_scan(prev_scan, file)
         self.msdb.build_current_ID(self.msdb.Display_ID[file], prev_scan)
-        currentFile['newf'] = currentFile['xr'][grid][trace][2]-5
-        currentFile['newl'] = currentFile['xr'][grid][trace][3]+8
-        step = float(currentFile["newl"]-currentFile["newf"])/float(currentFile["axes"])
-        current_mz = currentFile["newf"]
-        currentFile["mass_ranges"]=[]
-        for i in range(0, currentFile["axes"]):
-            currentFile["mass_ranges"].append((current_mz, current_mz + step))
+        currentFile.newf = currentFile.xr[grid][trace][2]-5
+        currentFile.newl = currentFile.xr[grid][trace][3]+8
+        step = float(currentFile.newl-currentFile.newf)/float(currentFile.axes)
+        current_mz = currentFile.newf
+        currentFile.mass_ranges=[]
+        for i in range(0, currentFile.axes):
+            currentFile.mass_ranges.append((current_mz, current_mz + step))
             current_mz += step        
 
     def OnLeftUp(self, event):
@@ -3567,12 +3723,12 @@ class DrawPanel(wx.Panel):
         if self.e == 'Thr':
             print "Reset thresh"
             currentFile = self.msdb.files[self.msdb.Display_ID[self.file]] 
-            xaxis = currentFile['axco'][0][0]
-            yaxis = currentFile['axco'][0][1]   
-            max_int = currentFile["max_int"][0]
+            xaxis = currentFile.axco[0][0]
+            yaxis = currentFile.axco[0][1]   
+            max_int = currentFile.max_int[0]
             #_thr_y1 = xaxis[1] - ((float(thresh)/float(max_int)) * (yaxis[3]-yaxis[1]))
             thresh = (xaxis[1] - pos[1])/(yaxis[3]-yaxis[1]) * float(max_int)
-            currentFile["settings"]["label_threshold"][currentFile['vendor']] = thresh
+            currentFile.settings["label_threshold"][currentFile.vendor] = thresh
             print "Set"
             print thresh
             self.Window.ClearOverlay()
@@ -3580,17 +3736,17 @@ class DrawPanel(wx.Panel):
             self.Refresh()        
 
         #-------------------------------------CHECK TO SEE IF FEATURE BOXES HIT
-        #if currentFile["Features"]:
+        #if currentFile.Features:
         if pos: tfound, index, feature = self.msdb.HitTestFeatures(pos)
         if tfound:
             print "HIT!"
             print feature 
             currentFile = self.msdb.files[self.msdb.Display_ID[self.file]] 
-            featureData = currentFile['featureByIndex'][feature]
-            featurePSMs = currentFile['featureToPSMs'].get(feature, [])
-            #To get mass for XIC: currentFile['scanFToPeaks'][(scannum, featurenum)]
-            peaks = currentFile['scanFToPeaks'][(currentFile['scanNum'], feature)]
-            #a = FeaturePopUp.FeaturePopUp(self, -1, feature, currentFile['featureToPSMs'][feature], pos=(pos[0],pos[1]-50), peaks=peaks)
+            featureData = currentFile.featureByIndex[feature]
+            featurePSMs = currentFile.featureToPSMs.get(feature, [])
+            #To get mass for XIC: currentFile.scanFToPeaks[(scannum, featurenum)]
+            peaks = currentFile.scanFToPeaks[(currentFile.scanNum, feature)]
+            #a = FeaturePopUp.FeaturePopUp(self, -1, feature, currentFile.featureToPSMs[feature], pos=(pos[0],pos[1]-50), peaks=peaks)
             a = FeaturePopUp_new.FeaturePopUp(self.parent.parent, -1, feature, featureData, self, featurePSMs)
             self.parent.parent._mgr.AddPane(a, aui.AuiPaneInfo().Right().Caption('Feature # %s' % feature))
             self.parent.parent._mgr.Update()
@@ -3601,7 +3757,7 @@ class DrawPanel(wx.Panel):
         if tfound:
             currentFile = self.msdb.files[self.msdb.Display_ID[tfile]]  
             print "HIT!"
-            if len(currentFile['xic_params']) > 1: #Require at least one XIC window.
+            if len(currentFile.xic_params) > 1: #Require at least one XIC window.
                 self.frm = xicFrame(self, currentFile, self.msdb.active_file)
                 for k in range(0,10):
                     if self.frm.grid.GetCellValue(k, 0) == str(tgrid):
@@ -3642,10 +3798,10 @@ class DrawPanel(wx.Panel):
         tfound, ttrace, tgrid, tfile = self.msdb.HitTestXICBox(pos, 10)
         if tfound:
             currentFile = self.msdb.files[self.msdb.Display_ID[tfile]]
-            currentFile['active_xic'][tgrid] = ttrace
+            currentFile.active_xic[tgrid] = ttrace
             print "TRACE GRID HIT!"
-            if not currentFile['xic_view'][tgrid][ttrace]:
-                currentFile['xic_view'][tgrid][ttrace] = True
+            if not currentFile.xic_view[tgrid][ttrace]:
+                currentFile.xic_view[tgrid][ttrace] = True
             self.Window.UpdateDrawing()
             self.Refresh()            
 
@@ -3654,8 +3810,8 @@ class DrawPanel(wx.Panel):
         tfound, ttrace, tgrid, tfile = self.msdb.HitTestXICBox(pos, 25)
         if tfound:
             currentFile = self.msdb.files[self.msdb.Display_ID[tfile]]
-            if currentFile['active_xic'][tgrid] != ttrace:
-                currentFile['xic_view'][tgrid][ttrace] = not currentFile['xic_view'][tgrid][ttrace]
+            if currentFile.active_xic[tgrid] != ttrace:
+                currentFile.xic_view[tgrid][ttrace] = not currentFile.xic_view[tgrid][ttrace]
             print "CONTROL GRID HIT!"
             self.Window.UpdateDrawing()
             self.Refresh()         
@@ -3670,20 +3826,20 @@ class DrawPanel(wx.Panel):
             if self.e == "SPEC":
                 print wx.GetKeyState(67)
                 if pos != self.postup and not wx.GetKeyState(67):
-                    currentFile['is_zooming'] = True
+                    currentFile.is_zooming = True
                     mz = self.ConvertPixelToMass(pos[0], grid, file)
                     #print "UP:" + str(mz)
-                    currentFile["newl"] = mz
-                    if currentFile["newl"] < currentFile["newf"]:
+                    currentFile.newl = mz
+                    if currentFile.newl < currentFile.newf:
                         temp = 0
-                        temp = currentFile["newl"]
-                        currentFile["newl"] = currentFile["newf"]
-                        currentFile["newf"] = temp
-                    step = float(currentFile["newl"]-currentFile["newf"])/float(currentFile["axes"])
-                    current_mz = currentFile["newf"]
-                    currentFile["mass_ranges"]=[]
-                    for i in range(0, currentFile["axes"]):
-                        currentFile["mass_ranges"].append((current_mz, current_mz + step))
+                        temp = currentFile.newl
+                        currentFile.newl = currentFile.newf
+                        currentFile.newf = temp
+                    step = float(currentFile.newl-currentFile.newf)/float(currentFile.axes)
+                    current_mz = currentFile.newf
+                    currentFile.mass_ranges=[]
+                    for i in range(0, currentFile.axes):
+                        currentFile.mass_ranges.append((current_mz, current_mz + step))
                         current_mz += step
 
             if self.e == "XIC":
@@ -3693,30 +3849,30 @@ class DrawPanel(wx.Panel):
                 if self.grid == grid:
                     if self.postup[0]==pos[0]:
                         #-----------------LEFT DOWN AND UP SAME POSITION IN XIC; GO TO SCAN
-                        currentFile["spectrum_style"] = "single scan"
-                        currentFile["Processing"] = False
+                        currentFile.spectrum_style = "single scan"
+                        currentFile.Processing = False
                         #CHECK IF THERE IS A PEPTIGRAM IN WINDOW
-                        if 'p' not in currentFile["xic_type"][grid]: # [['x'], ['x', 'x', 'x'], ['p']]
-                            if currentFile['vendor']=='Thermo':
-                                scanNum = currentFile["rt2scan"][self.f(self.new_startTime, currentFile["rt2scan"].keys())]
+                        if 'p' not in currentFile.xic_type[grid]: # [['x'], ['x', 'x', 'x'], ['p']]
+                            if currentFile.vendor=='Thermo':
+                                scanNum = currentFile.rt2scan[self.f(self.new_startTime, currentFile.rt2scan.keys())]
                                 self.msdb.set_scan(scanNum, file)
                                 self.msdb.build_current_ID(self.msdb.Display_ID[file], scanNum)
-                            elif currentFile['vendor']=='mgf':
-                                scanNum = currentFile["rt2scan"][self.f(self.new_startTime, currentFile["rt2scan"].keys())]
+                            elif currentFile.vendor=='mgf':
+                                scanNum = currentFile.rt2scan[self.f(self.new_startTime, currentFile.rt2scan.keys())]
                                 self.msdb.set_scan(str(scanNum), file)
                                 self.msdb.build_current_ID(self.msdb.Display_ID[file], scanNum)                            
-                            elif currentFile['vendor']=='ABI':
-                                #scanNum = currentFile["rt2scan"][self.f(self.new_startTime, currentFile["rt2scan"].keys())]
+                            elif currentFile.vendor=='ABI':
+                                #scanNum = currentFile.rt2scan[self.f(self.new_startTime, currentFile.rt2scan.keys())]
                                 #lambda a, l:min(l,key=lambda x:abs(x-a))
-                                RTs = [x[0] for x in currentFile["rt2scan"].keys()]
+                                RTs = [x[0] for x in currentFile.rt2scan.keys()]
                                 rt = self.f(self.new_startTime, RTs)
-                                scanNum = currentFile["rt2scan"][(rt, currentFile['rt2exp'][rt])]
+                                scanNum = currentFile.rt2scan[(rt, currentFile.rt2exp[rt])]
                                 self.msdb.set_scan(scanNum[0], file) #***NOTE: scanNum here has (Scan, "Exp")
-                                self.msdb.build_current_ID(self.msdb.Display_ID[file], (scanNum,currentFile['experiment']), 'ABI')
+                                self.msdb.build_current_ID(self.msdb.Display_ID[file], (scanNum,currentFile.experiment), 'ABI')
                         else: #THERE IS A PEPTIGRAM
                             #CHECK TO SEE if time in middle of peptigram
                             print "CHECKING..."
-                            trace_types = currentFile["xic_type"][grid]
+                            trace_types = currentFile.xic_type[grid]
                             peptidegrams = []
                             for i, member in enumerate(trace_types):
                                 if member == 'p':
@@ -3724,8 +3880,8 @@ class DrawPanel(wx.Panel):
                                     peptidegrams.append(i)
                             trace_dict = {} #This maps trace # to tuple of (start, stop)
                             for member in peptidegrams:
-                                print currentFile['xic'][grid][member]
-                                trace_dict[member] = (min(currentFile['xic'][grid][member], key = lambda t:t[0])[0], max(currentFile['xic'][grid][member], key = lambda t:t[0])[0])
+                                print currentFile.xic[grid][member]
+                                trace_dict[member] = (min(currentFile.xic[grid][member], key = lambda t:t[0])[0], max(currentFile.xic[grid][member], key = lambda t:t[0])[0])
                             print trace_dict
                             match = []
                             for key in trace_dict.keys():
@@ -3734,33 +3890,33 @@ class DrawPanel(wx.Panel):
                                 if self.new_startTime > p_start and self.new_startTime < p_stop:
                                     match.append(key)
                             if match and len(match) == 1:
-                                #scanNum = currentFile["rt2scan"][self.f(self.new_startTime, currentFile["rt2scan"].keys())]
-                                #prev_scan = mz_core.find_MS1(currentFile['scan_dict'], scanNum, "Reverse")
+                                #scanNum = currentFile.rt2scan[self.f(self.new_startTime, currentFile.rt2scan.keys())]
+                                #prev_scan = mz_core.find_MS1(currentFile.scan_dict, scanNum, "Reverse")
                                 #self.msdb.set_scan(prev_scan, file)
                                 #self.msdb.build_current_ID(self.msdb.Display_ID[file], prev_scan)
-                                #a = currentFile['xr']
-                                #currentFile['newf'] = currentFile['xr'][grid][match[0]][2]-5
-                                #currentFile['newl'] = currentFile['xr'][grid][match[0]][3]+8
-                                #step = float(currentFile["newl"]-currentFile["newf"])/float(currentFile["axes"])
-                                #current_mz = currentFile["newf"]
-                                #currentFile["mass_ranges"]=[]
-                                #for i in range(0, currentFile["axes"]):
-                                    #currentFile["mass_ranges"].append((current_mz, current_mz + step))
+                                #a = currentFile.xr
+                                #currentFile.newf = currentFile.xr[grid][match[0]][2]-5
+                                #currentFile.newl = currentFile.xr[grid][match[0]][3]+8
+                                #step = float(currentFile.newl-currentFile.newf)/float(currentFile.axes)
+                                #current_mz = currentFile.newf
+                                #currentFile.mass_ranges=[]
+                                #for i in range(0, currentFile.axes):
+                                    #currentFile.mass_ranges.append((current_mz, current_mz + step))
                                     #current_mz += step
                                 self.set_scan(currentFile, file, grid, match[0])
-                            elif match and len(match) > 1 and currentFile['active_xic'][grid] in match:
+                            elif match and len(match) > 1 and currentFile.active_xic[grid] in match:
                                 #match = traces that match left click hit
-                                #currentFile['active_xic'][grid] = # of the active trace in the grid 
-                                index = match.index(currentFile['active_xic'][grid])
+                                #currentFile.active_xic[grid] = # of the active trace in the grid 
+                                index = match.index(currentFile.active_xic[grid])
                                 self.set_scan(currentFile, file, grid, match[index])
                             else:
-                                scanNum = currentFile["rt2scan"][self.f(self.new_startTime, currentFile["rt2scan"].keys())]
-                                if currentFile['vendor']=='Thermo':
+                                scanNum = currentFile.rt2scan[self.f(self.new_startTime, currentFile.rt2scan.keys())]
+                                if currentFile.vendor=='Thermo':
                                     self.msdb.set_scan(scanNum, file)
                                     self.msdb.build_current_ID(self.msdb.Display_ID[file], scanNum)
-                                elif currentFile['vendor']=='ABI':
+                                elif currentFile.vendor=='ABI':
                                     self.msdb.set_scan(scanNum[0], file) #***NOTE: scanNum here has (Scan, "Exp")
-                                    self.msdb.build_current_ID(self.msdb.Display_ID[file], (scanNum,currentFile['experiment']), 'ABI')                                
+                                    self.msdb.build_current_ID(self.msdb.Display_ID[file], (scanNum,currentFile.experiment), 'ABI')                                
                     #----------------LEFT DOWN AND UP IN SAME XIC GRID BUT MOVED; SET NEW TIME RANGE
                     else:
                         #print "XIC!"
@@ -3768,9 +3924,9 @@ class DrawPanel(wx.Panel):
                         self.new_stopTime = time
                         if wx.GetKeyState(wx.WXK_ALT):
                             # Average scan show.
-                            currentFile["spectrum_style"] = "average scan"
+                            currentFile.spectrum_style = "average scan"
                             #averaging_range = self.new_startTime, self.new_stopTime
-                            relevant_filter = self.msdb.files[self.msdb.Display_ID[file]]['filters'][grid][currentFile["active_xic"][grid]]
+                            relevant_filter = self.msdb.files[self.msdb.Display_ID[file]].filters[grid][currentFile.active_xic[grid]]
 
                             worked = self.msdb.set_average_scan(self.new_startTime,self.new_stopTime, 
                                                                 relevant_filter, 
@@ -3779,7 +3935,7 @@ class DrawPanel(wx.Panel):
                                 #self.msdb.set_scan('Averagescan', file)
 
 
-                            #scanNum = currentFile["rt2scan"][self.f(self.new_startTime, currentFile["rt2scan"].keys())]
+                            #scanNum = currentFile.rt2scan[self.f(self.new_startTime, currentFile.rt2scan.keys())]
                             #self.msdb.set_scan(str(scanNum), file)
                             #self.msdb.build_current_ID(self.msdb.Display_ID[file], scanNum)                             
                         else:
@@ -3788,15 +3944,15 @@ class DrawPanel(wx.Panel):
                                 temp = self.new_stopTime
                                 self.new_stopTime = self.new_startTime
                                 self.new_startTime = temp
-                            if currentFile['vendor']=='Thermo':
-                                currentFile["time_ranges"]=[(self.f(self.new_startTime, currentFile["rt2scan"].keys()), self.f(self.new_stopTime, currentFile["rt2scan"].keys()))]
-                            elif currentFile['vendor']=='mgf':
-                                currentFile["time_ranges"]=[(self.f(self.new_startTime, currentFile["rt2scan"].keys()), self.f(self.new_stopTime, currentFile["rt2scan"].keys()))]                        
-                            elif currentFile['vendor']=='ABI':
-                                RTs = [x[0] for x in currentFile["rt2scan"].keys()]
+                            if currentFile.vendor=='Thermo':
+                                currentFile.time_ranges=[(self.f(self.new_startTime, currentFile.rt2scan.keys()), self.f(self.new_stopTime, currentFile.rt2scan.keys()))]
+                            elif currentFile.vendor=='mgf':
+                                currentFile.time_ranges=[(self.f(self.new_startTime, currentFile.rt2scan.keys()), self.f(self.new_stopTime, currentFile.rt2scan.keys()))]                        
+                            elif currentFile.vendor=='ABI':
+                                RTs = [x[0] for x in currentFile.rt2scan.keys()]
                                 #rt = self.f(self.new_startTime, RTs)
-                                #scanNum = currentFile["rt2scan"][(rt, currentFile['rt2exp'][rt])]                            
-                                currentFile["time_ranges"]=[(self.f(self.new_startTime, RTs), self.f(self.new_stopTime,RTs))]
+                                #scanNum = currentFile.rt2scan[(rt, currentFile.rt2exp[rt])]                            
+                                currentFile.time_ranges=[(self.f(self.new_startTime, RTs), self.f(self.new_stopTime,RTs))]
                 else:
                     print "DRAG N DROP XIC TO DIFFERENT LOCATION"
                     self.frm = xicFrame(self, currentFile, self.msdb.active_file)
@@ -3811,7 +3967,7 @@ class DrawPanel(wx.Panel):
         self.Window.UpdateDrawing()
 
         try:
-            currentFile['is_zooming'] = False
+            currentFile.is_zooming = False
         except:
             pass
 
@@ -3832,9 +3988,9 @@ class DrawPanel(wx.Panel):
         if file > -1:
             currentFile = self.msdb.files[self.msdb.Display_ID[file]]
         if e == "SPEC":
-            #self.msdb.set_mass_ranges(currentFile["FileAbs"])
+            #self.msdb.set_mass_ranges(currentFile.FileAbs)
             self.right_down_pos = pos
-            self.yaxco = self.msdb.files[self.msdb.Display_ID[file]]['axco'][grid][1]
+            self.yaxco = self.msdb.files[self.msdb.Display_ID[file]].axco[grid][1]
         if e == "RIC":
             if event.ShiftDown():
                 print "SHIFT DOWN"
@@ -3842,15 +3998,15 @@ class DrawPanel(wx.Panel):
                 self.right_down_pos = pos
                 time = self.ConvertPixelToTime(pos[0], file)
                 self.average_start = time
-                self.yaxco = self.msdb.files[self.msdb.Display_ID[file]]['xic_axco'][grid][1]
+                self.yaxco = self.msdb.files[self.msdb.Display_ID[file]].xic_axco[grid][1]
 
             else:
                 self.right_down_pos = pos
-                #currentFile["time_ranges"] = [(currentFile["unzStartTime"], currentFile["unzStopTime"])]
+                #currentFile.time_ranges = [(currentFile.unzStartTime, currentFile.unzStopTime)]
                 time = self.ConvertPixelToTime(pos[0], file)
                 self.areaTime = time
                 print time
-                self.yaxco = self.msdb.files[self.msdb.Display_ID[file]]['xic_axco'][grid][1]
+                self.yaxco = self.msdb.files[self.msdb.Display_ID[file]].xic_axco[grid][1]
                 #self.e = "XIC"            
         self.Refresh()
 
@@ -3873,7 +4029,7 @@ class DrawPanel(wx.Panel):
         tfound, tgrid, tfile = self.msdb.HitTestRemoveXIC(pos, 10, 10)
         if tfound:
             currentFile = self.msdb.files[self.msdb.Display_ID[tfile]]
-            if len(currentFile["xic_params"][tgrid]) > 3:
+            if len(currentFile.xic_params[tgrid]) > 3:
                 palette = XICPalette.XICPalette(self, currentFile, tgrid)
                 palette.Show()
         tfound, ttrace, tgrid, tfile = self.msdb.HitTestXICBox(pos, 25)
@@ -3900,7 +4056,7 @@ class DrawPanel(wx.Panel):
         if e == "RIC":
             if not self.right_shift and self.right_down_pos:
                 if pos[0] == self.right_down_pos[0]:
-                    currentFile["time_ranges"] = [(currentFile["unzStartTime"], currentFile["unzStopTime"])]
+                    currentFile.time_ranges = [(currentFile.unzStartTime, currentFile.unzStopTime)]
                 else:
                     #-------------------------------EXECUTING AREA
                     #--NEED ACTIVE
@@ -3910,10 +4066,10 @@ class DrawPanel(wx.Panel):
                         stopTime = max([time, self.areaTime])
 
                         xic = []
-                        for member in currentFile['xic'][grid][currentFile['active_xic'][grid]]:
+                        for member in currentFile.xic[grid][currentFile.active_xic[grid]]:
                             if member[0]>startTime and member[0]<stopTime:
                                 xic.append(member)
-                        aw = AreaWindow.AreaWindow(None, -1, xic, currentFile['settings']['areaCalcOption'])
+                        aw = AreaWindow.AreaWindow(None, -1, xic, currentFile.settings['areaCalcOption'])
                         if aw.valid:
                             aw.Show()
                         else:
@@ -3930,19 +4086,19 @@ class DrawPanel(wx.Panel):
                     print "Capture average"
                     self.right_shift = False
                     self.average_stop = self.ConvertPixelToTime(pos[0], file)
-                    self.average_start_scan = currentFile['rt2scan'][self.f(self.average_start, currentFile["rt2scan"].keys())]
-                    self.average_stop_scan = currentFile['rt2scan'][self.f(self.average_stop, currentFile["rt2scan"].keys())]
-                    self.average_filter = currentFile["xic_params"][grid][currentFile['active_xic'][grid]][2]
-                    #activeFile['scan'] = activeFile['m'].average_scan(activeFile['average_range'][0],activeFile['average_range'][1],activeFile['currently_selected_filter'])
+                    self.average_start_scan = currentFile.rt2scan[self.f(self.average_start, currentFile.rt2scan.keys())]
+                    self.average_stop_scan = currentFile.rt2scan[self.f(self.average_stop, currentFile.rt2scan.keys())]
+                    self.average_filter = currentFile.xic_params[grid][currentFile.active_xic[grid]][2]
+                    #activeFile.scan = activeFile.m.average_scan(activeFile.average_range[0],activeFile.average_range[1],activeFile.currently_selected_filter)
                     print "AVERAGE"
-                    currentFile['scan'] = currentFile['m'].average_scan(self.average_start_scan, self.average_stop_scan, self.average_filter)
+                    currentFile.scan = currentFile.m.average_scan(self.average_start_scan, self.average_stop_scan, self.average_filter)
                     print "DONE"
-                    currentFile["spectrum_style"]='average'
+                    currentFile.spectrum_style='average'
 
         if e == "SPEC":
             # Right down and up in same position zooms out.
             if pos == self.right_down_pos:
-                self.msdb.set_mass_ranges(currentFile["FileAbs"])
+                self.msdb.set_mass_ranges(currentFile.FileAbs)
                 self.msdb.set_axes()
                 self.Window.ClearOverlay()
                 if refresh:
@@ -3951,7 +4107,7 @@ class DrawPanel(wx.Panel):
                 return
 
             # otherwise make XIC    
-            if not currentFile['vendor'] in ['mgf', 'ABI-MALDI'] and self.right_down_pos:
+            if not currentFile.vendor in ['mgf', 'ABI-MALDI'] and self.right_down_pos:
                 #self.Window.ClearOverlay()
                 dc = wx.BufferedDC(wx.ClientDC(self.Window), self.Window._Buffer)
                 dc.DrawText("Building XIC...", pos[0], self.yaxco[1])
@@ -3967,14 +4123,14 @@ class DrawPanel(wx.Panel):
                 if abs(mz1-mz2)>0.01:
                     currentFile = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
                     self.frm = xicFrame(self, currentFile, self.msdb.active_file)
-                    #xics = len(currentFile["xic_mass_ranges"])
+                    #xics = len(currentFile.xic_mass_ranges)
                     traces = 0
-                    wins = len(currentFile["xic_mass_ranges"])
+                    wins = len(currentFile.xic_mass_ranges)
                     for win in range(0, wins):
-                        for trace in range(0, len(currentFile["xic_mass_ranges"][win])):
+                        for trace in range(0, len(currentFile.xic_mass_ranges[win])):
                             traces += 1
                     add_window = wins
-                    if currentFile['xic_style'] == 'OVERLAY':
+                    if currentFile.xic_style == 'OVERLAY':
                         add_window = wins - 1
                     if traces < 10:
                         self.frm.grid.SetCellValue(traces, 0, str(add_window))  #WIN
@@ -3992,7 +4148,7 @@ class DrawPanel(wx.Panel):
                 #del busy
                 #proc.Destroy()
             else:
-                wx.MessageBox("XIC not supported for %s" % currentFile['vendor'], "mzStudio")
+                wx.MessageBox("XIC not supported for %s" % currentFile.vendor, "mzStudio")
 
         self.Window.ClearOverlay()
         if refresh:
@@ -4044,39 +4200,39 @@ class DrawPanel(wx.Panel):
 
         #if key == 67: #"C"
             ##print "Mark average start"
-            #activeFile['average_range']=[activeFile['scanNum']]
-            ##print activeFile['average_range']
+            #activeFile.average_range=[activeFile.scanNum]
+            ##print activeFile.average_range
 
         #if key == 68: #"D"
             ##print "Mark average end"
-            #activeFile['average_range'].append(activeFile['scanNum'])
-            ##print activeFile['average_range']
-            #activeFile['scan'] = activeFile['m'].average_scan(activeFile['average_range'][0],activeFile['average_range'][1],activeFile['currently_selected_filter'])
+            #activeFile.average_range.append(activeFile.scanNum)
+            ##print activeFile.average_range
+            #activeFile.scan = activeFile.m.average_scan(activeFile.average_range[0],activeFile.average_range[1],activeFile.currently_selected_filter)
 
         if key == 87: #"W"  LOCKS FILTER
-            if activeFile['filterLock']==None:
+            if activeFile.filterLock==None:
                 #print "LOCK check"
-                if not activeFile['targ_check']:
+                if not activeFile.targ_check:
                     targ_filt = set()
-                    for member in activeFile['filter_dict'].values():
+                    for member in activeFile.filter_dict.values():
                         id = self.msdb.targ.match(member)
                         if id:
                             targ_filt.add(member)
                         id = self.msdb.targ_ms3.match(member)
                         if id:
                             targ_filt.add(member)
-                    activeFile["targ_filt"] = list(targ_filt)
-                    activeFile['targ_check']=True
-                if activeFile["filter_dict"][activeFile['scanNum']] in activeFile["targ_filt"]:
+                    activeFile.targ_filt = list(targ_filt)
+                    activeFile.targ_check=True
+                if activeFile.filter_dict[activeFile.scanNum] in activeFile.targ_filt:
                     #print "locked on filter"
-                    activeFile['filterLock']=activeFile["filter_dict"][activeFile['scanNum']]
+                    activeFile.filterLock=activeFile.filter_dict[activeFile.scanNum]
                 else:
-                    print activeFile['filter']
-                    print activeFile['targ_filt']
-                print activeFile['filterLock']
+                    print activeFile.filter
+                    print activeFile.targ_filt
+                print activeFile.filterLock
             else:
                 #print "UNLOCK"
-                activeFile['filterLock']=None
+                activeFile.filterLock=None
 
         elif key == 86: #"V"
             #print "View All"
@@ -4086,7 +4242,7 @@ class DrawPanel(wx.Panel):
 
         #if key == 69: #"E" HCD error toggle
             ##Toggle viewing errors
-            #activeFile["errorFlag"] = not activeFile["errorFlag"]
+            #activeFile.errorFlag = not activeFile.errorFlag
 
         #if key == 89: #"Y"
             #self.mass_ranges = [(self.mass_ranges[0][0], self.mass_ranges[self.axes-1][1])]
@@ -4103,132 +4259,152 @@ class DrawPanel(wx.Panel):
         #+----------------------NOTE, ADDITIONAL CODE RUNS FOR +/- scan see logic block below
         #-----------------------Runs set_scan and build_current_ID
         elif key == 61: #"+"
-            if activeFile['vendor']=='Thermo':
-                activeFile["scanNum"] += 1
-                while (activeFile["scanNum"] not in activeFile['filter_dict']
-                       and activeFile['scanNum'] <= activeFile['scan_range'][1]):
-                    activeFile['scanNum'] += 1
-            if activeFile['vendor']=='mgf':
+            if isinstance(activeFile.scanNum, basestring):
+                # Average scans have a "scanNum" of the form "X-Y"
+                activeFile.scanNum = int(activeFile.scanNum.split('-')[1])
+                
+            if activeFile.vendor=='Thermo':
+                activeFile.scanNum += 1
+                while (activeFile.scanNum not in activeFile.filter_dict
+                       and activeFile.scanNum <= activeFile.scan_range[1]):
+                    activeFile.scanNum += 1
+            if activeFile.vendor=='mgf':
                 try:
-                    activeFile["scanNum"] = min(x for x in activeFile['scan_dict']
-                                                if x > activeFile['scanNum'])
+                    activeFile.scanNum = min(x for x in activeFile.scan_dict
+                                                if x > activeFile.scanNum)
                 except ValueError:
-                    activeFile["scanNum"] = max(activeFile['scan_dict'])          
-            if activeFile['vendor']=='ABI':
-                if activeFile["scanNum"] in activeFile["m"].associated_MS2.keys():
-                    currentExp = int(activeFile["experiment"])
-                    maxExp = activeFile["m"].associated_MS2[activeFile["scanNum"]]
+                    activeFile.scanNum = max(activeFile.scan_dict)          
+            if activeFile.vendor=='ABI':
+                if activeFile.scanNum in activeFile.m.associated_MS2.keys():
+                    currentExp = int(activeFile.experiment)
+                    maxExp = activeFile.m.associated_MS2[activeFile.scanNum]
                     if currentExp == maxExp:
-                        activeFile['scanNum']=activeFile["scanNum"]+1
-                        activeFile['experiment'] = "0"
+                        activeFile.scanNum=activeFile.scanNum+1
+                        activeFile.experiment = "0"
                     else:
                         keep_looking = True
                         look_for_exp = currentExp
                         while keep_looking:
                             look_for_exp += 1
-                            look_for = (activeFile['scanNum'], str(look_for_exp))
-                            if look_for in activeFile['filter_dict']:
-                                activeFile['experiment']=str(look_for_exp)
+                            look_for = (activeFile.scanNum, str(look_for_exp))
+                            if look_for in activeFile.filter_dict:
+                                activeFile.experiment=str(look_for_exp)
                                 break
                             if currentExp == maxExp:
-                                activeFile['scanNum']=activeFile["scanNum"]+1
-                                activeFile['experiment'] = "0"
+                                activeFile.scanNum=activeFile.scanNum+1
+                                activeFile.experiment = "0"
                                 break
 
                 else:
-                    activeFile['scanNum']=activeFile["scanNum"]+1
-                    activeFile['experiment'] = "0"
+                    activeFile.scanNum=activeFile.scanNum+1
+                    activeFile.experiment = "0"
 
         elif key == 45: #"-"
             '''
             NEEDS PATCH TO CHECK FOR VALID SCAN
 
             '''            
-            if activeFile['vendor']=='Thermo':
-                activeFile["scanNum"] -= 1 if activeFile["scanNum"] else 0
-                while (activeFile["scanNum"] not in activeFile['filter_dict']
-                       and activeFile['scanNum'] >= activeFile['scan_range'][0]):
-                    activeFile['scanNum'] -= 1                
-            elif activeFile['vendor']=='mgf':
+            if isinstance(activeFile.scanNum, basestring):
+                # Average scans have a "scanNum" of the form "X-Y"
+                activeFile.scanNum = int(activeFile.scanNum.split('-')[0])
+                
+            if activeFile.vendor=='Thermo':
+                activeFile.scanNum -= 1 if activeFile.scanNum else 0
+                while (activeFile.scanNum not in activeFile.filter_dict
+                       and activeFile.scanNum >= activeFile.scan_range[0]):
+                    activeFile.scanNum -= 1                
+            elif activeFile.vendor=='mgf':
                 try:
-                    activeFile["scanNum"] = max(x for x in activeFile['scan_dict']
-                                                if x < activeFile['scanNum'])
+                    activeFile.scanNum = max(x for x in activeFile.scan_dict
+                                                if x < activeFile.scanNum)
                 except ValueError:
-                    activeFile["scanNum"] = 0
+                    activeFile.scanNum = 0
 
 
-            elif activeFile['vendor']=='ABI':
-                if activeFile['experiment']=="0":
-                    if activeFile["scanNum"]-1 in activeFile["m"].associated_MS2.keys():
-                        activeFile['experiment'] = str(activeFile["m"].associated_MS2[activeFile["scanNum"]-1])
-                        activeFile['scanNum']-=1
+            elif activeFile.vendor=='ABI':
+                if activeFile.experiment=="0":
+                    if activeFile.scanNum-1 in activeFile.m.associated_MS2.keys():
+                        activeFile.experiment = str(activeFile.m.associated_MS2[activeFile.scanNum-1])
+                        activeFile.scanNum-=1
                     else:
-                        activeFile['scanNum']-=1
+                        activeFile.scanNum-=1
                 else:
-                    activeFile['experiment'] = str(int(activeFile['experiment'])-1)
+                    activeFile.experiment = str(int(activeFile.experiment)-1)
 
         elif key == 44: # Originally 314 = "Left arrow"; AUI notebook uses this to move through windows; change to <
-            if activeFile['master_scan'] != 'ms2':
-                if activeFile['filterLock']:
-                    msfilter = activeFile['filterLock']
-                    activeFile["scanNum"]=mz_core.find_filter(activeFile["filter_dict"], activeFile["scanNum"], "Reverse", msfilter)   
-                else:
-                    if activeFile['vendor']=='Thermo':
-                        activeFile["scanNum"] = mz_core.find_MS1(activeFile["scan_dict"], activeFile["scanNum"], "Reverse")
-                    if activeFile['vendor']=='ABI':
-                        activeFile["scanNum"] = activeFile["scanNum"] - 1
-                        activeFile['experiment'] = "0"
+            #if activeFile.master_scan != 'ms2':
+            if activeFile.filterLock:
+                msfilter = activeFile.filterLock
+                activeFile.scanNum=mz_core.find_filter(activeFile.filter_dict, activeFile.scanNum, "Reverse", msfilter)   
             else:
-                dlg = wx.MessageDialog(self, 'This is an MS2 file! Use +/- to navigate.', 'Alert', wx.OK | wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
+                if activeFile.vendor=='Thermo':
+                    sn = mz_core.find_MS1(activeFile.scan_dict, activeFile.scanNum, "Reverse")
+                    if sn is None:
+                        dlg = wx.MessageDialog(self, 'This is an MS2 file! Use +/- to navigate.', 'Alert', wx.OK | wx.ICON_INFORMATION)
+                        dlg.ShowModal()
+                        dlg.Destroy()
+                        return
+                    activeFile.scanNum = sn
+                if activeFile.vendor=='ABI':
+                    activeFile.scanNum = activeFile.scanNum - 1
+                    activeFile.experiment = "0"
+            #else:
+                #dlg = wx.MessageDialog(self, 'This is an MS2 file! Use +/- to navigate.', 'Alert', wx.OK | wx.ICON_INFORMATION)
+                #dlg.ShowModal()
+                #dlg.Destroy()
 
 
         elif key == 46: # Originally 316 = "Right arrow"; AUI notebook uses this to move through windows; change to >
-            if activeFile['master_scan'] != 'ms2':
-                if activeFile['filterLock']:
-                    msfilter = activeFile['filterLock']
-                    activeFile["scanNum"]=mz_core.find_filter(activeFile["filter_dict"], activeFile["scanNum"], "Forward", msfilter)
-                else:
-                    if activeFile['vendor']=='Thermo':
-                        activeFile["scanNum"] = mz_core.find_MS1(activeFile["scan_dict"], activeFile["scanNum"], "Forward")
-                    if activeFile['vendor']=='ABI':
-                        activeFile["scanNum"] = activeFile["scanNum"] + 1
-                        activeFile['experiment'] = "0"
+            #if activeFile.master_scan != 'ms2':
+            if activeFile.filterLock:
+                msfilter = activeFile.filterLock
+                activeFile.scanNum=mz_core.find_filter(activeFile.filter_dict, activeFile.scanNum, "Forward", msfilter)
             else:
-                dlg = wx.MessageDialog(self, 'This is an MS2 file! Use +/- to navigate.', 'Alert', wx.OK | wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
+                if activeFile.vendor=='Thermo':
+                    sn = mz_core.find_MS1(activeFile.scan_dict, activeFile.scanNum, "Forward")
+                    if sn is None:
+                        dlg = wx.MessageDialog(self, 'This is an MS2 file! Use +/- to navigate.', 'Alert', wx.OK | wx.ICON_INFORMATION)
+                        dlg.ShowModal()
+                        dlg.Destroy()
+                        return                        
+                    activeFile.scanNum = sn
+                if activeFile.vendor=='ABI':
+                    activeFile.scanNum = activeFile.scanNum + 1
+                    activeFile.experiment = "0"
+            #else:
+                #dlg = wx.MessageDialog(self, 'This is an MS2 file! Use +/- to navigate.', 'Alert', wx.OK | wx.ICON_INFORMATION)
+                #dlg.ShowModal()
+                #dlg.Destroy()
 
         elif key == 83: #"S"  VIEW SPECTRUM ONLY
-            activeFile["mode"] = "SPEC"
+            activeFile.mode = "SPEC"
             self.msdb.set_axes()
 
         elif key == 82: #"R" VIEW CHROMATOGRAM AND SPECTRUM
-            activeFile["mode"] = "RIC-SPEC"
+            activeFile.mode = "RIC-SPEC"
             self.msdb.set_axes()
 
         elif key == 81: # "Q"
             print "Q"
-            if not activeFile["Processing"]:
-                activeFile["Processing"] = True # Was 'RRC'.
+            if not activeFile.Processing:
+                activeFile.Processing = True # Was 'RRC'.
 
-                #activeFile['viewCentroid']=True              
-                #activeFile["scan"] = activeFile["m"].rscan(activeFile["scanNum"])
-                #activeFile['scan'] = activeFile['m'].scan(activeFile['scanNum'], centroid = True)
-                #self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
+                #activeFile.viewCentroid=True              
+                #activeFile.scan = activeFile.m.rscan(activeFile.scanNum)
+                #activeFile.scan = activeFile.m.scan(activeFile.scanNum, centroid = True)
+                #self.msdb.set_scan(activeFile.scanNum, self.msdb.active_file)
 
-                #self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"]) 
+                #self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile.scanNum) 
             else:
-                activeFile["Processing"] = False
-                activeFile['processed_data'] = activeFile['unprocessed_data']
+                activeFile.Processing = False
+                activeFile.processed_data = activeFile.scan
 
-                self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
+                self.msdb.set_scan(activeFile.scanNum, self.msdb.active_file)
 
-                #self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"])                 
+                #self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile.scanNum)                 
 
         elif key == 89:# What is it?
-            activeFile['Analytical_Overlay'] = not activeFile['Analytical_Overlay']
+            activeFile.Analytical_Overlay = not activeFile.Analytical_Overlay
 
         elif key == 80: #"P" PROPAGATE XICS
             #print "Propagating XICs..."
@@ -4247,19 +4423,19 @@ class DrawPanel(wx.Panel):
                     for m in [0,1,2,3]:
                         for n in [0,1,2]:
                             self.frm.grid.SetCellValue(m, n, "")
-                    for i, member in enumerate(activeFile["xic_mass_ranges"]):
+                    for i, member in enumerate(activeFile.xic_mass_ranges):
                         #print i
-                        #print activeFile["filters"][i]
-                        self.frm.grid.SetCellValue(i, 0, str(activeFile["xic_mass_ranges"][i][0]))
-                        self.frm.grid.SetCellValue(i, 1, str(activeFile["xic_mass_ranges"][i][1]))
-                        self.frm.grid.SetCellValue(i, 2, str(activeFile["filters"][i]))
+                        #print activeFile.filters[i]
+                        self.frm.grid.SetCellValue(i, 0, str(activeFile.xic_mass_ranges[i][0]))
+                        self.frm.grid.SetCellValue(i, 1, str(activeFile.xic_mass_ranges[i][1]))
+                        self.frm.grid.SetCellValue(i, 2, str(activeFile.filters[i]))
                     self.frm.OnClick(None)
                     self.frm.Destroy()
                     del busy
                     proc.Destroy()
 
         elif key == 71:# "g"  Get isotope list
-            #label_file = os.path.dirname(activeFile["xlsSource"]) + '\\IsotopeLabels.csv'
+            #label_file = os.path.dirname(activeFile.xlsSource) + '\\IsotopeLabels.csv'
             label_file = mzGUI.file_chooser('Select isotope label csv file', wildcard='csv files (*.csv)|*.csv')
             if label_file:
                 rdr = csv.reader(open(label_file), delimiter=',', quotechar='|')
@@ -4273,18 +4449,18 @@ class DrawPanel(wx.Panel):
         #    self.findFrame.Show()
 
         elif key == 85:# "U"
-            activeFile["label_non_id"] = not activeFile["label_non_id"]
+            activeFile.label_non_id = not activeFile.label_non_id
 
         elif key == 49: #"1"
-            activeFile["axes"] = 1
+            activeFile.axes = 1
             self.msdb.set_axes()
 
         elif key == 50: #"2"
-            activeFile["axes"] = 2
+            activeFile.axes = 2
             self.msdb.set_axes()
 
         elif key == 51: #"3"
-            activeFile["axes"] = 3
+            activeFile.axes = 3
             self.msdb.set_axes()
 
         elif key == 52: #"4" LOAD REPORTER ION CORRECTION FILE.
@@ -4301,37 +4477,37 @@ class DrawPanel(wx.Panel):
             #IDd_Ions = LabelCoverage.derive_IDd_Ions(activeFile)
             #print IDd_Ions
             #key = None
-            #if activeFile['vendor']=='Thermo':
-                #key = activeFile["scanNum"]
-            #elif activeFile['vendor']=='ABI':
-                #key = (activeFile['scanNum'], activeFile['experiment'])
-            #if activeFile["SearchType"]=="Mascot":
-                #seq = activeFile["ID_Dict"][key]["Peptide Sequence"]
-                #fixedmod = activeFile["fixedmod"]
-                #varmod = activeFile["ID_Dict"][key]["Variable Modifications"]            
+            #if activeFile.vendor=='Thermo':
+                #key = activeFile.scanNum
+            #elif activeFile.vendor=='ABI':
+                #key = (activeFile.scanNum, activeFile.experiment)
+            #if activeFile.SearchType=="Mascot":
+                #seq = activeFile.ID_Dict[key]["Peptide Sequence"]
+                #fixedmod = activeFile.fixedmod
+                #varmod = activeFile.ID_Dict[key]["Variable Modifications"]            
             #lf = LabelCoverage.CoveragePanel(self, seq, fixedmod, varmod, IDd_Ions, True, True)
             #lf.Show()
 
         elif key == 73: #"i"
-            if self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["axes"] == 1:
-                self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["mass_ranges"]=[(110,120)]
+            if self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]].axes == 1:
+                self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]].mass_ranges =[(110,120)]
 
         elif key == 56: #"8"
-            if self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["axes"] == 1:
-                self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["mass_ranges"]=[(109,125)]   
+            if self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]].axes == 1:
+                self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]].mass_ranges =[(109,125)]   
 
         #elif key == 77: #"M"
             #self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["viewMascot"] = not self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["viewMascot"]
-            #self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"])
+            #self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile.scanNum)
             #print "TOGGLE"
             #self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["viewMascot"] 
 
         elif key == 76: #"L"
-            self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["locked"] = not self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["locked"]
+            self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]].locked = not self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]].locked
 
         elif key == 84:
-            if self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["axes"] == 1:
-                self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]["mass_ranges"]=[(121,136)]
+            if self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]].axes == 1:
+                self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]].mass_ranges =[(121,136)]
 
         #elif key == 315: # "UP"
             #if self.msdb.getDisplayWindows() > 1:
@@ -4351,17 +4527,17 @@ class DrawPanel(wx.Panel):
             return
 
         if key in [61, 45, 44, 46]:
-            activeFile["spectrum_style"] = "single scan"
-            activeFile["Processing"] = False
+            activeFile.spectrum_style = "single scan"
+            activeFile.Processing = False
             try:
-                self.msdb.set_scan(activeFile["scanNum"], self.msdb.active_file)
+                self.msdb.set_scan(activeFile.scanNum, self.msdb.active_file)
             except KeyError:
-                print "Scan %s not present in file.  (Return from OnKeyDown.)" % activeFile["scanNum"]
+                print "Scan %s not present in file.  (Return from OnKeyDown.)" % activeFile.scanNum
                 return
-            if activeFile['vendor']=='Thermo':
-                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile["scanNum"])
-            if activeFile['vendor']=='ABI':
-                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], (activeFile["scanNum"], activeFile['experiment']), 'ABI')
+            if activeFile.vendor=='Thermo':
+                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], activeFile.scanNum)
+            if activeFile.vendor=='ABI':
+                self.msdb.build_current_ID(self.msdb.Display_ID[self.msdb.active_file], (activeFile.scanNum, activeFile.experiment), 'ABI')
 
         self.Window.UpdateDrawing()
         self.Refresh()
@@ -4455,37 +4631,37 @@ class DrawPanel(wx.Panel):
             font_size = 8
         scaling = False
         currentFile = self.msdb.files[self.msdb.Display_ID[rawID]]
-        startTime = currentFile["time_ranges"][0][0]
-        stopTime = currentFile["time_ranges"][0][1]
-        active_xic = currentFile['active_xic'][key]
+        startTime = currentFile.time_ranges[0][0]
+        stopTime = currentFile.time_ranges[0][1]
+        active_xic = currentFile.active_xic[key]
         window_marks = None
-        #if key in currentFile['xic_marks'].keys():
-        window_marks = currentFile['xic_marks'][key]
+        #if key in currentFile.xic_marks.keys():
+        window_marks = currentFile.xic_marks[key]
         maxTable = max_tables[key]
         #maxTable = []
-        #for xic in range(0, len(currentFile["xic_params"][key])):
+        #for xic in range(0, len(currentFile.xic_params[key])):
         #    maxTable.append(self.msdb.GetMaxSignal(startTime, stopTime, key, self.msdb.Display_ID[rawID], xic))
         max_trace = maxTable.index(max(maxTable))
-        xics = len(currentFile["xic_params"][key])
-        xaxis = currentFile['xic_axco'][key][0]
-        yaxis = currentFile['xic_axco'][key][1]        
+        xics = len(currentFile.xic_params[key])
+        xaxis = currentFile.xic_axco[key][0]
+        yaxis = currentFile.xic_axco[key][1]        
         dc.SetBrush(wx.Brush(wx.BLACK, wx.SOLID))
-        #dc.DrawRectangle(xaxis[0]-10, (yaxis[1]+10)+(30*len(currentFile["xic_params"][key])),10,10)
+        #dc.DrawRectangle(xaxis[0]-10, (yaxis[1]+10)+(30*len(currentFile.xic_params[key])),10,10)
         dc.DrawRectangle(xaxis[0]-10, (yaxis[1]+10),10,10)
-        for xic in range(0, len(currentFile["xic_params"][key])):
+        for xic in range(0, len(currentFile.xic_params[key])):
             trace_marks = None
             #if window_marks:
-            #if xic in currentFile['xic_marks'][key].keys():
-            trace_marks = currentFile['xic_marks'][key][xic]            
+            #if xic in currentFile.xic_marks[key].keys():
+            trace_marks = currentFile.xic_marks[key][xic]            
             col = self.get_xic_color(xic, dc)
             #dc.SetBrush(wx.Brush(col, wx.SOLID))        
-            if xics > 1 and xics <4:
+            if 1 < xics < 4: 
                 dc.SetTextForeground(col)
                 dc.SetFont(wx.Font(6, wx.ROMAN, wx.NORMAL, wx.BOLD, False))
-                ex = dc.GetTextExtent(str(currentFile['xic_mass_ranges'][key][xic][0]))
-                dc.DrawText(str(currentFile['xic_mass_ranges'][key][xic][0])+'-', xaxis[0]-1-ex[0], (yaxis[1]+48)+ (30*xic))
-                ex = dc.GetTextExtent(str(currentFile['xic_mass_ranges'][key][xic][1]))
-                dc.DrawText(str(currentFile['xic_mass_ranges'][key][xic][1]), xaxis[0]-1-ex[0], (yaxis[1]+58)+ (30*xic))
+                ex = dc.GetTextExtent(str(currentFile.xic_mass_ranges[key][xic][0]))
+                dc.DrawText(str(currentFile.xic_mass_ranges[key][xic][0])+'-', xaxis[0]-1-ex[0], (yaxis[1]+48)+ (30*xic))
+                ex = dc.GetTextExtent(str(currentFile.xic_mass_ranges[key][xic][1]))
+                dc.DrawText(str(currentFile.xic_mass_ranges[key][xic][1]), xaxis[0]-1-ex[0], (yaxis[1]+58)+ (30*xic))
                 dc.SetTextForeground("BLACK")
                 dc.SetFont(wx.Font(10, wx.ROMAN, wx.NORMAL, wx.BOLD, False))
                 #dc.DrawRectangle(xaxis[0]+250 + (20*xic), yaxis[1]-20,10,10)
@@ -4496,19 +4672,19 @@ class DrawPanel(wx.Panel):
                 #dc.DrawLine(xaxis[0]-35, (yaxis[1]+10) + (20*xic),xaxis[0]-35, yaxis[1]+20 + (20*xic))
                 #dc.DrawLine(xaxis[0]-35, (yaxis[1]+19) + (20*xic),xaxis[0]-32, yaxis[1]+15 + (20*xic))
                 #dc.DrawLine(xaxis[0]-35, (yaxis[1]+19) + (20*xic),xaxis[0]-38, yaxis[1]+15 + (20*xic))
-                dc.DrawText('+' if currentFile['xic_view'][key][xic] else '-', xaxis[0]-25+2, (yaxis[1]+40)+ (30*xic)-3)
+                dc.DrawText('+' if currentFile.xic_view[key][xic] else '-', xaxis[0]-25+2, (yaxis[1]+40)+ (30*xic)-3)
                 dc.SetBrush(wx.Brush(col, wx.SOLID))
                 dc.DrawRectangle(xaxis[0]-10, (yaxis[1]+40)+ (30*xic),10,10) 
-            if currentFile['xic_view'][key][xic]:
+            if currentFile.xic_view[key][xic]:
                 currentActive=False
                 if active_xic == xic:
                     currentActive = True
                 # if xic == 0, only one trace to draw.
-                #a = currentFile['xic_scale'][key]
-                scale = currentFile['xic_scale'][key][xic]
+                #a = currentFile.xic_scale[key]
+                scale = currentFile.xic_scale[key][xic]
                 #xaxis[0]-10, (yaxis[1]+10)+ (20*xic),10,10
-                #xaxis = currentFile['xic_axco'][key][0]
-                #yaxis = currentFile['xic_axco'][key][1]
+                #xaxis = currentFile.xic_axco[key][0]
+                #yaxis = currentFile.xic_axco[key][1]
                 dc.SetPen(wx.Pen(wx.BLACK,1))
                 dc.DrawLine(*xaxis)
                 self.msdb.svg["lines"].append(xaxis)
@@ -4533,14 +4709,14 @@ class DrawPanel(wx.Panel):
                     scaling = True                
                 elif str(scale).lower().startswith("s"):
                     #Scale to a trace
-                    max_signal = max_tables[int(str(scale)[1:])][currentFile['active_xic'][int(str(scale)[1:])]]      # #should make to active trace
+                    max_signal = max_tables[int(str(scale)[1:])][currentFile.active_xic[int(str(scale)[1:])]]      # #should make to active trace
                     scaling = True
                 else:
                     print "SCALING"
                     max_signal = scale
                     scaling = True           
-                #tr = int(currentFile["time_ranges"][0][1])-int(currentFile["time_ranges"][0][0])
-                tr = (currentFile["time_ranges"][0][1])-(currentFile["time_ranges"][0][0])
+                #tr = int(currentFile.time_ranges[0][1])-int(currentFile.time_ranges[0][0])
+                tr = (currentFile.time_ranges[0][1])-(currentFile.time_ranges[0][0])
                 #print "tr:" + str(tr)
                 try:
                     px = float(width)/float(tr)
@@ -4574,15 +4750,15 @@ class DrawPanel(wx.Panel):
                                 c_inten = trace_marks[mark].intensity
                                 y2 = (yaxis[1] + (height - c_inten*py)) if c_inten < max_signal else (yaxis[1] + (height - max_signal*py))  
                             #--------------XIC Lookup is used by OnMotion for coordinates and information
-                            currentFile['xic_lookup'].append([x2,y2,currentFile['xic_marks'][key][xic][mark]])
+                            currentFile.xic_lookup.append([x2,y2,currentFile.xic_marks[key][xic][mark]])
                             dc.DrawText("*", x2-10, y2-20)
                     dc.SetFont(wx.Font(font_size, wx.ROMAN, wx.NORMAL, wx.BOLD, False))
                     dc.SetTextForeground("BLACK")
                 #t4 = time.time()
                 #--------------------------------------------------------------------
                 #This code builds the XIC - loop through all data points and make a list of points to draw
-                for member in currentFile['xic'][key][xic]:
-                    if member[0]>startTime and member[0]<stopTime:
+                for member in currentFile.xic[key][xic]:
+                    if startTime < member[0] < stopTime: #member[0]>startTime and member[0]<stopTime:
                         x2 = yaxis[0] + px*(member[0]-startTime)
                         if not scaling:
                             y2 = yaxis[1] + (height - member[1]*py)
@@ -4669,7 +4845,7 @@ class DrawPanel(wx.Panel):
                         memberstr = "%.2f" % member if isinstance(member, float) else str(member)
                     else:
                         memberstr = "%.4f" % member if isinstance(member, float) else str(member)
-                    x1 = currentFile['xic_axco'][key][0][0] + px*((member-startTime))
+                    x1 = currentFile.xic_axco[key][0][0] + px*((member-startTime))
                     if x1 > (xaxis[0]-1) and x1 < (xaxis[2] +1):
                         dc.DrawText(memberstr, x1-8,yaxis[3]+5)
                         self.msdb.svg["text"].append((memberstr, x1-8,yaxis[3]+5,0.00001))
@@ -4683,21 +4859,21 @@ class DrawPanel(wx.Panel):
                 if currentActive:
                     col = self.get_xic_color(xic, dc)
                     dc.SetTextForeground(col)
-                    dc.DrawText("mz " + str(currentFile['xic_mass_ranges'][key][xic][0]) + '-'+ str(currentFile['xic_mass_ranges'][key][xic][1]) + ' (' + currentFile['filters'][key][xic].strip() + ')', currentFile['xic_axco'][key][1][0], currentFile['xic_axco'][key][1][1] - 20)
-                    dc.DrawText(currentFile['xic_title'][key][xic], xaxis[2] - dc.GetTextExtent(currentFile['xic_title'][key][xic])[0], currentFile['xic_axco'][key][1][1] - 15)
-                    #currentFile['xic_title'][key][xic]
-                    self.msdb.svg["text"].append(("mz " + str(currentFile['xic_mass_ranges'][key][xic][0]) + '-'+ str(currentFile['xic_mass_ranges'][key][xic][1]), currentFile['xic_axco'][key][1][0], currentFile['xic_axco'][key][1][1] - 20,0.00001))
-                if currentFile['spectrum_style']=='single scan':
-                    if currentFile['vendor']=='Thermo':
+                    dc.DrawText("mz " + str(currentFile.xic_mass_ranges[key][xic][0]) + '-'+ str(currentFile.xic_mass_ranges[key][xic][1]) + ' (' + currentFile.filters[key][xic].strip() + ')', currentFile.xic_axco[key][1][0], currentFile.xic_axco[key][1][1] - 20)
+                    dc.DrawText(currentFile.xic_title[key][xic], xaxis[2] - dc.GetTextExtent(currentFile.xic_title[key][xic])[0], currentFile.xic_axco[key][1][1] - 15)
+                    #currentFile.xic_title[key][xic]
+                    self.msdb.svg["text"].append(("mz " + str(currentFile.xic_mass_ranges[key][xic][0]) + '-'+ str(currentFile.xic_mass_ranges[key][xic][1]), currentFile.xic_axco[key][1][0], currentFile.xic_axco[key][1][1] - 20,0.00001))
+                if currentFile.spectrum_style=='single scan':
+                    if currentFile.vendor=='Thermo':
 
-                        rt = currentFile['rt_dict'][currentFile['scanNum']]
+                        rt = currentFile.rt_dict[currentFile.scanNum]
 
-                    elif currentFile['vendor']=='mgf':
-                        #rt = currentFile['rt_dict'][currentFile['scanNum']]                
-                        rt = currentFile['scanNum']
-                    elif currentFile['vendor']=='ABI':
-                        rt = currentFile['rt_dict'][(currentFile['scanNum'], currentFile['experiment'])][0]
-                    current_x = currentFile['xic_axco'][key][0][0] + ((float(rt)-startTime)*px)
+                    elif currentFile.vendor=='mgf':
+                        #rt = currentFile.rt_dict[currentFile.scanNum]                
+                        rt = currentFile.scanNum
+                    elif currentFile.vendor=='ABI':
+                        rt = currentFile.rt_dict[(currentFile.scanNum, currentFile.experiment)][0]
+                    current_x = currentFile.xic_axco[key][0][0] + ((float(rt)-startTime)*px)
                     #------------------This draws the red line on the XIC
                     dc.SetPen(wx.Pen(wx.RED,2))
                     bar_min = xaxis[0]
@@ -4718,35 +4894,35 @@ class DrawPanel(wx.Panel):
         #pdc = wx.BufferedDC(wx.ClientDC(self), self._Buffer)
         currentFile = self.msdb.files[self.msdb.Display_ID[rawID]]
 
-        if "scansWithFeatures" in currentFile and currentFile["scanNum"] in currentFile["scansWithFeatures"]:
+        if "scansWithFeatures" in currentFile and currentFile.scanNum in currentFile.scansWithFeatures:
             gdc = wx.GCDC(dc)
-            currentFile['FeatureBoxes'] = []
+            currentFile.FeatureBoxes = []
             print "FOUND FEATURES"
-            thresh = currentFile["settings"]["label_threshold"][currentFile['vendor']]
+            thresh = currentFile.settings["label_threshold"][currentFile.vendor]
 
-            firstMass = currentFile["mass_ranges"][key][0]
-            lastMass = currentFile["mass_ranges"][key][1]
+            firstMass = currentFile.mass_ranges[key][0]
+            lastMass = currentFile.mass_ranges[key][1]
 
-            xaxis = currentFile['axco'][key][0]
-            yaxis = currentFile['axco'][key][1]
+            xaxis = currentFile.axco[key][0]
+            yaxis = currentFile.axco[key][1]
             height = yaxis[1]-yaxis[3]
             width = xaxis[2]-xaxis[0]
             px = width
             self.width = width
             self.indent = yaxis[0]
 
-            if not currentFile['intensity_scaling']:
+            if not currentFile.intensity_scaling:
                 max_int = self.msdb.GetMaxInt(firstMass, lastMass, self.msdb.Display_ID[rawID])
             else:
-                max_int = currentFile['intensity_scaling']
+                max_int = currentFile.intensity_scaling
 
-            currentFile["max_int"][key]=max_int
+            currentFile.max_int[key]=max_int
 
-            features = currentFile["scanToF"][currentFile["scanNum"]] 
-            mr = currentFile["mass_ranges"][key][1]-currentFile["mass_ranges"][key][0]
+            features = currentFile.scanToF[currentFile.scanNum] 
+            mr = currentFile.mass_ranges[key][1]-currentFile.mass_ranges[key][0]
             for feature in features:
 
-                scan_data = currentFile["scanFToPeaks"][currentFile["scanNum"], feature]
+                scan_data = currentFile.scanFToPeaks[currentFile.scanNum, feature]
                 max_mz = scan_data[len(scan_data)-1][0] + 0.1
 
                 # scan_data[0][0] is the first mass of the feature
@@ -4761,7 +4937,7 @@ class DrawPanel(wx.Panel):
                     #x1 = yaxis[0] + px*((member[0]-firstMass)/float(mr))
                     #x2 = x1                
 
-                    if currentFile['intensity_scaling']:
+                    if currentFile.intensity_scaling:
                         if scan_data[0][1] > float(max_int):
                             y1 = yaxis[1] + yaxis[3]-yaxis[1] - (yaxis[3]-yaxis[1])                
                     y_frac = (float(yaxis[3])-float(y1))/(float(yaxis[3])-float(yaxis[1]))
@@ -4771,8 +4947,8 @@ class DrawPanel(wx.Panel):
                         gdc.SetBrush(wx.Brush(brushclr))                    
                         gdc.DrawRectangle(x1, y1,x2-x1,yaxis[3]-y1)
                         try:
-                            #seq = currentFile["featureToPSMs"][feature][0]['Peptide Sequence']
-                            psms = currentFile["featureToPSMs"][feature]
+                            #seq = currentFile.featureToPSMs[feature][0]['Peptide Sequence']
+                            psms = currentFile.featureToPSMs[feature]
                             psms.sort(key=lambda t: t["Peptide Score"], reverse=True) 
                             seq = psms[0]['Peptide Sequence']
                         except:
@@ -4786,14 +4962,14 @@ class DrawPanel(wx.Panel):
                         dc.SetPen(wx.Pen(wx.BLACK,3))
                         pen = wx.Pen(wx.BLACK,1)                         
                         dc.DrawRectangle(x2,y1+20,10,10)
-                        currentFile['FeatureBoxes'].append((x2, y1+20, x2+10, y1+30, feature))
+                        currentFile.FeatureBoxes.append((x2, y1+20, x2+10, y1+30, feature))
                     #---------------- DRAWS THE FEATURE PEAKS
                     for member in scan_data:
                         if member[0]>firstMass and member[0]<lastMass:
                             x1 = yaxis[0] + px*((member[0]-firstMass)/float(mr))
                             x2 = x1
                             y1 = yaxis[1] + yaxis[3]-yaxis[1] - (yaxis[3]-yaxis[1])*(member[1]/float(max_int))
-                            if currentFile['intensity_scaling']:
+                            if currentFile.intensity_scaling:
                                 if member[1] > float(max_int):
                                     y1 = yaxis[1] + yaxis[3]-yaxis[1] - (yaxis[3]-yaxis[1])
 
@@ -4803,49 +4979,49 @@ class DrawPanel(wx.Panel):
                             dc.DrawLine(x1, y1, x2, y2)
 
     def DrawTextLabels(self, scan_data, dc, thresh, cutoff, currentFile, key, scan_type, rd, rawID, filter):
-        xaxis = currentFile['axco'][key][0]
-        yaxis = currentFile['axco'][key][1]
+        xaxis = currentFile.axco[key][0]
+        yaxis = currentFile.axco[key][1]
         height = yaxis[1]-yaxis[3]
         width = xaxis[2]-xaxis[0]
-        firstMass = currentFile["mass_ranges"][key][0]
-        lastMass = currentFile["mass_ranges"][key][1]    
+        firstMass = currentFile.mass_ranges[key][0]
+        lastMass = currentFile.mass_ranges[key][1]    
 
         #if profile: # and scan_type == 'MS1'
-        #    if currentFile['vendor']=='Thermo':
+        #    if currentFile.vendor=='Thermo':
         #        if filter.find("ITMS + p") == -1:
-        #            scan_data = currentFile["m"].rscan(currentFile["scanNum"])
+        #            scan_data = currentFile.m.rscan(currentFile.scanNum)
         #        else:
-        #            scan_data = currentFile["m"].scan(currentFile["scanNum"], True)
+        #            scan_data = currentFile.m.scan(currentFile.scanNum, True)
 
-        #if currentFile['vendor']=='ABI':
-        #        scan_data = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = currentFile['settings']['threshold_cent_abi'])
-        #    if currentFile['vendor']=='ABI-MALDI':
+        #if currentFile.vendor=='ABI':
+        #        scan_data = currentFile.m.cscan(currentFile.m.scan_time_from_scan_name(currentFile.scanNum), currentFile.experiment, algorithm=currentFile.settings['abi_centroid'], eliminate_noise = currentFile.settings['eliminate_noise'], step_length = currentFile.settings['step_length'], peak_min = currentFile.settings['peak_min'], cent_thresh = currentFile.settings['threshold_cent_abi'])
+        #    if currentFile.vendor=='ABI-MALDI':
         #        # The multiplierz centroid function should be used here instead.
-        #        scan_data = t2dv2.centroid(currentFile['m'].scan())
+        #        scan_data = t2dv2.centroid(currentFile.m.scan())
         #else:
-        #    scan_data = currentFile["scan"]          
+        #    scan_data = currentFile.scan          
 
-        if currentFile['Processing']==True and self.parent.parent.custom_spectrum_process:
+        if currentFile.Processing==True and self.parent.parent.custom_spectrum_process:
             # scan_data is already coming from being processed in DrawSpectrum!  This is redundant!
             #scan_data = self.parent.parent.custom_spectrum_process(scan_data)
-            #currentFile["processed_data"] = scan_data
+            #currentFile.processed_data = scan_data
 
-            #currentFile["scan"] = scan_data
+            #currentFile.scan = scan_data
             #----------FOR PROCESSED SPECTRUM, MUST OVERRIDE RAW DATA
             #Redefine first and last mass - this is for viewing the entire spectrum
             minMass = min([x[0] for x in scan_data])
             maxMass = max([x[0] for x in scan_data])
-            currentFile['processed_first']=minMass
-            currentFile['processed_last']=maxMass
+            currentFile.processed_first=minMass
+            currentFile.processed_last=maxMass
         #else:
-            #currentFile["processed_data"] = scan_data
-        assert currentFile['processed_data'] == scan_data
+            #currentFile.processed_data = scan_data
+        assert currentFile.processed_data == scan_data
         #if scan_data:
         #    max_int = max(x[1] for x in scan_data)        
         #else:
         #    max_int = 1        
-        if not currentFile['Processing']:
-            mr = currentFile["mass_ranges"][key][1]-currentFile["mass_ranges"][key][0] #MASS RANGE
+        if not currentFile.Processing:
+            mr = currentFile.mass_ranges[key][1]-currentFile.mass_ranges[key][0] #MASS RANGE
         else:
             mr = lastMass - firstMass   
 
@@ -4876,11 +5052,11 @@ class DrawPanel(wx.Panel):
             if member[0]>firstMass and member[0]<lastMass:
                 x1 = yaxis[0] + px*((member[0]-firstMass)/float(mr))
                 y1 = yvar1 - yvar2*(member[1]/float(max_int))
-                if currentFile['intensity_scaling']:
+                if currentFile.intensity_scaling:
                     if member[1] > float(max_int):
                         y1 = yvar1 - yvar2 #IF INTENSITY SCALING, and would go off-scale, scale to max display.
                 y2 = yaxis[3]            
-                if member[1] > thresh: #or member[0] in currentFile["label_dict"].keys():  #ONLY LABEL IF OVER THRESHOLD
+                if member[1] > thresh: #or member[0] in currentFile.label_dict.keys():  #ONLY LABEL IF OVER THRESHOLD
                     angle = 90
                     pt = 10
                     right_margin = 9
@@ -4889,28 +5065,28 @@ class DrawPanel(wx.Panel):
                         pt = 9
                         right_margin = 50
                     #------------Smaller size if more than 1 axis or file
-                    if currentFile["axes"] > 1 and self.msdb.getFileNum() > 1:
+                    if currentFile.axes > 1 and self.msdb.getFileNum() > 1:
                         pt = 7
-                    dc.SetFont(currentFile["settings"]['font1'])
+                    dc.SetFont(currentFile.settings['font1'])
                     font = wx.Font(pt, wx.ROMAN, wx.NORMAL, wx.BOLD, False)
                     #----------------------------------------------------------------------------
                     #-------------------labels have label locations so labels don't crowd together
                     #-------------------Was a peak near this m/z already labeled?
                     found = self.CheckLabels(x1, labels)
                     if not found:
-                        if member[0] not in currentFile["label_dict"].keys():
-                            if currentFile["label_non_id"]:
-                                dc.SetTextForeground(currentFile['settings']["mainfont"]["color"])
+                        if member[0] not in currentFile.label_dict.keys():
+                            if currentFile.label_non_id:
+                                dc.SetTextForeground(currentFile.settings["mainfont"]["color"])
                                 #MS1 peak labeling
                                 if scan_type == "MS1":
                                     if len(member) > 2:
-                                        if member[3] >= currentFile["settings"]['min_cg'] and member[3] <= currentFile["settings"]['max_cg']:
-                                            if not currentFile["label_res"]:  #-------LABEL RESOLUTION?
+                                        if member[3] >= currentFile.settings['min_cg'] and member[3] <= currentFile.settings['max_cg']:
+                                            if not currentFile.label_res:  #-------LABEL RESOLUTION?
                                             #if member[3] > 0:
                                                 dc.DrawRotatedText(str(round(member[0],rd)) + ' +' + str(int(member[3])),x1-7,y1-5,angle)
                                                 self.msdb.svg["text"].append((str(round(member[0],rd)) + ' +' + str(int(member[3])),x1-7,y1-5,angle, "BLACK", font))
                                             else:
-                                            #if member[3] >= currentFile["settings"]['min_cg'] and member[3] <= currentFile["settings"]['max_cg']:
+                                            #if member[3] >= currentFile.settings['min_cg'] and member[3] <= currentFile.settings['max_cg']:
                                                 dc.DrawRotatedText(str(round(member[0],rd)) + ' +' + str(int(member[3])) + " %.2e"%member[4],x1-7,y1-5,angle)
                                                 self.msdb.svg["text"].append((str(round(member[0],rd)) + ' +' + str(int(member[3])) + " %.2e"%member[4],x1-7,y1-5,angle, "BLACK", font))                                                
                                     else:
@@ -4919,7 +5095,7 @@ class DrawPanel(wx.Panel):
                                 #-----------------END MS1 PEAK LABELING
                                 #LABEL NON MS1
                                 else:
-                                    if currentFile['Analytical_Overlay']:
+                                    if currentFile.Analytical_Overlay:
                                         match = mzAtomicYardstick.match_to_mass(member[0], 10)
                                         
                                         if angle == 90:
@@ -4937,27 +5113,27 @@ class DrawPanel(wx.Panel):
                             #Peak is labeled
                             error = ''
                             if filter.find("FTMS")>-1:
-                                th = currentFile["found2theor"][member[0]]
+                                th = currentFile.found2theor[member[0]]
                                 exp = member[0]
-                                if currentFile['errorFlag']:
+                                if currentFile.errorFlag:
                                     try:
                                         error = ' ' + str(round((float(abs(exp-th)/float(th)))*1000000,1)) + ' ppm'
                                     except:
                                         error = '0 ppm'
-                            if currentFile["label_dict"][member[0]].startswith("y") or currentFile["label_dict"][member[0]].startswith("z"):
+                            if currentFile.label_dict[member[0]].startswith("y") or currentFile.label_dict[member[0]].startswith("z"):
                                 dc.SetTextForeground("RED")
                                 color = "RED"
-                            elif currentFile["label_dict"][member[0]].startswith("b") or currentFile["label_dict"][member[0]].startswith("c"):
+                            elif currentFile.label_dict[member[0]].startswith("b") or currentFile.label_dict[member[0]].startswith("c"):
                                 dc.SetTextForeground("BLUE")
                                 color = "BLUE"
                             else:
                                 color = "BLACK"
-                            if currentFile["viewMascot"]:
-                                dc.DrawRotatedText(str(round(member[0],rd)) + ' ' + currentFile["label_dict"][member[0]] + error,x1-7,y1-5,angle)
-                                self.msdb.svg["text"].append((str(round(member[0],rd)) + ' ' + currentFile["label_dict"][member[0]],x1-7,y1-5,angle, color, font))
+                            if currentFile.viewMascot:
+                                dc.DrawRotatedText(str(round(member[0],rd)) + ' ' + currentFile.label_dict[member[0]] + error,x1-7,y1-5,angle)
+                                self.msdb.svg["text"].append((str(round(member[0],rd)) + ' ' + currentFile.label_dict[member[0]],x1-7,y1-5,angle, color, font))
                             else:
-                                dc.DrawRotatedText(str(round(member[0],rd)) + '  (' + currentFile["label_dict"][member[0]] + ')' + error,x1-7,y1-5,angle)
-                                self.msdb.svg["text"].append((str(round(member[0],rd)) + '  (' + currentFile["label_dict"][member[0]] + ')'+ error,x1-7,y1-5,angle, color, font))
+                                dc.DrawRotatedText(str(round(member[0],rd)) + '  (' + currentFile.label_dict[member[0]] + ')' + error,x1-7,y1-5,angle)
+                                self.msdb.svg["text"].append((str(round(member[0],rd)) + '  (' + currentFile.label_dict[member[0]] + ')'+ error,x1-7,y1-5,angle, color, font))
                             labels.append([x1-9,x1+right_margin])
 
     def DrawSpectrum(self, dc, key, rawID, profile=False, drawLines = True):
@@ -4973,59 +5149,51 @@ class DrawPanel(wx.Panel):
         #  Get spectral filter - helps decide whether high or low res/ prof/cent data
         #-------------------------------
 
-        if currentFile['vendor'] in ['Thermo', 'ABI-MALDI', 'mgf'] and currentFile['spectrum_style']=='single scan':
-            filter = currentFile["filter_dict"][currentFile["scanNum"]]
+        if currentFile.vendor in ['Thermo', 'ABI-MALDI', 'mgf'] and currentFile.spectrum_style=='single scan':
+            filter = currentFile.filter_dict[currentFile.scanNum]
         else:
-            filter = currentFile["filter_dict"][int(currentFile["scanNum"].split('-')[0])]
-        #elif currentFile['vendor']=='ABI':
-            #filter = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])]        
+            filter = currentFile.filter_dict[int(currentFile.scanNum.split('-')[0])]
+        #elif currentFile.vendor=='ABI':
+            #filter = currentFile.filter_dict[(currentFile.scanNum, currentFile.experiment)]        
 
         #-------------------------------
         #     FIRST GET SCAN DATA
         #--------------------------------------------
 
         prof_data = None
-        if currentFile['spectrum_style']=='single scan':
-            if profile: # and scan_type == 'MS1'
-                if currentFile['vendor']=='Thermo':
-                    #if filter.find("ITMS + p") == -1:
-                    if "FTMS" in filter:
-                        scan_data = currentFile["m"].rscan(currentFile["scanNum"]) # Used to be rscan.
-                    else:
-                        try:
-                            scan_data = currentFile["m"].scan(currentFile["scanNum"], True)
-                        except TypeError:
-                            prof_data = currentFile["m"].scan(currentFile["scanNum"])
-                            scan_data = mz_centroid(prof_data)
-                        #max_int = self.msdb.GetMaxIntScanData(firstMass, lastMass, self.msdb.Display_ID[rawID], scan_data)
-                if currentFile['vendor']=='ABI':
-                    scan_data = currentFile["m"].cscan(currentFile['m'].scan_time_from_scan_name(currentFile["scanNum"]), currentFile['experiment'], algorithm=currentFile['settings']['abi_centroid'], eliminate_noise = currentFile['settings']['eliminate_noise'], step_length = currentFile['settings']['step_length'], peak_min = currentFile['settings']['peak_min'], cent_thresh = currentFile['settings']['threshold_cent_abi'])
-                if currentFile['vendor']=='ABI-MALDI':
-                    try:
-                        precentroidscan = currentFile['m'].scan()
-                        threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
-                        scan_data = mz_centroid(precentroidscan, threshold)
-                    except:
-                        scan_data = mz_centroid(currentFile['m'].scan())
-            else:
-                scan_data = currentFile["scan"]  
-        else:
-            scan_data = currentFile["scan"]
-
-        currentFile['unprocessed_data'] = scan_data
-
-        ## Correct ER filters.  (Hacky!)
-        #if 'ER' in filter and (prof_data or scan_data):
-            #peaks = zip(*(prof_data if prof_data else scan_data))[0]
-            #rangestr = '[%.2f-%.2f]' % (min(peaks), max(peaks))
-            #filter = filter.split('[')[0]
-            #filter += rangestr
-            #currentFile["filter_dict"][currentFile["scanNum"]] = filter
-            #print "Corrected- " + filter
+        #if currentFile.spectrum_style=='single scan':
+            #if profile: # and scan_type == 'MS1'
+                #if currentFile.vendor=='Thermo':
+                    ##if filter.find("ITMS + p") == -1:
+                    #if "FTMS" in filter:
+                        #scan_data = currentFile.m.rscan(currentFile.scanNum) # Used to be rscan.
+                    #else:
+                        #try:
+                            #scan_data = currentFile.m.scan(currentFile.scanNum, True)
+                        #except TypeError:
+                            #prof_data = currentFile.m.scan(currentFile.scanNum)
+                            #scan_data = mz_centroid(prof_data)
+                        ##max_int = self.msdb.GetMaxIntScanData(firstMass, lastMass, self.msdb.Display_ID[rawID], scan_data)
+                #if currentFile.vendor=='ABI':
+                    #scan_data = currentFile.m.cscan(currentFile.m.scan_time_from_scan_name(currentFile.scanNum), currentFile.experiment, algorithm=currentFile.settings['abi_centroid'], eliminate_noise = currentFile.settings['eliminate_noise'], step_length = currentFile.settings['step_length'], peak_min = currentFile.settings['peak_min'], cent_thresh = currentFile.settings['threshold_cent_abi'])
+                #if currentFile.vendor=='ABI-MALDI':
+                    #try:
+                        #precentroidscan = currentFile.m.scan()
+                        #threshold = average(zip(*precentroidscan)[1]) * CENTROID_SCALE
+                        #scan_data = mz_centroid(precentroidscan, threshold)
+                    #except:
+                        #scan_data = mz_centroid(currentFile.m.scan())
+            #else:
+                #scan_data = currentFile.scan  
+        #else:
+            #scan_data = currentFile.scan
+        # IT'S BEEN ACCESSING THE SCAN TWICE PER DISPLAY!  Canonical call to scan()
+        # is in set_scan().
+        scan_data = currentFile.scan
 
         #CUST_PROC
 
-        if currentFile['Processing']==True and self.parent.parent.custom_spectrum_process:
+        if currentFile.Processing==True and self.parent.parent.custom_spectrum_process:
             #No lscan silliness!  We tell people its a list of pairs.
             scan_data = [x[:2] for x in scan_data]
 
@@ -5033,24 +5201,24 @@ class DrawPanel(wx.Panel):
                 scan_data = self.parent.parent.custom_spectrum_process(scan_data)
                 #if scan_data:
                     #mzs = zip(*scan_data)[0]
-                    #currentFile['mass_ranges'][0] = min(mzs)-1, max(mzs)+1
+                    #currentFile.mass_ranges[0] = min(mzs)-1, max(mzs)+1
             except:
                 wx.MessageBox("Error in spectrum processing script!", "mzStudio")
                 scan_data = [(0, 0)]
 
-            #currentFile["scan"] = scan_data
+            #currentFile.scan = scan_data
             if scan_data == []:
                 print "No scan data."
                 scan_data = [(0, 0)]
             #----------FOR PROCESSED SPECTRUM, MUST OVERRIDE RAW DATA
             #Redefine first and last mass - this is for viewing the entire spectrum
-            if not currentFile['locked']:
+            if not currentFile.locked:
                 minMass = min([x[0] for x in scan_data])
                 maxMass = max([x[0] for x in scan_data])
-                currentFile['processed_first']=minMass
-                currentFile['processed_last']=maxMass
+                currentFile.processed_first=minMass
+                currentFile.processed_last=maxMass
 
-        currentFile["processed_data"] = (scan_data)
+        currentFile.processed_data = (scan_data)
 
         if scan_data:
             max_int = max(x[1] for x in scan_data)        
@@ -5059,25 +5227,25 @@ class DrawPanel(wx.Panel):
 
 
         #------FOR DRAGGING SPECTRUM
-        self.drag_coords=(currentFile['axco'][key][0][2]+35, currentFile['axco'][key][1][1])
+        self.drag_coords=(currentFile.axco[key][0][2]+35, currentFile.axco[key][1][1])
 
         #THRESHOLD FOR LABELING
-        thresh = currentFile["settings"]["label_threshold"][currentFile['vendor']]
+        thresh = currentFile.settings["label_threshold"][currentFile.vendor]
 
         #GET FIRST AND LAST MASS
 
-        if (not currentFile['is_zooming']) and (currentFile['Processing'] or 'ER' in filter) and (prof_data or scan_data):
+        if (not currentFile.is_zooming) and (currentFile.Processing or 'ER' in filter) and (prof_data or scan_data):
             peaks = zip(*(prof_data if prof_data else scan_data))[0]
             firstMass = min(peaks) - 1
             lastMass = max(peaks) + 1
-            currentFile["mass_ranges"][key] = firstMass, lastMass
+            currentFile.mass_ranges[key] = firstMass, lastMass
         else:
-            firstMass = currentFile["mass_ranges"][key][0]
-            lastMass = currentFile["mass_ranges"][key][1]
+            firstMass = currentFile.mass_ranges[key][0]
+            lastMass = currentFile.mass_ranges[key][1]
 
         #DRAW AXES
-        xaxis = currentFile['axco'][key][0]
-        yaxis = currentFile['axco'][key][1]
+        xaxis = currentFile.axco[key][0]
+        yaxis = currentFile.axco[key][1]
         height = yaxis[1]-yaxis[3]
         width = xaxis[2]-xaxis[0]
         px = width
@@ -5091,12 +5259,12 @@ class DrawPanel(wx.Panel):
         self.msdb.svg["lines"].append((xaxis[0]-5, yaxis[1], xaxis[0], yaxis[1]))
 
         #IF SCALING, GET ABSOLUTE VALUE.  IF NOT, SCALE TO MAXIMUM INTENSITY
-        if not currentFile['intensity_scaling']:
+        if not currentFile.intensity_scaling:
             max_int = self.msdb.GetMaxInt(firstMass, lastMass, self.msdb.Display_ID[rawID])
         else:
-            max_int = currentFile['intensity_scaling']
+            max_int = currentFile.intensity_scaling
 
-        currentFile["max_int"][key]=max_int
+        currentFile.max_int[key]=max_int
 
         #--------------WANT TO DRAW TRIANGLE SHOWING LABEL THRESHOLD
         #--------------IF THRESH = 200, MAX_INT = 400, then it will be 50% of yax3-yax1
@@ -5114,8 +5282,8 @@ class DrawPanel(wx.Panel):
             self.thresh_box = (0 , 0, 0, 0)
         #---------------------------------------------------------------------------
 
-        if not currentFile['Processing']:
-            mr = currentFile["mass_ranges"][key][1]-currentFile["mass_ranges"][key][0] #MASS RANGE
+        if not currentFile.Processing:
+            mr = currentFile.mass_ranges[key][1]-currentFile.mass_ranges[key][0] #MASS RANGE
         else:
             mr = lastMass - firstMass
 
@@ -5189,7 +5357,7 @@ class DrawPanel(wx.Panel):
                     x1 = yaxis[0] + px*((member[0]-firstMass)/float(mr))
                     #x2 = x1
                     y1 = yvar1 - yvar2*(member[1]/float(max_int))
-                    if currentFile['intensity_scaling']:
+                    if currentFile.intensity_scaling:
                         if member[1] > float(max_int):
                             y1 = yvar1 - yvar2 #IF INTENSITY SCALING, and would go off-scale, scale to max display.
 
@@ -5227,9 +5395,9 @@ class DrawPanel(wx.Panel):
                                     self.msdb.svg["text"].append((self.msdb.isotope_dict[entry],a1-7,b1-5,0.0001, "BLACK", wx.Font(12, wx.ROMAN, wx.NORMAL, wx.BOLD, False)))
 
                     #---------------------SILAC LABELING ANNOTATION        
-                    if currentFile['SILAC']['mode']: 
+                    if currentFile.SILAC['mode']: 
                         if scan_type=='MS1':
-                            for peak in currentFile['SILAC']['peaks']:
+                            for peak in currentFile.SILAC['peaks']:
                                 if abs(member[0] - peak) < 0.05:
                                     dc.SetPen(wx.Pen(wx.RED,3))
                                     pen = wx.Pen(wx.RED,3)                                
@@ -5239,11 +5407,11 @@ class DrawPanel(wx.Panel):
                     #-----------MAIN DRAWING OF UNLABELED PEAKS
                     #-----------LABELED ONES ARE DONE SEPARATELY, IN COLOR
 
-                    if member[0] not in currentFile["label_dict"].keys():
+                    if member[0] not in currentFile.label_dict.keys():
                         #Unlabeled peaks done in normal
-                        dc.SetPen(wx.Pen(wx.Colour(*currentFile['settings']['line color']),currentFile['settings']['line width']))
-                        pen = wx.Pen(wx.Colour(*currentFile['settings']['line color']),currentFile['settings']['line width'])
-                        if currentFile['Processing'] or currentFile["viewCentroid"] or (profile and currentFile['settings']['drawCentroid']) or not profile:
+                        dc.SetPen(wx.Pen(wx.Colour(*currentFile.settings['line color']),currentFile.settings['line width']))
+                        pen = wx.Pen(wx.Colour(*currentFile.settings['line color']),currentFile.settings['line width'])
+                        if currentFile.Processing or currentFile.viewCentroid or (profile and currentFile.settings['drawCentroid']) or not profile:
                             '''
                             If PROFILE, AND VIEW CENTROID False skip this line
 
@@ -5252,10 +5420,10 @@ class DrawPanel(wx.Panel):
                             self.msdb.svg["lines"].append((x1, y1, x1, y2 , pen))
                     else:
                         #LABELED PEAKS ARE DRAWN IN COLOR
-                        if currentFile["label_dict"][member[0]].find("y") > -1 or currentFile["label_dict"][member[0]].find("z") >-1:
+                        if currentFile.label_dict[member[0]].find("y") > -1 or currentFile.label_dict[member[0]].find("z") >-1:
                             dc.SetPen(wx.Pen(wx.RED,2))
                             pen = wx.Pen(wx.RED,2)
-                        elif currentFile["label_dict"][member[0]].find("b") > -1 or currentFile["label_dict"][member[0]].find("c")>-1:
+                        elif currentFile.label_dict[member[0]].find("b") > -1 or currentFile.label_dict[member[0]].find("c")>-1:
                             dc.SetPen(wx.Pen(wx.BLUE,2))
                             pen = wx.Pen(wx.BLUE,2)
                         else:
@@ -5266,7 +5434,7 @@ class DrawPanel(wx.Panel):
 
                     #------------FOR DRAWING TEXT LABELS
                     #if False:
-            if currentFile['settings']['labelPeaks']:        
+            if currentFile.settings['labelPeaks']:        
                 self.DrawTextLabels(scan_data, dc, thresh, cutoff, currentFile, key, scan_type, rd, rawID, filter)
 
             t2 = time.time()
@@ -5300,11 +5468,11 @@ class DrawPanel(wx.Panel):
             #if self.GetClientSize()[0] < 600:
                 #scale = scale * 3
             firstlabel = self.myRound(firstMass, scale)
-            #if firstlabel < currentFile["fm"]:
+            #if firstlabel < currentFile.fm:
             if firstlabel < firstMass:
                 firstlabel += scale
             lastlabel = self.myRound(lastMass, scale)
-            #if lastlabel > currentFile["lm"]:
+            #if lastlabel > currentFile.lm:
             if lastlabel > lastMass:
                 lastlabel -= scale
             for i in range (firstlabel, lastlabel + scale, scale):
@@ -5313,78 +5481,81 @@ class DrawPanel(wx.Panel):
             xticks.append(round(firstMass, 1))
             xticks.append(round(lastMass, 1))
         for member in xticks:
-            x1 = currentFile["axco"][key][0][0] + px*((member-firstMass)/float(mr))
+            x1 = currentFile.axco[key][0][0] + px*((member-firstMass)/float(mr))
             dc.DrawRotatedText(str(member), x1-8,yaxis[3]+5,0.00001)
             self.msdb.svg["text"].append((str(member), x1-8,yaxis[3]+5,0.00001))
             dc.DrawLine(x1, yaxis[3], x1, yaxis[3]+2)
             self.msdb.svg["lines"].append((x1, yaxis[3], x1, yaxis[3]+2))
         if key == 0:
-            x = currentFile["axco"][0][0][2]
-            subxx = currentFile["axco"][0][0][0]
-            y = currentFile["axco"][0][1][1]
+            x = currentFile.axco[0][0][2]
+            subxx = currentFile.axco[0][0][0]
+            y = currentFile.axco[0][1][1]
             #This displays filter lock
-            if currentFile['filterLock']:
-                dc.DrawText("Filter Locked: " + currentFile['filterLock'], subxx, y - 45)
+            if currentFile.filterLock:
+                dc.DrawText("Filter Locked: " + currentFile.filterLock, subxx, y - 45)
             #This displays filename on trace
-            #dc.DrawText(currentFile["Filename"].split('.')[0], subxx, y - 30)
-            #self.msdb.svg["text"].append((currentFile["Filename"][:-4], subxx, y - 30,0.00001))
-            if currentFile['vendor']=='Thermo':
-                if currentFile["spectrum_style"] == "single scan":
-                    dc.DrawText("Scan: " + str(currentFile["scanNum"]), x+5, y + 110)
-                    self.msdb.svg["text"].append(("Scan: " + str(currentFile["scanNum"]), x+5, y + 110,0.00001))
+            #dc.DrawText(currentFile.Filename.split('.')[0], subxx, y - 30)
+            #self.msdb.svg["text"].append((currentFile.Filename[:-4], subxx, y - 30,0.00001))
+            if currentFile.vendor=='Thermo':
+                if currentFile.spectrum_style == "single scan":
+                    scantext = "Scan: " + str(currentFile.scanNum)
+                    if currentFile.m.file_type == 'wiff':
+                        scantext += '\n(%s, %s)' % currentFile.m.make_explicit[currentFile.scanNum]
+                    dc.DrawText(scantext, x+5, y + 105)
+                    self.msdb.svg["text"].append((scantext, x+5, y + 105,0.00001))
                 else:
                     #-----Description for average scan
-                    rtstart = currentFile['m'].timeForScan(int(currentFile['scanNum'].split('-')[0]))
-                    rtstop = currentFile['m'].timeForScan(int(currentFile['scanNum'].split('-')[1].split(' ')[0]))
-                    dc.DrawText("Average Scan\n" + currentFile['scanNum'] + '\n' + str(round(rtstart,2)) + '-' + str(round(rtstart,2)), x+5, y +110)
-            if currentFile['vendor']=='mgf':
-                dc.DrawText("Query: " + str(currentFile["scanNum"]), x+5, y + 110)
-                self.msdb.svg["text"].append(("Query: " + str(currentFile["scanNum"]), x+5, y + 110,0.00001))            
-            if currentFile['vendor']=='ABI':
-                dc.DrawText("Scan: (" + str(currentFile["scanNum"]) + ', ' + currentFile['experiment'] + ')', x+5, y + 110)
-                self.msdb.svg["text"].append(("Scan: (" + str(currentFile["scanNum"]) + ', ' + currentFile['experiment'] + ')', x+5, y + 110,0.00001))
-            self.msdb.svg["text"].append(("Scan: " + str(currentFile["scanNum"]), x+5, y + 110,0.00001))
-            if currentFile['vendor']=='Thermo':
-                if currentFile['spectrum_style']=='single scan':
-                    rt = currentFile["rt_dict"][currentFile["scanNum"]]
+                    rtstart = currentFile.m.timeForScan(int(currentFile.scanNum.split('-')[0]))
+                    rtstop = currentFile.m.timeForScan(int(currentFile.scanNum.split('-')[1].split(' ')[0]))
+                    dc.DrawText("Average Scan\n" + currentFile.scanNum + '\n' + str(round(rtstart,2)) + '-' + str(round(rtstart,2)), x+5, y +110)
+            if currentFile.vendor=='mgf':
+                dc.DrawText("Query: " + str(currentFile.scanNum), x+5, y + 110)
+                self.msdb.svg["text"].append(("Query: " + str(currentFile.scanNum), x+5, y + 110,0.00001))            
+            if currentFile.vendor=='ABI':
+                dc.DrawText("Scan: (" + str(currentFile.scanNum) + ', ' + currentFile.experiment + ')', x+5, y + 110)
+                self.msdb.svg["text"].append(("Scan: (" + str(currentFile.scanNum) + ', ' + currentFile.experiment + ')', x+5, y + 110,0.00001))
+            self.msdb.svg["text"].append(("Scan: " + str(currentFile.scanNum), x+5, y + 110,0.00001))
+            if currentFile.vendor=='Thermo':
+                if currentFile.spectrum_style=='single scan':
+                    rt = currentFile.rt_dict[currentFile.scanNum]
                 else:
                     rt = 'AV'
-            elif currentFile['vendor']=='ABI':
-                rt = currentFile["rt_dict"][(currentFile["scanNum"], currentFile['experiment'])]
-            elif currentFile['vendor']=='ABI-MALDI':
+            elif currentFile.vendor=='ABI':
+                rt = currentFile.rt_dict[(currentFile.scanNum, currentFile.experiment)]
+            elif currentFile.vendor=='ABI-MALDI':
                 rt = 0
-            if currentFile['spectrum_style']=='single scan':
-                if currentFile['vendor']=='Thermo':
+            if currentFile.spectrum_style=='single scan':
+                if currentFile.vendor=='Thermo':
                     dc.DrawText("RT: " + str(round(rt,2)), x+5, y + 130)
-                if currentFile['vendor']=='ABI':
+                if currentFile.vendor=='ABI':
                     dc.DrawText("RT: " + str(round(rt[0],2)), x+5, y + 130)
             #else:
             #    print "AVERAGE SCAN."
                 #dc.DrawText("RT: " + str(round(self.average_start,2))+'-'+str(round(self.average_stop,2)), x+5, y + 130)
-            if currentFile['vendor']=='Thermo' and currentFile['spectrum_style']=='single scan':
+            if currentFile.vendor=='Thermo' and currentFile.spectrum_style=='single scan':
                 self.msdb.svg["text"].append(("RT: " + str(round(rt,2)), x+5, y + 130,0.00001))
-            if currentFile['vendor']=='ABI':
+            if currentFile.vendor=='ABI':
                 self.msdb.svg["text"].append(("RT: " + str(round(rt[0],2)), x+5, y + 130,0.00001))
-            if currentFile['vendor']=='Thermo':
-                if currentFile['spectrum_style']=='single scan':
-                    fd=self.msdb.Create_Filter_Info(currentFile["filter_dict"][currentFile["scanNum"]], 'Thermo')
+            if currentFile.vendor=='Thermo':
+                if currentFile.spectrum_style=='single scan':
+                    fd=self.msdb.Create_Filter_Info(currentFile.filter_dict[currentFile.scanNum], 'Thermo')
                 else:
                     if "ms1" in filter:
-                        currentFile['fd'] = {'mode':"ms1", 'analyzer':'average', 'data':'average' , 'mr':'[t1-t2]'}
+                        currentFile.fd = {'mode':"ms1", 'analyzer':'average', 'data':'average' , 'mr':'[t1-t2]'}
                     elif "ms2" in filter:
-                        currentFile['fd'] = {'mode':"ms1", 'analyzer':'average', 'precursor':'average', 'data':'average', 'reaction':'average', 'mr':'[t1-t2]', 'energy':'average'}
-            if currentFile['vendor']=='mgf':
-                fd=self.msdb.Create_Filter_Info(currentFile["filter_dict"][currentFile["scanNum"]], 'mgf') 
+                        currentFile.fd = {'mode':"ms1", 'analyzer':'average', 'precursor':'average', 'data':'average', 'reaction':'average', 'mr':'[t1-t2]', 'energy':'average'}
+            if currentFile.vendor=='mgf':
+                fd=self.msdb.Create_Filter_Info(currentFile.filter_dict[currentFile.scanNum], 'mgf') 
                 dc.DrawText("Scan: " + str(fd['file scan']), x+5, y + 90)
-            if currentFile['vendor']=='ABI':
-                fd=self.msdb.Create_Filter_Info(currentFile["filter_dict"][(currentFile["scanNum"],currentFile['experiment'])], 'ABI')
-            if currentFile['vendor']=='ABI-MALDI':
-                #fd={"mode":"ms1", "analyzer":"tof", "data":"centroid", "mr":str(currentFile['m'].scan_range())}
-                fd = self.msdb.Create_Filter_Info(currentFile["filter_dict"][currentFile["scanNum"]], 'ABI-MALDI')
+            if currentFile.vendor=='ABI':
+                fd=self.msdb.Create_Filter_Info(currentFile.filter_dict[(currentFile.scanNum,currentFile.experiment)], 'ABI')
+            if currentFile.vendor=='ABI-MALDI':
+                #fd={"mode":"ms1", "analyzer":"tof", "data":"centroid", "mr":str(currentFile.m.scan_range())}
+                fd = self.msdb.Create_Filter_Info(currentFile.filter_dict[currentFile.scanNum], 'ABI-MALDI')
             ystart = y + 150
             if self.msdb.getFileNum() > 1:
                 dc.SetFont(wx.Font(7, wx.ROMAN, wx.NORMAL, wx.BOLD, False))
-            if currentFile["spectrum_style"] == "single scan":
+            if currentFile.spectrum_style == "single scan":
                 if fd["mode"].lower() in ["ms1", "sim (ms1)", "precursor", 'ms']:
                     keys = ["mode", "analyzer", "data", "mr"]
                     for key in keys:
@@ -5403,14 +5574,14 @@ class DrawPanel(wx.Panel):
                         dc.DrawText(fd[key], x+5, ystart)
                         self.msdb.svg["text"].append((fd[key], x+5, ystart,0.00001))
                         ystart+=15
-            if currentFile['vendor']=='Thermo' and currentFile['spectrum_style']=='single scan':
+            if currentFile.vendor=='Thermo' and currentFile.spectrum_style=='single scan':
                 try:
-                    inj_time = currentFile['m'].scanInjectionTime(currentFile["scanNum"])
+                    inj_time = currentFile.m.scanInjectionTime(currentFile.scanNum)
                     dc.DrawText("Inj: " + str(inj_time), x+5, ystart)
                     self.msdb.svg["text"].append(("Inj: " + str(inj_time), x+5, ystart,0.00001))
                 except AttributeError: # Actually a WIFF file in disguise.
                     pass
-            if currentFile["Processing"]:
+            if currentFile.Processing:
                 ystart+= 15
                 dc.DrawText("PROCESSED", x+5, ystart)
 
@@ -5418,47 +5589,51 @@ class DrawPanel(wx.Panel):
         #self.parent.Window.dragController.SetPosition()
         #page=self.ctrl.GetPage(self.ctrl.GetSelection())
 
-        if currentFile["ID"]: # Handles drawing the sequence
+        if currentFile.ID: # Handles drawing the sequence
             #print "ID!!"
             key = None
-            if currentFile['vendor']=='Thermo':
-                key = currentFile["scanNum"]
-            elif currentFile['vendor']=='ABI':
-                key = (currentFile['scanNum'], currentFile['experiment'])
-            elif currentFile['vendor']=='mgf':
-                key = currentFile["scanNum"]          
-
-            if currentFile["SearchType"] in ["Mascot", "X!Tandem"]:
-                seq = currentFile["ID_Dict"][key]["Peptide Sequence"]
-                fixedmod = currentFile["fixedmod"]
-                varmod = currentFile["ID_Dict"][key]["Variable Modifications"]
-            if currentFile["SearchType"] in ['Proteome Discoverer']:
-                seq = currentFile["ID_Dict"][key]["Annotated Sequence"].upper()
-                fixedmod = ''
-                varmod = currentFile["ID_Dict"][key]["Modifications"]            
+            if currentFile.vendor=='ABI':
+                key = (currentFile.scanNum, currentFile.experiment)            
             else:
-                seq = currentFile["ID_Dict"][key]["Peptide Sequence"]
-                fixedmod = currentFile["fixedmod"]
-                varmod = currentFile["ID_Dict"][key]["Variable Modifications"]                
+                key = currentFile.scanNum            
 
-            if currentFile["SearchType"] in ["Mascot", "X!Tandem"]:
-                score = currentFile["ID_Dict"][key]["Peptide Score"]
-            elif currentFile["SearchType"]=="COMET" :
-                score = currentFile["ID_Dict"][key]["Cross-Correlation"]
-            elif currentFile["SearchType"]=="Proteome Discoverer" :
-                score = currentFile["ID_Dict"][key]["XCorr"]            
+            if currentFile.SearchType in ["Mascot", "X!Tandem"]:
+                seq = currentFile.ID_Dict[key]["Peptide Sequence"]
+                fixedmod = currentFile.fixedmod
+                varmod = currentFile.ID_Dict[key]["Variable Modifications"]
+            if currentFile.SearchType in ['Proteome Discoverer']:
+                seq = currentFile.ID_Dict[key]["Annotated Sequence"].upper()
+                fixedmod = ''
+                varmod = currentFile.ID_Dict[key]["Modifications"]            
+            elif currentFile.SearchType == 'PEAKS':
+                seq = ''.join([x for x in currentFile.ID_Dict[key]["Peptide"] if x.isalpha()])
+                varmod = peaks_mods_to_mascot_mods(currentFile.ID_Dict[key]["AScore"])
+                fixedmod = ''
+            else:
+                seq = currentFile.ID_Dict[key]["Peptide Sequence"]
+                fixedmod = currentFile.fixedmod
+                varmod = currentFile.ID_Dict[key]["Variable Modifications"]                
+
+            if currentFile.SearchType in ["Mascot", "X!Tandem"]:
+                score = currentFile.ID_Dict[key]["Peptide Score"]
+            elif currentFile.SearchType=="COMET" :
+                score = currentFile.ID_Dict[key]["Cross-Correlation"]
+            elif currentFile.SearchType=="Proteome Discoverer" :
+                score = currentFile.ID_Dict[key]["XCorr"]    
+            elif currentFile.SearchType=="PEAKS":
+                score = currentFile.ID_Dict[key]["-10lgP"]  
 
             peptide_container = mz_core.create_peptide_container(seq, varmod, fixedmod)
             sequence = ''
             for member in peptide_container:
                 sequence += member
-            if currentFile['scanNum'] not in currentFile['overlay'].keys():    
-                dc.DrawText(sequence + ' (' + str(score) + ')', currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25)
-                self.msdb.svg["text"].append((seq, currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25,0.00001))
+            if currentFile.scanNum not in currentFile.overlay.keys():    
+                dc.DrawText(sequence + ' (' + str(score) + ')', currentFile.axco[currentFile.axes-1][0][0]+100, currentFile.axco[currentFile.axes-1][0][1] + 25)
+                self.msdb.svg["text"].append((seq, currentFile.axco[currentFile.axes-1][0][0]+100, currentFile.axco[currentFile.axes-1][0][1] + 25,0.00001))
             else:
-                dc.DrawText("Overlay:  " + currentFile['overlay_sequence'][currentFile['scanNum']] + '  (Clear for search result)', currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25)
-        elif currentFile['scanNum'] in currentFile['overlay'].keys():
-            dc.DrawText(currentFile['overlay_sequence'][currentFile['scanNum']], currentFile['axco'][currentFile['axes']-1][0][0]+100, currentFile['axco'][currentFile['axes']-1][0][1] + 25)
+                dc.DrawText("Overlay:  " + currentFile.overlay_sequence[currentFile.scanNum] + '  (Clear for search result)', currentFile.axco[currentFile.axes-1][0][0]+100, currentFile.axco[currentFile.axes-1][0][1] + 25)
+        elif currentFile.scanNum in currentFile.overlay.keys():
+            dc.DrawText(currentFile.overlay_sequence[currentFile.scanNum], currentFile.axco[currentFile.axes-1][0][0]+100, currentFile.axco[currentFile.axes-1][0][1] + 25)
 
 
     def DrawProfileSpectrum(self, dc, key, rawID):
@@ -5469,55 +5644,59 @@ class DrawPanel(wx.Panel):
 
         '''
         currentFile = self.msdb.files[self.msdb.Display_ID[rawID]]
-        firstMass = currentFile["mass_ranges"][key][0]
-        lastMass = currentFile["mass_ranges"][key][1]
+        if not currentFile.profile_scan:
+            print "No profile data."
+            return
+        
+        firstMass = currentFile.mass_ranges[key][0]
+        lastMass = currentFile.mass_ranges[key][1]
 
-        xaxis = currentFile['axco'][key][0]
-        yaxis = currentFile['axco'][key][1]
+        xaxis = currentFile.axco[key][0]
+        yaxis = currentFile.axco[key][1]
         height = yaxis[1]-yaxis[3]
         width = xaxis[2]-xaxis[0]
         self.indent = yaxis[0]
 
-        if not currentFile['intensity_scaling']:
+        if not currentFile.intensity_scaling:
             max_int = self.msdb.GetMaxInt(firstMass, lastMass, self.msdb.Display_ID[rawID])
         else:
-            max_int = currentFile['intensity_scaling']
+            max_int = currentFile.intensity_scaling
 
         cutoff = 0.75 * float(max_int)
         dc.SetTextForeground("BLACK")
         dc.SetFont(wx.Font(10, wx.ROMAN, wx.NORMAL, wx.BOLD, False))
 
-        mr = currentFile["mass_ranges"][key][1]-currentFile["mass_ranges"][key][0]
+        mr = currentFile.mass_ranges[key][1]-currentFile.mass_ranges[key][0]
         #print mr
         px = width
         self.width = width
         labels = []
         scan_type = 'MS2'
-        if currentFile['vendor'] == 'Thermo':
-            if currentFile['spectrum_style']=='single scan':
-                filter = currentFile["filter_dict"][currentFile["scanNum"]]
+        if currentFile.vendor == 'Thermo':
+            if currentFile.spectrum_style=='single scan':
+                filter = currentFile.filter_dict[currentFile.scanNum]
             else:
-                filter = currentFile["filter_dict"][int(currentFile["scanNum"].split('-')[0])]              
+                filter = currentFile.filter_dict[int(currentFile.scanNum.split('-')[0])]              
 
-        elif currentFile['vendor'] == 'ABI-MALDI':
-            filter = currentFile['filter_dict'][None]
-        elif currentFile['vendor'] == 'ABI':
+        elif currentFile.vendor == 'ABI-MALDI':
+            filter = currentFile.filter_dict[None]
+        elif currentFile.vendor == 'ABI':
             try:
-                filter = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])]
+                filter = currentFile.filter_dict[(currentFile.scanNum, currentFile.experiment)]
             except:
-                filter = currentFile["filter_dict"][(currentFile["scanNum"])]
+                filter = currentFile.filter_dict[(currentFile.scanNum)]
         #print filter
         if filter.find("FTMS") > -1 and filter.find("Full ms ") > -1:
             scan_type = 'MS1'
         if filter.find("TOF MS") > -1 and filter.find("Full ms ") > -1:
             scan_type = 'MS1'
         #print scan_type
-        scan_data = currentFile["scan"]
+        scan_data = currentFile.profile_scan
         scan_data.sort(key = lambda t:t[0])
 
         if len(scan_data) > 1 and max_int > 0:
             points = []
-            dc.SetPen(wx.Pen(wx.Colour(*currentFile['settings']['line color']),currentFile['settings']['line width']))
+            dc.SetPen(wx.Pen(wx.Colour(*currentFile.settings['line color']),currentFile.settings['line width']))
 
             y_var = yaxis[1] + yaxis[3]-yaxis[1] # == yaxis[3]?
             y_var2 = (yaxis[3]-yaxis[1])
@@ -5525,7 +5704,7 @@ class DrawPanel(wx.Panel):
             for member in scan_data:
                 if member[0]>firstMass and member[0]<lastMass:
                     x1 = yaxis[0] + px*((member[0]-firstMass)/float(mr))
-                    if currentFile['intensity_scaling'] and member[1] > float(max_int):
+                    if currentFile.intensity_scaling and member[1] > float(max_int):
                         y1 = y_var - (yaxis[3]-yaxis[1]) 
                     else:
                         y1 = y_var - y_var2*(member[1]/float(max_int))
@@ -5550,33 +5729,33 @@ class DrawPanel(wx.Panel):
         counter = 0
         found = []        
 
-        if currentFile['vendor'] == 'Thermo':
+        if currentFile.vendor == 'Thermo':
             inst=["FTMS", "ITMS", "TOF PI"]
             mode=["c","p"]
             act=["hcd", "cid", "etd"]
             regex = None
 
             #------------------------------Which regex to use?
-            if currentFile['FileAbs'].endswith('.raw'):
+            if currentFile.FileAbs.endswith('.raw'):
                 regex = [self.msdb.pa, self.msdb.lockms2]
-            elif currentFile['FileAbs'].endswith('.wiff'):
+            elif currentFile.FileAbs.endswith('.wiff'):
                 regex = self.msdb.tofms2            
-            elif currentFile['FileAbs'].endswith('.d'):
+            elif currentFile.FileAbs.endswith('.d'):
                 regex = self.msdb.Dms     
 
 
             #-------------------------------Loop through all scans    
-            start, stop = currentFile["scan_range"]
+            start, stop = currentFile.scan_range
             for i in range(start, stop):
                 if counter % 500 == 0:
                     print str(i)
-                    print currentFile["filter_dict"][i]
+                    print currentFile.filter_dict[i]
                 counter += 1
                 #------------------------------------------FIND MS2 scans, then match to regex.
-                #if currentFile["scan_dict"][i].lower()=="ms2":
-                #if currentFile["filter_dict"][i].find("ms2") > -1:
-                if 'ms2' in currentFile["filter_dict"].get(i, ''):
-                    filt = currentFile["filter_dict"][i]
+                #if currentFile.scan_dict[i].lower()=="ms2":
+                #if currentFile.filter_dict[i].find("ms2") > -1:
+                if 'ms2' in currentFile.filter_dict.get(i, ''):
+                    filt = currentFile.filter_dict[i]
                     if not isinstance(regex, list):
                         id = regex.match(filt)
                     else:
@@ -5586,17 +5765,17 @@ class DrawPanel(wx.Panel):
                                 break
                     #--------------------------------------------------------Right now, thermo and wiff are the same logic; should adjust Agilent so the same.
                     #--------------------------------------------------------This would remove the extra if/else.
-                    if currentFile['FileAbs'].endswith('.d') == False:
+                    if currentFile.FileAbs.endswith('.d') == False:
                         # IF NOT AGILENT, WILL BE THERMO, ABI.
-                        if currentFile['vendor']=='Thermo':
+                        if currentFile.vendor=='Thermo':
                             # THERMO OR WIFF
                             if id:
-                                if currentFile['FileAbs'].endswith('.raw'):
+                                if currentFile.FileAbs.endswith('.raw'):
                                     if id.groups()[0] in inst and id.groups()[1] in mode and id.groups()[3] in act:
                                         prec = float(id.groups()[2])
                                         if mz > prec - tolerance and mz < prec + tolerance:
                                             found.append([i, id.groups()[2], id.groups()[3], filt])
-                                elif currentFile['FileAbs'].endswith('.wiff'):
+                                elif currentFile.FileAbs.endswith('.wiff'):
                                     if id.groups()[0] in inst and id.groups()[1] in mode:
                                         prec = float(id.groups()[2])
                                         if mz > prec - tolerance and mz < prec + tolerance:
@@ -5616,10 +5795,10 @@ class DrawPanel(wx.Panel):
                         if mz > prec - tolerance and mz < prec + tolerance:
                             found.append([i, id.groups()[3], "CAD", filt])
 
-        elif currentFile['vendor'] == 'mgf':
+        elif currentFile.vendor == 'mgf':
             regex = self.msdb.mgf            
-            for key in currentFile['filter_dict'].keys():
-                current_filter = currentFile['filter_dict'][key]
+            for key in currentFile.filter_dict.keys():
+                current_filter = currentFile.filter_dict[key]
                 if current_filter.lower().find("ms2") > -1:
                     id = regex.match(current_filter)
                     if id:
@@ -5668,50 +5847,50 @@ class DrawPanel(wx.Panel):
 
             dc.SetPen(wx.Pen(wx.BLACK,2))
             for i in range(0, self.msdb.getFileNum()):
-                if self.msdb.files[self.msdb.Display_ID[i]]["Display"]:
+                if self.msdb.files[self.msdb.Display_ID[i]].Display:
                     currentFile = self.msdb.files[self.msdb.Display_ID[i]]
-                    for k in range(0, self.msdb.files[self.msdb.Display_ID[i]]["axes"]):
+                    for k in range(0, self.msdb.files[self.msdb.Display_ID[i]].axes):
                         #print "DRAWING... spec axis " + str(k) + " on file " + str(i)
                         profFlag = False
-                        if currentFile["vendor"] in ["Thermo", "ABI-MALDI", 'mgf']:
+                        if currentFile.vendor in ["Thermo", "ABI-MALDI", 'mgf']:
                             try:
-                                filt = currentFile["filter_dict"][currentFile["scanNum"]]
+                                filt = currentFile.filter_dict[currentFile.scanNum]
                             except KeyError:
-                                filt = currentFile["filter_dict"].values()[0]
-                        elif currentFile["vendor"]=="ABI":
+                                filt = currentFile.filter_dict.values()[0]
+                        elif currentFile.vendor=="ABI":
                             try:
-                                filt = currentFile["filter_dict"][(currentFile["scanNum"], currentFile['experiment'])]
+                                filt = currentFile.filter_dict[(currentFile.scanNum, currentFile.experiment)]
                             except:
-                                filt = currentFile["filter_dict"][(currentFile["scanNum"])]
+                                filt = currentFile.filter_dict[(currentFile.scanNum)]
                         #if filt.find("+ p")>-1:
                         if '+ p' in filt:
                             profFlag = True # Indicates *file* scan is in profile data.
 
                         t2=time.time()
-                        #if currentFile["vendor"] != "ABI-MALDI": #Need to have option to centroid
+                        #if currentFile.vendor != "ABI-MALDI": #Need to have option to centroid
                         self.DrawSpectrum(dc, k, i, profFlag) #draws the centroid
                         t3=time.time()
                         #is this a profile spectrum?
-                        if profFlag and not (currentFile["viewCentroid"] or currentFile['Processing']):
+                        if profFlag and not (currentFile.viewCentroid or currentFile.Processing):
                             self.DrawProfileSpectrum(dc, k, i)
                         t4=time.time()
-                        if currentFile['features']:
+                        if currentFile.features:
                             self.DrawFeatures(dc, k, i)
 
 
-                    if self.msdb.files[self.msdb.Display_ID[i]]["mode"] != "SPEC":
-                        currentFile['xic_lookup']=[]
+                    if self.msdb.files[self.msdb.Display_ID[i]].mode != "SPEC":
+                        currentFile.xic_lookup=[]
                         #---------------------------------FIND MAXIMA
                         maxTables = []
-                        startTime = currentFile["time_ranges"][0][0]
-                        stopTime = currentFile["time_ranges"][0][1]
+                        startTime = currentFile.time_ranges[0][0]
+                        stopTime = currentFile.time_ranges[0][1]
                         global_grid = 0
                         global_trace = 0
                         global_inten = 0
-                        for k in range(0, len(self.msdb.files[self.msdb.Display_ID[i]]["xic_axco"])):
+                        for k in range(0, len(self.msdb.files[self.msdb.Display_ID[i]].xic_axco)):
                             maxTable = []
-                            for xic in range(0, len(currentFile["xic_params"][k])):
-                                if currentFile['xic_view'][k][xic]: #DECISION POINT COULD BE ADDED WHETHER TO SCALE IF VISIBLE OR NOT
+                            for xic in range(0, len(currentFile.xic_params[k])):
+                                if currentFile.xic_view[k][xic]: #DECISION POINT COULD BE ADDED WHETHER TO SCALE IF VISIBLE OR NOT
                                     maxTable.append(self.msdb.GetMaxSignal(startTime, stopTime, k, self.msdb.Display_ID[i], xic))
                                 else:
                                     maxTable.append(0)
@@ -5726,7 +5905,7 @@ class DrawPanel(wx.Panel):
                         self.max_tables = maxTables
                         t5 = time.time()
                         #---------------------------------DRAW XICs one by one
-                        for k in range(0, len(self.msdb.files[self.msdb.Display_ID[i]]["xic_axco"])):
+                        for k in range(0, len(self.msdb.files[self.msdb.Display_ID[i]].xic_axco)):
                             #print "DRAWING... ric axis " + str(k) + " on file " + str(i)
                             self.DrawXic(dc, k, i, global_max, maxTables)
             t6 = time.time()
@@ -5734,20 +5913,20 @@ class DrawPanel(wx.Panel):
             self.storeImage(dc)
 
             for i in range(0, len(self.msdb.files.keys())):
-                if self.msdb.files[self.msdb.Display_ID[i]]["locked"]:
-                    x = self.msdb.files[self.msdb.Display_ID[i]]["axco"][0][0][2]
-                    y = self.msdb.files[self.msdb.Display_ID[i]]["axco"][0][1][1]
+                if self.msdb.files[self.msdb.Display_ID[i]].locked:
+                    x = self.msdb.files[self.msdb.Display_ID[i]].axco[0][0][2]
+                    y = self.msdb.files[self.msdb.Display_ID[i]].axco[0][1][1]
                     dc.DrawBitmap(self.lock_image, x, y+60, True)
-                if self.msdb.files[self.msdb.Display_ID[i]]["Display"]:
-                    x = self.msdb.files[self.msdb.Display_ID[i]]["axco"][0][0][2]
-                    y = self.msdb.files[self.msdb.Display_ID[i]]["axco"][0][1][1]
+                if self.msdb.files[self.msdb.Display_ID[i]].Display:
+                    x = self.msdb.files[self.msdb.Display_ID[i]].axco[0][0][2]
+                    y = self.msdb.files[self.msdb.Display_ID[i]].axco[0][1][1]
                     if i == self.msdb.active_file:
                         dc.DrawBitmap(self.active_image, x, y, True)
                     else:
                         dc.DrawBitmap(self.inactive_image, x, y, True)
-                    if self.msdb.files[self.msdb.Display_ID[i]]["rows"]:
+                    if self.msdb.files[self.msdb.Display_ID[i]].rows:
                         dc.DrawBitmap(self.xls_image, x, y+30, True)
-                    if self.msdb.files[self.msdb.Display_ID[i]]["datLink"]:
+                    if self.msdb.files[self.msdb.Display_ID[i]].datLink:
                         dc.DrawBitmap(self.mascot_image, x, y+90, True)
 
             #print "Drawing"        
@@ -5768,8 +5947,8 @@ class DrawPanel(wx.Panel):
 
     def On_Text_Spectrum(self):
         infodict = self.msdb.files[self.msdb.Display_ID[self.msdb.active_file]]
-        scan = infodict['processed_data']
-        filt = infodict['filter_dict'][infodict['scanNum']]
+        scan = infodict.processed_data
+        filt = infodict.filter_dict[infodict.scanNum]
         scan.sort()
         textdog = TextSpectrumDialog(self, scan, filt)
         textdog.ShowModal()
@@ -5969,18 +6148,18 @@ class findOutput(wx.Panel):
         self.currentPage = currentPage
         self.currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]        
 
-        if self.currentFile['vendor'] in ['Thermo', 'mgf'] and row != -1:
+        if self.currentFile.vendor in ['Thermo', 'mgf'] and row != -1:
             scan = int(self.grid.GetCellValue(row, 0))        
-            self.currentPage.msdb.files[self.currentPage.msdb.Display_ID[self.currentPage.msdb.active_file]]["scanNum"]=scan
+            self.currentPage.msdb.files[self.currentPage.msdb.Display_ID[self.currentPage.msdb.active_file]].scanNum =scan
 
 
             self.currentPage.msdb.set_scan(scan, self.currentPage.msdb.active_file)
 
-            if self.currentFile['vendor']=='Thermo' and row != -1:
-                self.currentPage.msdb.build_current_ID(self.currentPage.msdb.files[self.currentPage.msdb.Display_ID[self.currentPage.msdb.active_file]]["FileAbs"], scan)
-        elif self.currentFile['vendor']=='ABI':
-            exp = self.currentFile['experiment']
-            self.currentPage.msdb.build_current_ID(self.currentPage.msdb.files[self.currentPage.msdb.Display_ID[self.currentPage.msdb.active_file]]["FileAbs"], (scan, exp), 'ABI')
+            if self.currentFile.vendor=='Thermo' and row != -1:
+                self.currentPage.msdb.build_current_ID(self.currentPage.msdb.files[self.currentPage.msdb.Display_ID[self.currentPage.msdb.active_file]].FileAbs, scan)
+        elif self.currentFile.vendor=='ABI':
+            exp = self.currentFile.experiment
+            self.currentPage.msdb.build_current_ID(self.currentPage.msdb.files[self.currentPage.msdb.Display_ID[self.currentPage.msdb.active_file]].FileAbs, (scan, exp), 'ABI')
         self.currentPage.Window.UpdateDrawing()
         self.currentPage.Refresh()
 
@@ -6008,7 +6187,7 @@ class RecalFrame(wx.Frame):
         slope = float(self.slope.GetValue().strip())
         intercept = float(self.intercept.GetValue().strip())
 
-        for member in self.currentFile["scan"]:
+        for member in self.currentFile.scan:
             member[0] = member[0] + member[0] * slope + intercept
         self.parent.Window.UpdateDrawing()
         self.parent.Refresh()
@@ -6035,10 +6214,10 @@ class findFrame(wx.Panel):
 
         mass_entry = ''
 
-        if self.currentFile["vendor"] in ['Thermo', 'mgf']:
-            filt = self.currentFile["filter_dict"][self.currentFile["scanNum"]]
-        #elif self.currentFile["vendor"]=='ABI':
-        #    filt = self.currentFile["filter_dict"][(self.currentFile["scanNum"],self.currentFile["experiment"])]
+        if self.currentFile.vendor in ['Thermo', 'mgf']:
+            filt = self.currentFile.filter_dict[self.currentFile.scanNum]
+        #elif self.currentFile.vendor=='ABI':
+        #    filt = self.currentFile.filter_dict[(self.currentFile.scanNum,self.currentFile.experiment)]
 
         #2017-03-26 adding code for lock mass scans.
         if filt.find("ms2") > -1:
@@ -6090,15 +6269,22 @@ class XICgrid(grid.Grid, glr.GridWithLabelRenderersMixin):
         #self.SetColLabelRenderer(6, MyColLabelRenderer())
         self.parent = parent
         try:
-            all_modes = self.parent.currentFile['m'].scan_modes()
+            all_modes = self.parent.currentFile.m.scan_modes()
             filter_list = ['Full ms ']
             for exp, mode in all_modes:
                 filter_list.append('Exp %d (%s)' % (exp, mode))
         except AttributeError:
             filter_list = ['Full ms ','Full ms2 ']
-        if self.parent.currentFile['m'].file_type == 'mgf':
+        if self.parent.currentFile.m.file_type == 'mgf':
             filter_list = ['MGF ms2']
-        filter_list += self.parent.currentFile["targ_filt"]
+        if self.parent.currentFile.m.file_type == 'Bruker':
+            filter_list += ['MOB: [RT 1.0-2.0] [MZ 1.0-2.0] [k0 0.0-3.0]']
+        filter_list += self.parent.currentFile.targ_filt
+        
+        #modes = (['Normal', 'Mobiligram'] if
+                 #self.parent.currentFile.m.file_type == 'Bruker' else
+                 #['Normal'])
+        
         for k in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
             self.SetCellEditor(k,3,wx.grid.GridCellChoiceEditor(choices=filter_list, allowOthers=True))
             self.SetCellEditor(k,4,wx.grid.GridCellBoolEditor())
@@ -6109,6 +6295,7 @@ class XICgrid(grid.Grid, glr.GridWithLabelRenderersMixin):
             self.SetCellEditor(k, 7, wx.grid.GridCellBoolEditor())
             self.SetCellRenderer(k, 7, wx.grid.GridCellBoolRenderer())
             self.SetCellEditor(k,8,wx.grid.GridCellChoiceEditor(choices=['XIC', 'TIC'], allowOthers=False))
+            #self.SetCellEditor(k, 15, wx.grid.GridCellChoiceEditor(choices = modes))
 
         #---------------------------------Peptigram functionality not yet ready for release.
         #---------------------------------Hide these columns for now.
@@ -6129,38 +6316,38 @@ class xicFrame(wx.Frame):
     def __init__(self, parent, currentFile, fileID):
         self.currentFile = currentFile
         self.fileID = fileID
-        self.xic_mass_ranges = currentFile["xic_mass_ranges"]
-        self.filters = currentFile["filters"]
-        self.xic_scale = currentFile['xic_scale']
-        self.xic_type = currentFile['xic_type']
-        self.xic_mz = currentFile['xic_mass']
-        self.xic_cg = currentFile['xic_charge']
-        self.xic_sequence = currentFile['xic_sequence']
-        self.xic_scan = currentFile['xic_scan']
-        self.xic_marks = currentFile['xic_marks']
-        self.xic_dict = currentFile["xic_dict"]
-        self.x = currentFile["xic"]
-        self.titles = currentFile['xic_title']
+        self.xic_mass_ranges = currentFile.xic_mass_ranges
+        self.filters = currentFile.filters
+        self.xic_scale = currentFile.xic_scale
+        self.xic_type = currentFile.xic_type
+        self.xic_mz = currentFile.xic_mass
+        self.xic_cg = currentFile.xic_charge
+        self.xic_sequence = currentFile.xic_sequence
+        self.xic_scan = currentFile.xic_scan
+        self.xic_marks = currentFile.xic_marks
+        self.xic_dict = currentFile.xic_dict
+        self.x = currentFile.xic
+        self.titles = currentFile.xic_title
         self.parent = parent
         #original: size=(600,175)
         wx.Frame.__init__(self, parent, -1, "XIC", size=(750,300))
         self.panel = wx.Panel(self, -1)
-        if not self.currentFile['targ_check']:
+        if not self.currentFile.targ_check:
             targ_filt = set()
-            for member in currentFile['filter_dict'].values():
+            for member in currentFile.filter_dict.values():
                 id = self.parent.msdb.targ.match(member)
                 if id:
                     targ_filt.add(member)
                 id = self.parent.msdb.targ_ms3.match(member)
                 if id:
                     targ_filt.add(member)                
-            self.currentFile["targ_filt"] = list(targ_filt)
-            self.currentFile['targ_check']=True
+            self.currentFile.targ_filt = list(targ_filt)
+            self.currentFile.targ_check=True
         self.grid = XICgrid(self)
         self.grid.Bind(wx.grid.EVT_GRID_CELL_LEFT_DCLICK, self.OnCellLeftDClick)
         self.grid.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.OnSelectCell)
-        #print self.currentFile['targ_check']
-        #print self.currentFile["targ_filt"]
+        #print self.currentFile.targ_check
+        #print self.currentFile.targ_filt
         self.btn = wx.Button(self.panel, -1, "OK", size=(25,25), pos = (0, 210))
         self.Bind(wx.EVT_BUTTON, self.OnClick, self.btn)
         self.saveButton = wx.Button(self.panel, -1, "Save", size=(40,25), pos = (35, 210))
@@ -6185,8 +6372,8 @@ class xicFrame(wx.Frame):
         self.type = "SS"
 
     def InitialGridPopulate(self):
-        active_xic = self.currentFile['active_xic'] # [0,1,0]
-        xic_view = self.currentFile['xic_view']        
+        active_xic = self.currentFile.active_xic # [0,1,0]
+        xic_view = self.currentFile.xic_view        
         counter = 0
         for i, member in enumerate(self.xic_mass_ranges): # 0, [(300,2000)]
             for j, trace in enumerate(member): # 0, (300,2000)
@@ -6208,7 +6395,8 @@ class xicFrame(wx.Frame):
                     self.grid.SetCellValue(counter, 11, str(self.xic_cg[i][j]))
                     self.grid.SetCellValue(counter, 12, str(self.xic_scan[i][j]))
                 counter += 1        
-
+                
+                #self.grid.SetCellValue(counter, 11, '---')
 
     def OnScan(self, evt):
         '''
@@ -6222,11 +6410,11 @@ class xicFrame(wx.Frame):
 
         print "Scanning"
         targ_filt = set()
-        for member in self.currentFile['filter_dict'].values(): 
+        for member in self.currentFile.filter_dict.values(): 
             targ_filt.add(member)
         print len(targ_filt)
-        self.currentFile["targ_filt"] = sorted(targ_filt)
-        self.currentFile['targ_check']=True
+        self.currentFile.targ_filt = sorted(targ_filt)
+        self.currentFile.targ_check=True
         self.grid.Destroy()
         self.grid = XICgrid(self)
         self.grid.Bind(wx.grid.EVT_GRID_CELL_LEFT_DCLICK, self.OnCellLeftDClick)
@@ -6254,7 +6442,7 @@ class xicFrame(wx.Frame):
             if self.GetXICEntries()-1 != 0:
                 prev = self.GetXICEntries() - 2
                 value = int(self.grid.GetCellValue(int(prev), 0))
-                if self.currentFile['xic_style'] != 'OVERLAY':                        
+                if self.currentFile.xic_style != 'OVERLAY':                        
                     value += 1
                 self.grid.SetCellValue(self.GetXICEntries()-1, 0, str(value))  
 
@@ -6288,7 +6476,7 @@ class xicFrame(wx.Frame):
                 current_mark = self.mark_base[index]
                 current_xic = self.xbase[index]
                 self.Hide()
-                m = MGrid.MFrame(parent=self, currentMarks=current_mark, currentXIC=current_xic, index=index, dataFile=self.currentFile['m'])
+                m = MGrid.MFrame(parent=self, currentMarks=current_mark, currentXIC=current_xic, index=index, dataFile=self.currentFile.m)
                 m.Show()
         evt.Skip()
 
@@ -6343,41 +6531,43 @@ class xicFrame(wx.Frame):
 
 
         '''
-        dlg = wx.FileDialog(None, "Save as..", pos = (2,2), style = wx.SAVE, wildcard = "text files (*.txt)|")
+        dir = None
+        dlg = wx.FileDialog(None, "Save as..", pos = (2,2), style = wx.FD_SAVE, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
             dir = dlg.GetDirectory()
             os.chdir(dir)
         dlg.Destroy()
-        self.savedir = dir
-        self.savefilename = filename
-        #print dir
-        #print filename
-        if filename.find(".txt") == -1:
-            filename += ".txt"
+        if dir:
+            self.savedir = dir
             self.savefilename = filename
-        file_w = open(dir + '\\' + filename, 'w')
-
-        lines = []
-        for member in range(0,150):
-            line = [str(self.grid.GetCellValue(member,col)) for col in [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12]]
-            lines.append(line)
-        outlist = []
-        for line in lines:
-            print line
-            print line[0]
-            if line[0] != '':
-                for i, member in enumerate(line):
-                    if not member:
-                        line[i] = '0'
-                outlist.append(line)
-        num_lines = len(outlist) - 1
-        for i, line in enumerate(outlist):
-            file_w.write('\t'.join(x for x in line))
-            if i < num_lines:
-                file_w.write('\n')
-            #file_w.write(line[0] + '\t' + line[1] + '\t' + line[2] + '\t' + line[3] + '\t' + line[4] + '\t' + line[5] if line[5] else '0' + '\t' + line[6] if line[6] else '0' + '\t\n')
-        file_w.close()
+            #print dir
+            #print filename
+            if filename.find(".txt") == -1:
+                filename += ".txt"
+                self.savefilename = filename
+            file_w = open(dir + '\\' + filename, 'w')
+    
+            lines = []
+            for member in range(0,150):
+                line = [str(self.grid.GetCellValue(member,col)) for col in [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12]]
+                lines.append(line)
+            outlist = []
+            for line in lines:
+                print line
+                print line[0]
+                if line[0] != '':
+                    for i, member in enumerate(line):
+                        if not member:
+                            line[i] = '0'
+                    outlist.append(line)
+            num_lines = len(outlist) - 1
+            for i, line in enumerate(outlist):
+                file_w.write('\t'.join(x for x in line))
+                if i < num_lines:
+                    file_w.write('\n')
+                #file_w.write(line[0] + '\t' + line[1] + '\t' + line[2] + '\t' + line[3] + '\t' + line[4] + '\t' + line[5] if line[5] else '0' + '\t' + line[6] if line[6] else '0' + '\t\n')
+            file_w.close()
 
     def OnLoad(self, event):
         '''
@@ -6385,7 +6575,7 @@ class xicFrame(wx.Frame):
         Load contents of text file into grid.
 
         '''
-        dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.OPEN, wildcard = "text files (*.txt)|")
+        dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.FD_OPEN, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
             dir = dlg.GetDirectory()
@@ -6435,7 +6625,8 @@ class xicFrame(wx.Frame):
             if window != '':
                 if not self.grid.GetCellValue(i,4): # IF REMOVE CHECKED, SKIP
                     if self.type == "SS": # IS IT START STOP?
-                        result.append([self.grid.GetCellValue(i,col) for col in [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12]] + [self.mark_base[i]] + [self.grid.GetCellValue(i,14)])
+                        result.append([self.grid.GetCellValue(i,col) for col in [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12]] + 
+                                      [self.mark_base[i] if i < len(self.mark_base) else {}] + [self.grid.GetCellValue(i,14)])
                     else: # IS IT CENTER WIDTH?
                         window = int(self.grid.GetCellValue(i, 0))
                         center = float(self.grid.GetCellValue(i, 1))
@@ -6461,8 +6652,8 @@ class xicFrame(wx.Frame):
                         result.append([window, center - hwidth, center + hwidth, filter, scale, active, view, xtype, seq, mz, cg, scan, self.xic_marks[i], title])
         self.result = result
         #NEED TO RECONSTRUCT XICS
-        #current["filters"] =[["Full ms "],["Full ms ","Full ms ", "Full ms "]]
-        #current["xic_params"] = [[(fm, lm, u'Full ms ')], [(571.3, 572.3, u'Full ms '), (495.3, 496.3, u'Full ms '), (644, 646, u'Full ms ')]]
+        #current.filters =[["Full ms "],["Full ms ","Full ms ", "Full ms "]]
+        #current.xic_params = [[(fm, lm, u'Full ms ')], [(571.3, 572.3, u'Full ms '), (495.3, 496.3, u'Full ms '), (644, 646, u'Full ms ')]]
 
         #--------------------------THIS SECTION MAKES A DICTIONARY OF XIC PARAMS TO XIC AND XIC MAXES
         #--------------------------SO IF RETAINED, THEY ARE NOT RECALCULATED
@@ -6471,19 +6662,19 @@ class xicFrame(wx.Frame):
         xic_maxes = {}
         dict_storage = {}
         xr_storage = {}
-        for i, window in enumerate(self.currentFile["xic_params"]):
+        for i, window in enumerate(self.currentFile.xic_params):
             for j, trace in enumerate(window):
-                xic_storage[trace] = self.currentFile["xic"][i][j]
-                xic_maxes[trace] = self.currentFile["xic_max"][i][j]
-                dict_storage[trace] = self.currentFile["xic_dict"][i][j]
-                xr_storage[trace] = self.currentFile["xr"][i][j]
+                xic_storage[trace] = self.currentFile.xic[i][j]
+                xic_maxes[trace] = self.currentFile.xic_max[i][j]
+                dict_storage[trace] = self.currentFile.xic_dict[i][j]
+                xr_storage[trace] = self.currentFile.xr[i][j]
         print xic_maxes
-        #current["xic_mass_ranges"] = [[(fm, lm)], [(571.3, 572.3),(495.3, 496.3), (644, 646)]]
-        #current["xic_scale"] = [[-1],[-1,'s0', 's0']]
-        #current["active_xic"] = [0,1]        
-        #current["xr"] = [[current["m"].time_range() + (fm, lm, "Full ms ")], [current["m"].time_range() + (571.3, 572.3, "Full ms "), current["m"].time_range() + (495.3, 496.3, "Full ms "), current["m"].time_range() + (644, 646, "Full ms ")]]
-        #current["xic"] = [[self.GetAnXIC(self, current["m"], current["xr"][0][0])], [self.GetAnXIC(self, current["m"], current["xr"][1][0]), self.GetAnXIC(self, current["m"], current["xr"][1][1]), self.GetAnXIC(self, current["m"], current["xr"][1][2])]]
-        #current["xic_max"] = [[max([x[1] for x in current["xic"][0][0]])], [max([x[1] for x in current["xic"][1][0]]), max([x[1] for x in current["xic"][1][1]]), max([x[1] for x in current["xic"][1][2]])]]
+        #current.xic_mass_ranges = [[(fm, lm)], [(571.3, 572.3),(495.3, 496.3), (644, 646)]]
+        #current.xic_scale = [[-1],[-1,'s0', 's0']]
+        #current.active_xic = [0,1]        
+        #current.xr = [[current.m.time_range() + (fm, lm, "Full ms ")], [current.m.time_range() + (571.3, 572.3, "Full ms "), current.m.time_range() + (495.3, 496.3, "Full ms "), current.m.time_range() + (644, 646, "Full ms ")]]
+        #current.xic = [[self.GetAnXIC(self, current.m, current.xr[0][0])], [self.GetAnXIC(self, current.m, current.xr[1][0]), self.GetAnXIC(self, current.m, current.xr[1][1]), self.GetAnXIC(self, current.m, current.xr[1][2])]]
+        #current.xic_max = [[max([x[1] for x in current.xic[0][0]])], [max([x[1] for x in current.xic[1][0]]), max([x[1] for x in current.xic[1][1]]), max([x[1] for x in current.xic[1][2]])]]
 
         #------------------------------THIS SECTION READS THROUGH ALL "TRACES" i.e. entries in grid
         #------------------------------AND GROUPS BY "WINDOW"
@@ -6602,37 +6793,37 @@ class xicFrame(wx.Frame):
                     xdicts.append(dict_storage[current_params])
                     xr_list.append(xr_storage[current_params])
                 else:
-                    if self.currentFile['vendor'] in ['Thermo', 'mgf']:
-                        xr = self.currentFile["m"].time_range() + current_params
+                    if self.currentFile.vendor in ['Thermo', 'mgf']:
+                        xr = self.currentFile.m.time_range() + current_params
                         if windows[win][trace][7] in ['XIC', 'x']:
-                            cx = self.parent.msdb.GetAnXIC(self, self.currentFile["m"], xr, self.currentFile["filter_dict"], self.currentFile['rt2scan'])
+                            cx = self.parent.msdb.GetAnXIC(self, self.currentFile.m, xr, self.currentFile.filter_dict, self.currentFile.rt2scan)
                             xr_list.append(xr)
-                        elif windows[win][trace][7]=='TIC':
-                            cx = self.currentFile['m'].tic()
+                        elif windows[win][trace][7]=='TIC' or not windows[win][trace][7]:
+                            cx = self.currentFile.m.tic()
                             if not cx:
                                 print "File does not contain true TIC data."
-                                cx = self.parent.msdb.GetAnXIC(self, self.currentFile["m"], xr, self.currentFile["filter_dict"], self.currentFile['rt2scan'])
+                                cx = self.parent.msdb.GetAnXIC(self, self.currentFile.m, xr, self.currentFile.filter_dict, self.currentFile.rt2scan)
                             starttime, stoptime = xr[:2]
                             # This is sort of messy and should be replaced with
                             # time arguments in .tic().
                             cx = [x for x in cx if starttime <= x[0] <= stoptime]
                             xr_list.append(xr)
                         else:
-                            #cx = self.parent.msdb.GetAnXIC(self, self.currentFile["m"], xr)
+                            #cx = self.parent.msdb.GetAnXIC(self, self.currentFile.m, xr)
                             cx = Peptigram.GetAPeptigram(self.currentFile, int(windows[win][trace][11]), float(windows[win][trace][9]), int(windows[win][trace][10]), tolerance=0.02)
                             xr_list.append((min(cx, key = lambda t:t[0])[0], max(cx, key = lambda t:t[0])[0]) + current_params)
                         xics.append(cx)
                         xdicts.append(self.parent.msdb.make_xic_dict(cx))
                         maxs.append(max([x[1] for x in cx]))
-                    elif self.currentFile['vendor']=='ABI':
-                        self.currentFile["m"].set_sample(0)
-                        self.currentFile["m"].set_experiment("0")                                          
-                        xr = self.currentFile["m"].time_range() + current_params
+                    elif self.currentFile.vendor=='ABI':
+                        self.currentFile.m.set_sample(0)
+                        self.currentFile.m.set_experiment("0")                                          
+                        xr = self.currentFile.m.time_range() + current_params
                         if windows[win][trace][7]=='XIC':
-                            cx = self.parent.msdb.GetAnXIC(self, self.currentFile["m"], xr, self.currentFile["filter_dict"], self.currentFile['rt2scan'])
+                            cx = self.parent.msdb.GetAnXIC(self, self.currentFile.m, xr, self.currentFile.filter_dict, self.currentFile.rt2scan)
                             xr_list.append(xr)
                         else:
-                            #cx = self.parent.msdb.GetAnXIC(self, self.currentFile["m"], xr)
+                            #cx = self.parent.msdb.GetAnXIC(self, self.currentFile.m, xr)
                             cx = Peptigram.GetAPeptigram(self.currentFile, int(windows[win][trace][11]), float(windows[win][trace][9]), int(windows[win][trace][10]), tolerance=0.02)
                             xr_list.append((min(cx, key = lambda t:t[0])[0], max(cx, key = lambda t:t[0])[0]) + current_params)
                         xics.append(cx)    
@@ -6651,32 +6842,32 @@ class xicFrame(wx.Frame):
             except:
                 pass
 
-        self.currentFile['xr'] = self.xr
-        self.currentFile["xic"] = self.xic
-        self.currentFile["xic_params"] = self.xic_params
-        self.currentFile["filters"] = self.filters
-        self.currentFile["xic_mass_ranges"] = self.xic_mass_ranges
-        self.currentFile["xic_scale"] = self.xic_scale
-        self.currentFile['xic_max'] = self.xic_max
-        self.currentFile['active_xic'] = self.active_xic
-        self.currentFile['xic_view'] = self.xic_view
-        self.currentFile['xic_type'] = self.xic_type
-        self.currentFile['xic_sequence'] = self.xic_seq
-        self.currentFile['xic_mass'] = self.xic_mz
-        self.currentFile['xic_charge'] = self.xic_cg
-        self.currentFile['xic_scan'] = self.xic_scan
-        self.currentFile['xic_marks'] = self.marks
-        self.currentFile['xic_title'] = self.titles
+        self.currentFile.xr = self.xr
+        self.currentFile.xic = self.xic
+        self.currentFile.xic_params = self.xic_params
+        self.currentFile.filters = self.filters
+        self.currentFile.xic_mass_ranges = self.xic_mass_ranges
+        self.currentFile.xic_scale = self.xic_scale
+        self.currentFile.xic_max = self.xic_max
+        self.currentFile.active_xic = self.active_xic
+        self.currentFile.xic_view = self.xic_view
+        self.currentFile.xic_type = self.xic_type
+        self.currentFile.xic_sequence = self.xic_seq
+        self.currentFile.xic_mass = self.xic_mz
+        self.currentFile.xic_charge = self.xic_cg
+        self.currentFile.xic_scan = self.xic_scan
+        self.currentFile.xic_marks = self.marks
+        self.currentFile.xic_title = self.titles
         #print self.xic_dicts
-        self.currentFile['xic_dict'] = self.xic_dicts
+        self.currentFile.xic_dict = self.xic_dicts
         self.parent.msdb.set_axes()
 
-        for i, win in enumerate(self.currentFile['xic_marks']):
+        for i, win in enumerate(self.currentFile.xic_marks):
             for j, trace in enumerate(win):
                 for key in trace.keys():
                     if trace[key].xic==None:
-                        #currentFile['xic_marks'][i][j][key].xic=self.currentFile['xic'][i][j]
-                        trace[key].xic=self.currentFile['xic'][i][j]
+                        #currentFile.xic_marks[i][j][key].xic=self.currentFile.xic[i][j]
+                        trace[key].xic=self.currentFile.xic[i][j]
                         trace[key].intensity=trace[key].get_nearest_intensity(trace[key].xic, trace[key].time)        
 
         #self.parent.Window.UpdateDrawing()
@@ -6801,18 +6992,67 @@ class TestPopup(wx.PopupWindow):
         #Go to scan with MS2
         currentFile = self.parent.parent.msdb.files[self.parent.parent.msdb.Display_ID[self.parent.parent.msdb.active_file]]
         scan = int(self.pos[2].scan) 
-        currentFile['scanNum']=scan
-        self.parent.parent.msdb.set_scan(currentFile["scanNum"], self.parent.parent.msdb.active_file)
-        if currentFile['vendor']=='Thermo':
-            self.parent.parent.msdb.build_current_ID(self.parent.parent.msdb.Display_ID[self.parent.parent.msdb.active_file], currentFile["scanNum"])        
+        currentFile.scanNum=scan
+        self.parent.parent.msdb.set_scan(currentFile.scanNum, self.parent.parent.msdb.active_file)
+        if currentFile.vendor=='Thermo':
+            self.parent.parent.msdb.build_current_ID(self.parent.parent.msdb.Display_ID[self.parent.parent.msdb.active_file], currentFile.scanNum)        
         #self.Show(False)
         #self.Destroy()
         self.parent.parent.Window.UpdateDrawing() 
         self.parent.parent.Refresh()        
 
+class ReportXIC(wx.Dialog):
+    def __init__(self, parent, rowcount):
+        wx.Dialog.__init__(self, parent, title = "Get XICs from Report")
+        panel = wx.Panel(self, -1, style = wx.EXPAND)
+        
+        topText = wx.StaticText(panel, -1, "Getting %d XICS" % rowcount)
+        mzLabel = wx.StaticText(panel, -1, "MZ Tolerance (Da)")
+        self.mzCtrl = wx.TextCtrl(panel, -1, "0.01")
+        rtLabel = wx.StaticText(panel, -1, "RT Tolerance (seconds)")
+        self.rtCtrl = wx.TextCtrl(panel, -1, "60")
+        k0Label = wx.StaticText(panel, -1, "1/K0 Range")
+        self.k0Ctrl = wx.TextCtrl(panel, -1, "0.01-2.9")
+
+        okButton = wx.Button(panel, wx.ID_OK, label = "OK")
+        cancelButton = wx.Button(panel, wx.ID_CANCEL, label = 'Cancel')
+        okButton.Bind(wx.EVT_BUTTON, self.onButton)
+        cancelButton.Bind(wx.EVT_BUTTON, self.onButton)
+        
+        self.gbs = wx.GridBagSizer(10, 10)
+        self.gbs.Add(topText, (0, 0), span = (1, 2))
+        self.gbs.Add(mzLabel, (1, 0))
+        self.gbs.Add(self.mzCtrl, (1, 1))
+        self.gbs.Add(rtLabel, (2, 0))
+        self.gbs.Add(self.rtCtrl, (2, 1))
+        self.gbs.Add(k0Label, (3, 0))
+        self.gbs.Add(self.k0Ctrl, (3, 1))
+        self.gbs.Add(okButton, (5, 0))
+        self.gbs.Add(cancelButton, (5, 1))
+        
+        box = wx.BoxSizer()
+        box.Add(self.gbs)
+        panel.SetSizerAndFit(box)
+        
+    def onButton(self, event):
+        if self.IsModal():
+            self.EndModal(event.EventObject.Id)
+        else:
+            self.Close()
+        
+    def getValues(self):
+        mz = float(self.mzCtrl.GetValue())
+        rt = float(self.rtCtrl.GetValue())
+        k0_range = map(float, self.k0Ctrl.GetValue().split('-'))
+        return mz, rt, k0_range
+        
+
+
+
+
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.2 2018-12-17)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.2.2 2019-05-19)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -6839,6 +7079,7 @@ class TopLevelFrame(wx.Frame):
         #self._mgr.Bind(wx.lib.agw.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.OnPageClose)
         #self._mgr.Bind(wx.lib.agw.aui.EVT_AUI, self.OnPageClose)
         #self.ctrl.Bind(wx.lib.agw.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.OnClose)
+        
         #---------------CREATE MAIN FRAME TOOLBAR, STATUS BAR
         self.tb = self.CreateToolBar( TBFLAGS )
         #self.tb = wx.ToolBar(self, -1, wx.DefaultPosition, wx.DefaultSize, wx.TB_FLAT | wx.TB_NODIVIDER)
@@ -6869,6 +7110,8 @@ class TopLevelFrame(wx.Frame):
 
         self.custom_spectrum_process = None
         self.custom_spectrum_process_file = ''
+        
+        self.k0Tool = None
 
     def OnPageClose(self, event):
         print "close page"
@@ -6932,7 +7175,7 @@ class TopLevelFrame(wx.Frame):
 
     def OnTest(self, evt):
 
-        sb = SpecBase_aui3.SpecFrame(self, id=-1)
+        sb = SpecBase.SpecFrame(self, id=-1)
         self._mgr.AddPane(sb, aui.AuiPaneInfo().Name("SpecNote").MaximizeButton(True).MinimizeButton(True).
                           Caption("SpecStylus").Right().
                           MinSize(wx.Size(50, 210)))
@@ -6999,7 +7242,7 @@ class TopLevelFrame(wx.Frame):
                 pass
         if cap == 'SpecStylus':
             try:
-                sb = self.parentFrame.ObjectOrganizer.getObjectOfType(SpecBase_aui3.SpecFrame)
+                sb = self.parentFrame.ObjectOrganizer.getObjectOfType(SpecBase.SpecFrame)
                 sb.OnClose(None)   
             except KeyError:
                 pass
@@ -7103,7 +7346,10 @@ class TopLevelFrame(wx.Frame):
             ("Tools", (
                 ("&miniCHNOPS", 'miniCHOPS', self.OnMiniCHNOPS),
                 ("&areaBank", 'areaBank', self.OnAreaBox),
-                ("&Mass Accuracy Calculator", 'Mass Accuracy Calculator', self.OnMassAcc),)),
+                ("&Mass Accuracy Calculator", 'Mass Accuracy Calculator', self.OnMassAcc),
+                ("&Filter Selector", "Filter Selector", self.OnFilterSelector),
+                ("&K0 Width Tool", "TIMSTOF K0 Tool", self.OnK0Tool),
+                ("&Multi-XIC Tool", "TIMSTOFF XIC Tool", self.OnReportXIC))),
             ("Features", (
                 ("Make Feature File", 'Derives Features from Rawfiles', self.OnMakeFeatureFile),
                 ("Toggle Feature Detection", 'Toggle Feature Detection', self.OnToggleFeatureDetection),
@@ -7115,12 +7361,12 @@ class TopLevelFrame(wx.Frame):
         current = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]           
 
         if 'xlsSource' in current:
-            psmfile = current['xlsSource']
+            psmfile = current.xlsSource
         else:
             psmfile = mzGUI.file_chooser("Select feature-annotated multiplierz report...", wildcard="XLSX|*.xlsx|XLS|*.xls|Other|*")
             if not psmfile:
                 return
-            current['xlsSource'] = psmfile
+            current.xlsSource = psmfile
 
         featureFile = mzGUI.file_chooser("Import Feature File...", wildcard="Feature files (*.features)|*.features|Other|*.*")   #wildcard="featurePickle files (*.featurePickle)|*.featurePickle"
         if not featureFile:
@@ -7129,10 +7375,10 @@ class TopLevelFrame(wx.Frame):
 
         print "LOADING FEATURES."
 
-        datafile = current['FileAbs']
+        datafile = current.FileAbs
         data = mzAPI.mzFile(datafile, compatible_mode = True)
 
-        #current["scanToF"], current["scanFToPeaks"], current["featureToPSMs"] = FeatureImport.import_features(featureFile)
+        #current.scanToF, current.scanFToPeaks, current.featureToPSMs = FeatureImport.import_features(featureFile)
         featureDB = featureUtilities.FeatureInterface(featureFile)
         featureData = featureDB.mz_range(1, 9999999)
         try:
@@ -7141,21 +7387,21 @@ class TopLevelFrame(wx.Frame):
                                                                    featureData,
                                                                    absScanFeatures = True)
 
-            featureToPSMs = featureUtilities.featureToPSM(current['xlsSource'], featureData)
+            featureToPSMs = featureUtilities.featureToPSM(current.xlsSource, featureData)
         except IOError as err:
             wx.MessageBox('Error loading file: %s' % err)
             return
 
 
-        current["scanToF"] = scanToF
-        current["scanFToPeaks"] = scanFToPeaks
-        current["featureToPSMs"] = featureToPSMs
-        current["featureByIndex"] = dict(featureData)
+        current.scanToF = scanToF
+        current.scanFToPeaks = scanFToPeaks
+        current.featureToPSMs = featureToPSMs
+        current.featureByIndex = dict(featureData)
 
-        current["scansWithFeatures"]=current["scanToF"].keys()
-        current["scansWithFeatures"].sort()
+        current.scansWithFeatures=current.scanToF.keys()
+        current.scansWithFeatures.sort()
 
-        current['features'] = True
+        current.features = True
         print "IMPORTED!"        
 
     def OnMakeFeatureFile(self, event):
@@ -7175,7 +7421,7 @@ class TopLevelFrame(wx.Frame):
     def OnToggleFeatureDetection(self, event):
         currentPage = self.ctrl.GetPage(self.ctrl.GetSelection())
         currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]
-        currentFile["features"] = not currentFile["features"]      
+        currentFile.features = not currentFile.features      
 
 
     def OnMassAcc(self, event):
@@ -7208,6 +7454,18 @@ class TopLevelFrame(wx.Frame):
 
     def OnClickClear(self, event):
         self.area_tb.areaBox.SetValue('')
+        
+    def OnSelectFilter(self, event):
+        print "gere"
+        currentPage = self.ctrl.GetPage(self.ctrl.GetSelection())
+        currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]        
+        
+        self.filterSel.selector.GetValue()
+        currentFile.filterLock=self.filterSel.selector.GetValue()
+        currentPage.Window.UpdateDrawing()
+        currentPage.Refresh()
+        event.Skip()        
+            
 
     def OnClickCopy(self, event):
         data = wx.TextDataObject()
@@ -7255,6 +7513,81 @@ class TopLevelFrame(wx.Frame):
         self._mgr.Update()
 
 
+    def OnFilterSelector(self, evt):
+        self.filterSel = aui.AuiToolBar(self, -1, wx.DefaultPosition, wx.DefaultSize, style=aui.AUI_TB_OVERFLOW | aui.AUI_TB_TEXT | aui.AUI_TB_HORZ_TEXT)
+        currentPage = self.ctrl.GetPage(self.ctrl.GetSelection())
+        currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]        
+        
+        if not currentFile.targ_check:
+            
+            print "Scanning"
+            targ_filt = set()
+            for member in currentFile.filter_dict.values(): 
+                targ_filt.add(member)
+            print len(targ_filt)
+            currentFile.targ_filt = sorted(targ_filt)
+            currentFile.targ_check=True
+            
+        self.filterSel.selector = wx.ComboBox(self.filterSel, -1, 'Selector', size=(300,20), choices=currentFile.targ_filt) #,size = (150,20)
+        self.filterSel.Bind(wx.EVT_COMBOBOX, self.OnSelectFilter, self.filterSel.selector) 
+        self.filterSel.AddControl(self.filterSel.selector)
+        
+        #ComboBox = wx.ComboBox(eachPanel, -1, size=eachSize, pos=eachPos, name=eachName, value=eachList[eachInit], choices=eachList)
+        #if eachEvent:
+        #    self.Bind(wx.EVT_COMBOBOX, eachHandler, ComboBox)
+        #return ComboBox        
+
+        self.filterSel.Realize()  
+        self._mgr.AddPane(self.filterSel, aui.AuiPaneInfo().Name("Filter Selector").Caption("Filter Selector").ToolbarPane().Top().Row(2).LeftDockable(False).RightDockable(False))  
+        self._mgr.Update()        
+        
+    def OnK0Tool(self, evt):
+        self.k0Tool = aui.AuiToolBar(self, -1)
+        self.k0Tool.AddLabel(-1, "k0 Range", width = 50)
+        self.k0Tool.k0Ctrl = wx.TextCtrl(self.k0Tool, -1, '0.0-3.0')
+        self.k0Tool.AddControl(self.k0Tool.k0Ctrl)
+        self.k0Tool.Realize()
+        self._mgr.AddPane(self.k0Tool, aui.AuiPaneInfo().Name("k0 Tool").Caption("k0 Tool").ToolbarPane().Top().Row(2).LeftDockable(False).RightDockable(False))
+        self._mgr.Update()
+    
+    def OnReportXIC(self, evt):
+        report = self.parentFrame.ObjectOrganizer.getObjectOfType(dbFrame.dbFrame)
+        header = [report.grid.GetColLabelValue(i) for i in range(report.grid.GetNumberCols())]
+        rt_col = header.index('RT')
+        mz_col = header.index(r'm/z')
+        rangeCtrl = ReportXIC(self, report.grid.GetNumberRows())
+        if rangeCtrl.ShowModal() == wx.ID_OK:
+            mz_tol, rt_tol, k0_range = rangeCtrl.getValues()
+            xic_vals = []
+            for i in range(report.grid.GetNumberRows()):
+                rt = float(report.grid.GetCellValue(i, rt_col))
+                mz = float(report.grid.GetCellValue(i, mz_col))
+                xic_vals.append((rt - rt_tol/2, rt + rt_tol/2,
+                                 mz - mz_tol/2, mz + rt_tol/2,
+                                 k0_range[0], k0_range[1]))
+        else:
+            return
+        
+        xic_vals = [(rtl*60, rth*60, mzl, mzh, k0l, k0h) for
+                    rtl, rth, mzl, mzh, k0l, k0h in xic_vals]
+        
+        filters = ['RT: [RT %.3f-%.3f] [MZ %.3f-%.3f] [k0 %.3f-%.3f]' % xic_val
+                   for xic_val in xic_vals]
+        currentPage = self.ctrl.GetPage(self.ctrl.GetSelection())
+        currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]        
+        self.xicfrm = xicFrame(currentPage, currentFile, 'ID UNKNOWN')
+        
+        xicheader = [self.xicfrm.grid.GetColLabelValue(i) for i in
+                     range(self.xicfrm.grid.GetNumberCols())]
+        filtercol = xicheader.index('Filter')
+        for i, filt in enumerate(filters[:140], start = 1):
+            self.xicfrm.grid.SetCellValue(i, filtercol, filt)
+            self.xicfrm.grid.SetCellValue(i, 0, self.xicfrm.grid.GetCellValue(i-1, 0))
+            self.xicfrm.grid.SetCellValue(i, 1, self.xicfrm.grid.GetCellValue(i-1, 1))
+            self.xicfrm.grid.SetCellValue(i, 2, self.xicfrm.grid.GetCellValue(i-1, 2))
+        self.xicfrm.Show()
+            
+        
 
     def OnDoClose(self, evt):
         # NEED TO UPDATE FOR AUI
@@ -7418,6 +7751,8 @@ class TopLevelFrame(wx.Frame):
             self.ctrl.GetPage(selection).OnCopySpectrum(None)    
         if event.GetId() == 210:
             self.ctrl.GetPage(selection).JumpToPrecursor(None)
+        if event.GetId() == 200:
+            self.ctrl.GetPage(selection).ClearXICs(None)
 
     def OnMakeDb(self, event):
         #-----------------------------------
@@ -7434,94 +7769,127 @@ class TopLevelFrame(wx.Frame):
         currentPage = self.ctrl.GetPage(self.ctrl.GetSelection())
         currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]        
 
-        xlsfile = mzGUI.file_chooser('Select search result file...', wildcard='xls files (*.xls,*.xlsx;*.txt)|*.xls;*.xlsx;*.txt')
+        xlsfile = mzGUI.file_chooser('Select search result file...', wildcard='Table files (*.xls,*.xlsx;*.txt;*.csv)|*.xls;*.xlsx;*.txt;*.csv')
         if not xlsfile:
             print "No file specified; returning."
             return
         if xlsfile.find(".xls") == -1: # Load proteome discoverer
-            if currentFile['FileAbs'].endswith('.wiff'):
+            if currentFile.FileAbs.endswith('.wiff'):
                 mgfFile = mzGUI.file_chooser('Select corresponding mgf file...', wildcard='mgf files (*.mgf)|*.mgf')
                 from multiplierz.mgf import parse_to_generator
                 mgf_dict = dict([(i, x['title']) for i, x in enumerate(parse_to_generator(mgfFile))])
 
         dir = os.path.dirname(xlsfile)
 
-        currentFile["xlsSource"]=xlsfile
+        currentFile.xlsSource=xlsfile
 
-        currentFile['SearchType'] = check_search_type.perform_check(xlsfile)        
+        currentFile.SearchType = check_search_type.perform_check(xlsfile)        
+
+
 
         #------------------------------------
         # Look for database file.  If present, load it.  If not, make it.
         #------------------------------------
+        def scan_convert(desc):
+            if currentFile.m.file_type == 'wiff' and 'Locus:' in desc:
+                scan_exp = tuple(map(int, desc.split()[0].split('.')[3:5]))
+                return str(currentFile.m.make_implicit[scan_exp])
+            elif 'MultiplierzMGF' in desc:
+                return str(standard_title_parse(desc)['scan'])
+            else:
+                return desc.split('.')[1]
+            
         if not os.path.exists(xlsfile[:-4] + '.db'):         
-            dbase = self.ctrl.GetPage(self.ctrl.GetSelection()).MakeDatabase(xlsfile, currentFile['SearchType'], mgf_dict=mgf_dict)
+            dbase =\
+                self.ctrl.GetPage(self.ctrl.GetSelection()).MakeDatabase(xlsfile,
+                                                                         currentFile.SearchType,
+                                                                         scan_convert,
+                                                                         mgf_dict=mgf_dict)
         else:
             dbase = xlsfile[:-4] + '.db'
-
-        #-------------------------------------
-
-
-
+    
         import sqlite3    
         con = sqlite3.connect(dbase)
         cursor = con.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")      
         tables = [x[0] for x in cursor.fetchall()]
+        
+        if not tables:
+            print "Empty database found; removing."
+            con.close()
+            os.remove(dbase)
+            dbase = self.ctrl.GetPage(self.ctrl.GetSelection()).MakeDatabase(xlsfile,
+                                                                             currentFile.SearchType,
+                                                                             scan_convert,
+                                                                             mgf_dict=mgf_dict) 
+            con = sqlite3.connect(dbase)
+            cursor = con.cursor()              
+    
+        currentFile.database = dbase            
 
-        currentFile["database"] = dbase
+        #if currentFile.SearchType == "Mascot":
+        currentFile.rows, currentFile.mzSheetcols = db.pull_data_dict(dbase, 'select * from "peptides"')
 
-        #if currentFile["SearchType"] == "Mascot":
-        currentFile["rows"], currentFile["mzSheetcols"] = db.pull_data_dict(dbase, 'select * from "peptides"')
-
-        for row in currentFile['rows']:
-            if currentFile["SearchType"] in ['Mascot', 'X!Tandem', 'COMET']:
-                if currentFile['vendor']=='Thermo':
-                    #if currentFile["SearchType"] == "Mascot":
+        for row in currentFile.rows:
+            if currentFile.SearchType in ['Mascot', 'X!Tandem', 'COMET']:
+                if currentFile.vendor=='Thermo':
+                    #if currentFile.SearchType == "Mascot":
                     if 'MultiplierzMGF' in row['Spectrum Description']:
                         row['scan'] = int(standard_title_parse(row['Spectrum Description'])['scan'])
                     elif 'Locus' in row['Spectrum Description']:
-                        row['scan'] = currentFile['m'].make_implicit[int(row['Spectrum Description'].split('.')[3]),#*currentFile['m'].exp_num
+                        row['scan'] = currentFile.m.make_implicit[int(row['Spectrum Description'].split('.')[3]),#*currentFile.m.exp_num
                                                                      int(row['Spectrum Description'].split('.')[4].split()[0])]
                     else:
                         row['scan']=int(row['Spectrum Description'].split(".")[1])
 
-                elif currentFile['vendor']=='ABI':
+                elif currentFile.vendor=='ABI':
                     row['scan']=int(row['Spectrum Description'].split(".")[3])-1
                     try:
                         row['experiment']=int(row['Spectrum Description'].split(".")[4])-1 #Locus:1.1.1.1903.2 File:"20061229_EGFR_iTRAQ_IP.wiff"
                     except:
                         #print row['Spectrum Description']
                         row['experiment']=int(row['Spectrum Description'].split(".")[4].split(" ")[0])-1
-            else:
-                if currentFile['FileAbs'].endswith(".wiff"):
+            elif currentFile.SearchType == 'Proteome Discoverer':
+                if currentFile.FileAbs.endswith(".wiff"):
                     query=int(row['First Scan'])
                     row['Spectrum Description']=mgf_dict[int(query)]
                     row['scan']=int(standard_title_parse(mgf_dict[int(query)])['scan'])
-                if currentFile['FileAbs'].endswith(".raw"):
+                elif currentFile.FileAbs.endswith(".raw"):
                     row['scan'] = int(row['First Scan'])
                     row['Spectrum Description']='NA'
+            elif currentFile.SearchType == 'PEAKS':
+                if 'scan_' in row:
+                    row['Scan'] = int(row['scan_'].split(':')[1])
+                else:
+                    row['Scan'] = row['Precursor Id']
+            else:
+                raise Exception, currentFile.SearchType
+                    
 
                 #Proteome discoverer - get spectrum description and scan from MGF
 
+    
+        #-------------------------------------
+
         #try:            
-        if currentFile["SearchType"] == "Mascot":
-            currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]["header"] = mz_core.pull_mods_from_mascot_header(xlsfile)
-            if "Quantitation method" in currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]["header"].keys():
+        if currentFile.SearchType == "Mascot":
+            currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]].header = mz_core.pull_mods_from_mascot_header(xlsfile)
+            if "Quantitation method" in currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]].header.keys():
                 print "Quant method detected!"
-                currentFile["SILAC"]["mode"]=True
-                currentFile["SILAC"]["method"]=currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]["header"]["Quantitation method"]
-                print currentFile["SILAC"]["method"]            
-            currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]["fixedmod"] = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]["header"]["Fixed modifications"]
-        if currentFile["SearchType"] == "COMET":
+                currentFile.SILAC["mode"]=True
+                currentFile.SILAC["method"]=currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]].header["Quantitation method"]
+                print currentFile.SILAC["method"]            
+            currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]].fixedmod = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]].header["Fixed modifications"]
+        if currentFile.SearchType == "COMET":
             # -------------------------------------------- PARSE FIXED MODS FROM COMET HEADER
-            h = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]["header"] = mz_core.pull_mods_from_comet_header(xlsfile)        
+            h = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]].header = mz_core.pull_mods_from_comet_header(xlsfile)        
             aamods = ['add_A_alanine','add_C_cysteine','add_D_aspartic_acid','add_E_glutamic_acid','add_F_phenylalanine','add_G_glycine','add_H_histidine','add_I_isoleucine','add_K_lysine','add_L_leucine','add_M_methionine','add_N_asparagine','add_P_proline','add_Q_glutamine','add_R_arginine','add_S_serine','add_T_threonine','add_V_valine','add_W_tryptophan','add_Y_tyrosine'] #'add_Cterm_peptide','add_Cterm_protein', 'add_Nterm_peptide','add_Nterm_protein'
-            currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]["fixedmod"] =  dict((x, '[' + str(y) + ']') for x, y in [(x[4], y) for x, y in zip(h.keys(), h.values()) if x in aamods and y > 0])
+            currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]].fixedmod =  dict((x, '[' + str(y) + ']') for x, y in [(x[4], y) for x, y in zip(h.keys(), h.values()) if x in aamods and y > 0])
 
             #[u'add_C_cysteine:57.022']
 
         #-------------------------------The ID dict is a dictionary of scan number to the associated ID.
-        currentFile["ID_Dict"]= currentPage.build_ID_dict(currentFile["rows"], currentFile["mzSheetcols"], currentFile["Filename"], currentFile["vendor"])
+        currentFile.ID_Dict= currentPage.build_ID_dict(currentFile.rows, currentFile.mzSheetcols, currentFile.Filename, currentFile.vendor)
         self.Refresh()
         #b = BlaisPepCalc2.MainBPC(self, wx.NewId())
         addTheFrame = True
@@ -7580,16 +7948,30 @@ class TopLevelFrame(wx.Frame):
             rawfile = file_given
         else:
             rawfile = mzGUI.file_chooser('Choose Data File(s)',
-                                         wildcard='MS files (*.raw,*.wiff, *.t2d, *.mgf, *.D)|*.raw;*.wiff;*.t2d;*.mgf|Any|*')
+                                         wildcard='MS files (*.raw,*.wiff, *.t2d, *.mgf, *.D)|*.raw;*.wiff;*.t2d;*.mgf|Any|*', mode='m')
         if not rawfile:
             return
 
-        dir = os.path.dirname(rawfile)
-
-        #-------------CREATE A NEW DRAWPANEL, ADD THE NEW PANEL TO A NEW AUINOTEBOOK PAGE
-        child = DrawPanel(self.parentFrame, rawfile, 1)        
-        self.ctrl.AddPage(child, os.path.basename(rawfile), False)#, self.page_bmp)
-        self.ctrl.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, child.OnClose, self.ctrl)
+        #2019-05-21 adding code to allow opeing multiple files
+        if type(rawfile) != list:
+            
+            dir = os.path.dirname(rawfile)
+    
+            #-------------CREATE A NEW DRAWPANEL, ADD THE NEW PANEL TO A NEW AUINOTEBOOK PAGE
+            child = DrawPanel(self.parentFrame, rawfile, 1)        
+            self.ctrl.AddPage(child, os.path.basename(rawfile), False)#, self.page_bmp)
+            self.ctrl.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, child.OnClose, self.ctrl)
+            
+        else:
+            
+            for filename in rawfile:
+                dir = os.path.dirname(filename)
+            
+                #-------------CREATE A NEW DRAWPANEL, ADD THE NEW PANEL TO A NEW AUINOTEBOOK PAGE
+                child = DrawPanel(self.parentFrame, filename, 1)        
+                self.ctrl.AddPage(child, os.path.basename(filename), False)#, self.page_bmp)
+                self.ctrl.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, child.OnClose, self.ctrl)                
+                
 
 
     def onDFileBrowse(self, evt):
@@ -7634,7 +8016,8 @@ class TopLevelFrame(wx.Frame):
                 (160, "Spectrum Readout", wx.ART_NORMAL_FILE, "Spectrum Text", "Show Selected Spectrum in Text Format", 160),
                 ("sep", 0, 0, 0, 0, 0),
                 (170, "Search Spectrum", wx.ART_EXECUTABLE_FILE, "Search Spectrum", "Submit Spectrum To Database Search", 170),
-                (190, "Copy Window to Clipboard", wx.ART_COPY, "Copy Window to Clipboard", "Copy Window to Clipboard", 190))
+                (190, "Copy Window to Clipboard", wx.ART_COPY, "Copy Window to Clipboard", "Copy Window to Clipboard", 190),
+                (200, "Clear XICs", wx.ART_MINUS, "Clear XICs", "Clear XICs", 200))
 
 
     def AddToolBarItems(self, tb):
@@ -7667,6 +8050,10 @@ except:
         dirName = os.path.dirname(os.path.abspath(sys.argv[0]))    
 
 if __name__ == '__main__':
+
+    if wx.__version__[0] != '4':
+        print "Please install wxPython version 4." % wx.__version__
+    
     app = wx.App(False)    
 
     #ID_Dict = {}
@@ -7678,6 +8065,7 @@ if __name__ == '__main__':
     #wx.adv.SplashScreen(bmp, wx.adv.SPLASH_CENTER_ON_SCREEN|wx.adv.SPLASH_TIMEOUT, 1000, None, -1)
     #wx.Yield()    
 
+if True:
     from tempfile import mkdtemp
     from random import seed
     seed(1)
@@ -7688,7 +8076,7 @@ if __name__ == '__main__':
     import DatabaseOperations as db
     import Peptigram   
     import XICPalette
-    import SpecBase_new as SpecBase_aui3
+    import SpecBase_new as SpecBase
     import AreaWindow
     import Settings
     import MGrid
@@ -7716,6 +8104,7 @@ if __name__ == '__main__':
     import wx.grid
     import wx.lib.throbber as  throb
     import cPickle as pickle
+    import cPickle
     import base64
 
 
@@ -7723,6 +8112,7 @@ if __name__ == '__main__':
 
     #-----------------multiplierz
     import multiplierz.mzAPI as mzAPI
+    from mzBruker_wrapper import mzBrukerWrapped
     import multiplierz.mzReport as mzReport
     from multiplierz.mgf import standard_title_parse, write_mgf
     from multiplierz.spectral_process import centroid as mz_centroid
@@ -7735,8 +8125,12 @@ if __name__ == '__main__':
     
     import mzAtomicYardstick
 
-    import wx.adv
-    wx.adv.SplashScreen(bmp, wx.adv.SPLASH_CENTER_ON_SCREEN|wx.adv.SPLASH_TIMEOUT, 1000, None, -1)
+if __name__ == '__main__':
+    if wx.__version__ == '3.0.2.0':
+        wx.SplashScreen(bmp, wx.SPLASH_CENTER_ON_SCREEN|wx.SPLASH_TIMEOUT, 1000, None, -1)
+    else:
+        import wx.adv
+        wx.adv.SplashScreen(bmp, wx.adv.SPLASH_CENTER_ON_SCREEN|wx.adv.SPLASH_TIMEOUT, 1000, None, -1)
 
     TBFLAGS = ( wx.TB_HORIZONTAL
                 | wx.NO_BORDER
