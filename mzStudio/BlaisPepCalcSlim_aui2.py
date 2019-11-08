@@ -919,12 +919,12 @@ class BlaisPepCalc(wx.Panel):
     def removeOverlay(self, event):
         currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
         currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]   
-        scanNum = currentFile["scanNum"]
-        if scanNum in currentFile['overlay'].keys():
-            del currentFile['overlay'][scanNum]
-            del currentFile['overlay_sequence'][scanNum]
-            currentFile['label_dict'] = {}
-            currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
+        scanNum = currentFile.scanNum
+        if scanNum in currentFile.overlay.keys():
+            del currentFile.overlay[scanNum]
+            del currentFile.overlay_sequence[scanNum]
+            currentFile.label_dict = {}
+            currentPage.msdb.build_current_ID(currentFile.FileAbs,scanNum)
             currentPage.Window.UpdateDrawing()
             currentPage.Window.Refresh()
             currentPage.Refresh()             
@@ -940,10 +940,10 @@ class BlaisPepCalc(wx.Panel):
         currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
         currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]
         
-        if currentFile['spectrum_style'] != 'AVERAGE':
-            currentFilter = currentFile['filter_dict'][currentFile['scanNum']]
+        if currentFile.spectrum_style != 'AVERAGE':
+            currentFilter = currentFile.filter_dict[currentFile.scanNum]
         else:
-            currentFilter = currentFile['filter_dict'][int(currentFile['scanNum'].split('-')[0])]
+            currentFilter = currentFile.filter_dict[int(currentFile.scanNum.split('-')[0])]
             
         if 'ms2' not in currentFilter and 'ms3' not in currentFilter and 'msms' not in currentFilter:
             wx.MessageBox("Not an MS2/MS3 scan, cannot label!")
@@ -955,26 +955,26 @@ class BlaisPepCalc(wx.Panel):
         else:
             ntermToken = nterm
         if self.parent.labelOverwrite:      
-            scanNum = currentFile["scanNum"]
-            if scanNum not in currentFile["overlay"].keys():
-                currentFile["overlay"][scanNum]=[self.y_ions, self.b_ions]
-                currentFile['overlay_sequence'][scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue() + '-OH'
+            scanNum = currentFile.scanNum
+            if scanNum not in currentFile.overlay.keys():
+                currentFile.overlay[scanNum]=[self.y_ions, self.b_ions]
+                currentFile.overlay_sequence[scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue() + '-OH'
             else:
-                orig_y = currentFile["overlay"][scanNum][0]
-                orig_b = currentFile["overlay"][scanNum][1]
-                currentFile["overlay"][scanNum]=[self.y_ions + orig_y, self.b_ions + orig_b]
-                currentFile['overlay_sequence'][scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
-            currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
+                orig_y = currentFile.overlay[scanNum][0]
+                orig_b = currentFile.overlay[scanNum][1]
+                currentFile.overlay[scanNum]=[self.y_ions + orig_y, self.b_ions + orig_b]
+                currentFile.overlay_sequence[scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
+            currentPage.msdb.build_current_ID(currentFile.FileAbs,scanNum)
             currentPage.Window.UpdateDrawing()
             currentPage.Window.Refresh()
             currentPage.Refresh()                
         else:
             currentPage = self.parent.parent.ctrl.GetPage(self.parent.parent.ctrl.GetSelection())
             currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]         
-            scanNum = currentFile["scanNum"]
-            currentFile["overlay"][scanNum]=[self.y_ions, self.b_ions]
-            currentFile['overlay_sequence'][scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
-            currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
+            scanNum = currentFile.scanNum
+            currentFile.overlay[scanNum]=[self.y_ions, self.b_ions]
+            currentFile.overlay_sequence[scanNum]=ntermToken + '-' + self.FindWindowByName("sequence").GetValue()+ '-OH'
+            currentPage.msdb.build_current_ID(currentFile.FileAbs,scanNum)
             currentPage.Window.UpdateDrawing()
             currentPage.Window.Refresh()
             currentPage.Refresh()
@@ -982,10 +982,10 @@ class BlaisPepCalc(wx.Panel):
     def OnAddIons(self, event):
         currentPage = self.parent.ctrl.GetPage(self.parent.ctrl.GetSelection())
         currentFile = currentPage.msdb.files[currentPage.msdb.Display_ID[currentPage.msdb.active_file]]         
-        scanNum = currentFile["scanNum"]
-        currentFile["overlay"][scanNum]=[self.y_ions, self.b_ions]
-        currentFile['overlay_sequence']=self.FindWindowByName("sequence").GetValue()
-        currentPage.msdb.build_current_ID(currentFile["FileAbs"],scanNum)
+        scanNum = currentFile.scanNum
+        currentFile.overlay[scanNum]=[self.y_ions, self.b_ions]
+        currentFile.overlay_sequence=self.FindWindowByName("sequence").GetValue()
+        currentPage.msdb.build_current_ID(currentFile.FileAbs,scanNum)
         currentPage.Window.UpdateDrawing()
         currentPage.Window.Refresh()
         currentPage.Refresh()    

@@ -224,6 +224,7 @@ class TestFrame(wx.Frame):
         frm.grid.SetCellValue(i, 6, '1')
         frm.grid.SetCellValue(i, 7, '1')
         frm.grid.SetCellValue(i, 8, 'x')
+        frm.grid.SetCellValue(i, 14, self.parent.FindWindowByName("sequence").GetValue() + ' ' + str(self.parent.FindWindowByName('precursorListBox').GetStringSelection().split('=')[0].strip()))
         frm.mark_base.append({})
         
         frm.OnClick(None)

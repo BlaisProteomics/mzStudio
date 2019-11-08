@@ -32,7 +32,8 @@ Useful routines for working with sqlite files.
 '''
 
 
-def make_database(file, overwrite=True, vendor='Thermo', parent=None, searchtype="Mascot", mgf_dict={}):
+def make_database(file, overwrite=True, vendor='Thermo', parent=None, 
+                  searchtype="Mascot", scan_convert = None, mgf_dict={}):
     '''
     
     Takes an xls or txt file and makes an mzResults file (sqlite database) for easy access and parsing of data.
@@ -51,8 +52,8 @@ def make_database(file, overwrite=True, vendor='Thermo', parent=None, searchtype
     
     try:
         rdr = mzReport.reader(file, sheet_name="Data")
-    except IOError as err:
-        if file.lower().endswith('.txt'):
+    except (IOError, TypeError) as err:
+        if file.lower().endswith('.txt') or file.lower().endswith('.csv'):
             from multiplierz.mzReport.mzCSV import CSVReportReader
             rdr = CSVReportReader(file)
         else:
@@ -68,12 +69,19 @@ def make_database(file, overwrite=True, vendor='Thermo', parent=None, searchtype
     
     
     for i, col in enumerate(rdr.columns):
-        line += '"' + col + '"' + check_entry(rdrdata[0][col]) + ' , '  #' text, '
+        typ = check_entry(rdrdata[0][col])
+        if col.lower() == 'id':
+            col = 'id_'
+        elif col.lower() == 'scan':
+            col = 'scan_'
+        line += '"' + col + '"' + typ + ' , '  #' text, '
     
     if vendor == 'Thermo' and searchtype in ['Mascot', 'COMET', 'X!Tandem']:
         line += '"scan" integer);'
     else: #Proteome Discoverer
         line += '"scan" integer, "spectrum description" text);'
+    #else:
+        #line = line[:-2] + ');' # To remove trailing , .
     
     #if vendor == 'ABI':
     #    line += '"scan" integer, "experiment" string);'
@@ -83,7 +91,6 @@ def make_database(file, overwrite=True, vendor='Thermo', parent=None, searchtype
     conn.commit()
     counter = 0
     for i, row in enumerate(rdrdata):
-        if not any(row.values()): continue
         if counter % 50 == 0:
             print counter
             
@@ -114,29 +121,39 @@ def make_database(file, overwrite=True, vendor='Thermo', parent=None, searchtype
             
         line = line[:-1]
         if searchtype in ['Mascot', 'X!Tandem', "COMET"]:
-            if 'MultiplierzMGF' in row['Spectrum Description']:
-                scandata = standard_title_parse(row['Spectrum Description'])
-                scan = scandata['scan']
-                line += str(scan)
-            elif vendor == 'Thermo':
-                scan = row["Spectrum Description"].split(".")[1]
-                line += scan
-            elif vendor == 'ABI':
-                scan = row["Spectrum Description"].split(".")[4]
-                experiment = row["Spectrum Description"].split(".")[5]
-                line += scan + ", " + experiment
+            scan = scan_convert(row['Spectrum Description'])
+            line += scan
+            #if 'MultiplierzMGF' in row['Spectrum Description']:
+                #scandata = standard_title_parse(row['Spectrum Description'])
+                #scan = scandata['scan']
+                #line += str(scan)
+            #elif vendor == 'Thermo':
+                #scan = row["Spectrum Description"].split(".")[1]
+                #line += scan
+            #elif vendor == 'ABI':
+                #scan = row["Spectrum Description"].split(".")[4]
+                #experiment = row["Spectrum Description"].split(".")[5]
+                #line += scan + ", " + experiment
             line += ');'
+        elif searchtype == 'PEAKS':
+            if 'Precursor Id' in row:
+                line += str(row['Precursor Id']) + ', "NA");'
+            else:
+                line += row['Scan'].split(':')[1] + ', "NA");'
         else:
-            #Proteome Discoverer
+            #Proteome Discoverer or MGF
             if mgf_dict:
                 query=int(row['First Scan'])
                 desc=mgf_dict[int(query)]
                 scan=int(standard_title_parse(mgf_dict[int(query)])['scan'])            
                 line += str(scan) + ', "' + desc+ '");'
             else:
-                line += str(row['First Scan']) + ', "NA");'
+                line += row['First Scan'] + ', "NA");'
         
         c.execute(line)
+        
+        if i % 1000 == 0:
+            conn.commit()
         
     conn.commit()
 

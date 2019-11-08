@@ -221,68 +221,68 @@ class SettingsFrame(wx.Frame):
     def OnUpdate(self, event):
         active = self.parent.msdb.active_file
         currentFile = self.parent.msdb.files[self.parent.msdb.Display_ID[active]]        
-        currentFile['viewCentroid'] = True if self.FindWindowByName("viewCentroid").GetValue() == 'True' else False
-        currentFile['settings']['labelPeaks'] = True if self.FindWindowByName("labelPeaks").GetValue() == 'True' else False
-        currentFile['settings']['multiFileOption'] = self.FindWindowByName("multiFileOption").GetValue()
-        currentFile['settings']['areaCalcOption'] = self.FindWindowByName("areaCalcOption").GetValue()
-        currentFile['settings']['ionLabelThresh'] = float(self.FindWindowByName("ionLabelThresh").GetValue())
+        currentFile.viewCentroid = True if self.FindWindowByName("viewCentroid").GetValue() == 'True' else False
+        currentFile.settings['labelPeaks'] = True if self.FindWindowByName("labelPeaks").GetValue() == 'True' else False
+        currentFile.settings['multiFileOption'] = self.FindWindowByName("multiFileOption").GetValue()
+        currentFile.settings['areaCalcOption'] = self.FindWindowByName("areaCalcOption").GetValue()
+        currentFile.settings['ionLabelThresh'] = float(self.FindWindowByName("ionLabelThresh").GetValue())
                                                                           
-        currentFile['drawCentroid'] = True if self.FindWindowByName("drawCentroid").GetValue() == 'True' else False
-        currentFile['settings']['searchAlgorithm'] = self.FindWindowByName("searchAlgorithm").GetValue()
-        currentFile['settings']['viewCentroid']=currentFile['viewCentroid']
-        currentFile['settings']['drawCentroid']=currentFile['drawCentroid']
-        currentFile['label_res'] = True if self.FindWindowByName("label_res").GetValue() == 'True' else False
-        currentFile['settings']['label_res']=currentFile['label_res']        
-        self.parent.msdb.set_scan(currentFile["scanNum"], self.parent.msdb.active_file)
-        currentFile['settings']['min_cg'] = int(self.FindWindowByName("min_cg").GetValue())
-        currentFile['settings']['max_cg'] = int(self.FindWindowByName("max_cg").GetValue())
+        currentFile.drawCentroid = True if self.FindWindowByName("drawCentroid").GetValue() == 'True' else False
+        currentFile.settings['searchAlgorithm'] = self.FindWindowByName("searchAlgorithm").GetValue()
+        currentFile.settings['viewCentroid']=currentFile.viewCentroid
+        currentFile.settings['drawCentroid']=currentFile.drawCentroid
+        currentFile.label_res = True if self.FindWindowByName("label_res").GetValue() == 'True' else False
+        currentFile.settings['label_res']=currentFile.label_res        
+        self.parent.msdb.set_scan(currentFile.scanNum, self.parent.msdb.active_file)
+        currentFile.settings['min_cg'] = int(self.FindWindowByName("min_cg").GetValue())
+        currentFile.settings['max_cg'] = int(self.FindWindowByName("max_cg").GetValue())
         
-        currentFile['settings']["label_threshold"]['Thermo'] = float(self.FindWindowByName("Thermo_label_threshold").GetValue())
+        currentFile.settings["label_threshold"]['Thermo'] = float(self.FindWindowByName("Thermo_label_threshold").GetValue())
         
-        #currentFile['settings']['space'] = int(self.FindWindowByName("space").GetValue())
-        #currentFile['settings']['inter_raw_space'] = int(self.FindWindowByName("inter_raw_space").GetValue())        
-        #currentFile['settings']['y_marg'] = int(self.FindWindowByName("y_marg").GetValue())
-        #currentFile['settings']['total_height'] = int(self.FindWindowByName("total_height").GetValue())   
-        #currentFile['settings']['inter_axis_factor'] = int(self.FindWindowByName("inter_axis_factor").GetValue())
-        #currentFile['settings']['inter_xic_space'] = int(self.FindWindowByName("inter_xic_space").GetValue())        
-        #currentFile['settings']['spec_indent'] = int(self.FindWindowByName("spec_indent").GetValue())
-        #currentFile['settings']['spec_width'] = int(self.FindWindowByName("spec_width").GetValue()) 
-        #currentFile['settings']['ric_spec_indent'] = int(self.FindWindowByName("ric_spec_indent").GetValue())
-        #currentFile['settings']['ric_spec_width'] = int(self.FindWindowByName("ric_spec_width").GetValue())                     
+        #currentFile.settings['space'] = int(self.FindWindowByName("space").GetValue())
+        #currentFile.settings['inter_raw_space'] = int(self.FindWindowByName("inter_raw_space").GetValue())        
+        #currentFile.settings['y_marg'] = int(self.FindWindowByName("y_marg").GetValue())
+        #currentFile.settings['total_height'] = int(self.FindWindowByName("total_height").GetValue())   
+        #currentFile.settings['inter_axis_factor'] = int(self.FindWindowByName("inter_axis_factor").GetValue())
+        #currentFile.settings['inter_xic_space'] = int(self.FindWindowByName("inter_xic_space").GetValue())        
+        #currentFile.settings['spec_indent'] = int(self.FindWindowByName("spec_indent").GetValue())
+        #currentFile.settings['spec_width'] = int(self.FindWindowByName("spec_width").GetValue()) 
+        #currentFile.settings['ric_spec_indent'] = int(self.FindWindowByName("ric_spec_indent").GetValue())
+        #currentFile.settings['ric_spec_width'] = int(self.FindWindowByName("ric_spec_width").GetValue())                     
         
-        #currentFile['settings']['abi_centroid'] = self.FindWindowByName("abi_centroid").GetValue()
-        #currentFile['settings']['eliminate_noise'] = bool(self.FindWindowByName("eliminate_noise").GetValue())
-        #currentFile['settings']['step_length'] = float(self.FindWindowByName("step_length").GetValue())
-        #currentFile['settings']['peak_min'] = int(self.FindWindowByName("peak_min").GetValue())
-        #currentFile['settings']['threshold_cent_abi'] = int(self.FindWindowByName("threshold_cent_abi").GetValue())
+        #currentFile.settings['abi_centroid'] = self.FindWindowByName("abi_centroid").GetValue()
+        #currentFile.settings['eliminate_noise'] = bool(self.FindWindowByName("eliminate_noise").GetValue())
+        #currentFile.settings['step_length'] = float(self.FindWindowByName("step_length").GetValue())
+        #currentFile.settings['peak_min'] = int(self.FindWindowByName("peak_min").GetValue())
+        #currentFile.settings['threshold_cent_abi'] = int(self.FindWindowByName("threshold_cent_abi").GetValue())
         
-        currentFile['settings']['mainfont']['size'] = int(self.FindWindowByName("main_font_size").GetValue())
-        currentFile['settings']['mainfont']['font'] = self.FindWindowByName("main_font_font").GetValue()
-        currentFile['settings']['mainfont']['face'] = self.FindWindowByName("main_font_face").GetValue()
-        currentFile['settings']['mainfont']['style'] = self.FindWindowByName("main_font_style").GetValue()
-        currentFile['settings']['mainfont']['weight'] = self.FindWindowByName("main_font_weight").GetValue()
-        currentFile['settings']['mainfont']['color'] = self.FindWindowByName("main_font_color").GetValue()
+        currentFile.settings['mainfont']['size'] = int(self.FindWindowByName("main_font_size").GetValue())
+        currentFile.settings['mainfont']['font'] = self.FindWindowByName("main_font_font").GetValue()
+        currentFile.settings['mainfont']['face'] = self.FindWindowByName("main_font_face").GetValue()
+        currentFile.settings['mainfont']['style'] = self.FindWindowByName("main_font_style").GetValue()
+        currentFile.settings['mainfont']['weight'] = self.FindWindowByName("main_font_weight").GetValue()
+        currentFile.settings['mainfont']['color'] = self.FindWindowByName("main_font_color").GetValue()
         colortxt = self.FindWindowByName("line color").GetValue().replace('[','').replace(']','').split(',')
         color = [int(x.strip()) for x in colortxt]
-        currentFile['settings']['line color'] = color
-        currentFile['settings']['line width'] = float(self.FindWindowByName("line width").GetValue())
-        sz = str(currentFile['settings']['mainfont']['size'])
-        font = currentFile['settings']['mainfont']['font']
-        style = currentFile['settings']['mainfont']['style']
-        wt = currentFile['settings']['mainfont']['weight']
-        face = currentFile['settings']['mainfont']['face']
+        currentFile.settings['line color'] = color
+        currentFile.settings['line width'] = float(self.FindWindowByName("line width").GetValue())
+        sz = str(currentFile.settings['mainfont']['size'])
+        font = currentFile.settings['mainfont']['font']
+        style = currentFile.settings['mainfont']['style']
+        wt = currentFile.settings['mainfont']['weight']
+        face = currentFile.settings['mainfont']['face']
         selfont = 'wx.Font('+ sz + ', wx.' + font + ', wx.' + style +', wx.' + wt + ', False, "' + face + '")'
         #print selfont
-        currentFile['settings']['font1'] = eval(selfont)        
-        if currentFile['vendor']=='Thermo':
-            self.parent.msdb.build_current_ID(self.parent.msdb.Display_ID[self.parent.msdb.active_file], currentFile["scanNum"])
-        #if currentFile['vendor']=='ABI':
-        #    self.parent.msdb.build_current_ID(self.parent.msdb.Display_ID[self.parent.msdb.active_file], (currentFile["scanNum"], currentFile['experiment']), 'ABI')        
+        currentFile.settings['font1'] = eval(selfont)        
+        if currentFile.vendor=='Thermo':
+            self.parent.msdb.build_current_ID(self.parent.msdb.Display_ID[self.parent.msdb.active_file], currentFile.scanNum)
+        #if currentFile.vendor=='ABI':
+        #    self.parent.msdb.build_current_ID(self.parent.msdb.Display_ID[self.parent.msdb.active_file], (currentFile.scanNum, currentFile.experiment), 'ABI')        
         
         yardstick_values = self.page_yardstick.GetValues()
-        if currentFile['settings']['yardstick_settings'] != yardstick_values:
+        if currentFile.settings['yardstick_settings'] != yardstick_values:
             mzAtomicYardstick.initialize_masses(*yardstick_values)
-            currentFile['settings']['yardstick_settings'] = yardstick_values
+            currentFile.settings['yardstick_settings'] = yardstick_values
         
         
         

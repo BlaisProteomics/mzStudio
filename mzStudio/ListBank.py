@@ -209,7 +209,7 @@ class ListBank(wx.Frame):
         file_r.close()        
 
     def OnSave(self, event):
-        dlg = wx.FileDialog(None, "Save as..", pos = (2,2), style = wx.SAVE, wildcard = "text files (*.txt)|")
+        dlg = wx.FileDialog(None, "Save as..", pos = (2,2), style = wx.FD_SAVE, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
             dir = dlg.GetDirectory()
@@ -228,7 +228,7 @@ class ListBank(wx.Frame):
         file_w.close()
 
     def OnLoad(self, event):
-        dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.OPEN, wildcard = "text files (*.txt)|")
+        dlg = wx.FileDialog(None, "Load...", pos = (2,2), style = wx.FD_OPEN, wildcard = "text files (*.txt)|")
         if dlg.ShowModal() == wx.ID_OK:
             filename=dlg.GetFilename()
             dir = dlg.GetDirectory()

@@ -1,5 +1,5 @@
 __author__ = 'Scott Ficarro'
-__version__ = '1.1'
+__version__ = '1.0'
 
 
 import wx

@@ -77,6 +77,10 @@ def read_mass_def():
     mass_dict['mi']['cneutron']=mass_dict['mi']['C13']-mass_dict['mi']['C']
     mass_dict['mi']['nneutron']=mass_dict['mi']['N15']-mass_dict['mi']['N']
 
+    # Hacky.
+    mass_dict[True] = mass_dict['mi']
+    mass_dict[False] = mass_dict['av']
+
     return mass_dict
 
 def read_translations():

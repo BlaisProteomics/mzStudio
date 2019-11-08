@@ -392,9 +392,13 @@ def find_MS1(scan_dict, scan, direction):
     If direction is "Forward", increments by 1, anything else, -1.
     
     '''
-    top_scan = max(scan_dict.values())
-    found = 0
-    while not found:
+    if isinstance(scan, basestring):
+        # Average scans give a "scan" object of the form "X-Y"
+        scan = int(scan.split('-')[direction == "Forward"])
+    
+    top_scan = max(scan_dict.keys())
+    found = None
+    while found is None:
         if direction == "Forward":
             scan += 1
         else:

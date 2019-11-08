@@ -68,7 +68,7 @@ import multiplierz.mass_biochem as mzF
 import multiplierz.mass_biochem as mzFunctions
 #import win32com
 import pylab
-import multiplierz.mzTools.mz_image as Image
+#import multiplierz.mzTools.mz_image as Image
 import collections
 import sys
 #import protein_base

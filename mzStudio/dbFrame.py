@@ -22,6 +22,19 @@ from multiplierz.mgf import standard_title_parse
 
 from autocomplete import AutocompleteTextCtrl, list_completer
 
+def peaks_modseq_to_pepcalc_modseq(seq):
+    parts = [x[0] for x in re.findall(r'([A-Z](\([\+][0-9]*.[0-9]*\))?)', seq)]
+    calcseq = []
+    for part in parts:
+        if len(part) == 1:
+            calcseq.append(part)
+        else:
+            assert part[0].isalpha() and part[-1] == ')', part
+            mod = part[1:].replace('(', '[').replace(')', ']').replace('+', '')
+            calcseq.append(mod + part[0])
+    return ''.join(calcseq)
+
+
 class dbGrid(wx.grid.Grid):
     def __init__(self, parent, rows):
         self.parent = parent
@@ -56,12 +69,12 @@ class dbFrame(wx.Panel):
         self.ActiveFileNumber = self.currentPage.msdb.active_file
         self.fileName = self.currentPage.msdb.Display_ID[self.ActiveFileNumber]
         self.parent = parent #THIS IS AUI FRAME OBJECT
-        self.parentFileName = self.currentFile['FileAbs']
+        self.parentFileName = self.currentFile.FileAbs
         self.bpc = bpc
         
         #------------------------GET DATA FOR GRID
         
-        self.rows, self.cols = db.pull_data_dict(self.currentFile["database"], 'select * from "peptides"')
+        self.rows, self.cols = db.pull_data_dict(self.currentFile.database, 'select * from "peptides"')
         
        
         
@@ -71,7 +84,9 @@ class dbFrame(wx.Panel):
         
         #self.query = wx.TextCtrl(self, -1, "select * from peptides;", pos=(60,20)) #, size=(1120,20)
                 
-        autoTerms = self.currentFile["mzSheetcols"] + ['SELECT', 'FROM', 'peptides', 'WHERE', 'DISTINCT']
+        autoTerms = (['"%s"' % x for x in self.currentFile.mzSheetcols] +
+                     ['SELECT', 'FROM', 'peptides', 'WHERE', 'DISTINCT',
+                      'LIKE', 'GROUP', 'BY', 'ORDER', 'BY', 'COUNT', 'HAVING', 'LIMIT'])
         self.query = AutocompleteTextCtrl(self, completer = list_completer(autoTerms))
         self.query.SetValue('select * from "peptides"')
         
@@ -97,20 +112,28 @@ class dbFrame(wx.Panel):
         self.SizeFrame()
         
         self.currentFileNamesSet = set()
-        self.curdir = os.path.dirname(self.currentFile["FileAbs"]).lower()
-        self.currentFileNamesSet.add(self.currentFile["Filename"].lower())
+        self.curdir = os.path.dirname(self.currentFile.FileAbs).lower()
+        self.currentFileNamesSet.add(self.currentFile.Filename.lower())
        
         #self.topSizer = topSizer
         #self.gridSizer = gridSizer
        
-        if "File" in self.currentFile["mzSheetcols"]:
-            if self.currentFile["SearchType"]=="Mascot":
-                for row in self.currentFile["rows"]:
-                    if self.currentFile["vendor"]=='Thermo':
+        if "File" in self.currentFile.mzSheetcols:
+            if self.currentFile.SearchType=="Mascot":
+                for row in self.currentFile.rows:
+                    if self.currentFile.vendor=='Thermo':
                         currentFileName = self.curdir + '\\' + row["Spectrum Description"].split(".")[0] + '.raw'
-                    elif self.currentFile["vendor"]=='ABI':
+                    elif self.currentFile.vendor=='ABI':
                         currentFileName = self.curdir + '\\' + os.path.basename(row["File"])[:-8]
                     self.currentFileNamesSet.add(currentFileName)
+        elif 'Source File' in self.currentFile.mzSheetcols:
+            # Assumes PEAKS report.
+            # Also assumes all files in the report are in the same directory.
+            mainfiledir = os.path.dirname(self.currentFile.FileAbs)
+            for row in self.currentFile.rows:
+                newfile = os.path.join(mainfiledir, row['Source File'])
+                self.currentFileNamesSet.add(newfile)
+                
             
         self.Check_diff = False
         if len(self.currentFileNamesSet) > 1:
@@ -118,24 +141,24 @@ class dbFrame(wx.Panel):
         
         self.sub_bank = BlaisBrowser.MS_Data_Manager(self.parent.ctrl.GetPage(self.parent.ctrl.GetSelection()))
         
-        #self.sub_bank.addFile(self.currentFile["FileAbs"])
+        #self.sub_bank.addFile(self.currentFile.FileAbs)
         
         #-----------------------------Manually add the existing file to the "sub-bank"
         display_key = self.sub_bank.getFileNum()        
-        self.currentFile['FileAbs']= self.currentFile['FileAbs'].lower()
-        self.sub_bank.Display_ID[display_key]=self.currentFile["FileAbs"].lower()
-        self.sub_bank.files[self.currentFile["FileAbs"].lower()]=self.currentFile
+        self.currentFile.FileAbs= self.currentFile.FileAbs.lower()
+        self.sub_bank.Display_ID[display_key]=self.currentFile.FileAbs.lower()
+        self.sub_bank.files[self.currentFile.FileAbs.lower()]=self.currentFile
     
-        self.sub_bank.files[self.currentFile["FileAbs"].lower()]["mzSheetcols"] = self.currentFile["mzSheetcols"]
-        self.sub_bank.files[self.currentFile["FileAbs"].lower()]["rows"] = self.currentFile["rows"]
-        self.sub_bank.files[self.currentFile["FileAbs"].lower()]["ID_Dict"] = self.currentFile["ID_Dict"]
+        self.sub_bank.files[self.currentFile.FileAbs.lower()].mzSheetcols = self.currentFile.mzSheetcols
+        self.sub_bank.files[self.currentFile.FileAbs.lower()].rows = self.currentFile.rows
+        self.sub_bank.files[self.currentFile.FileAbs.lower()].ID_Dict = self.currentFile.ID_Dict
         self.sub_bank.files
         
         #------------------------------Are there additional files to load?
-        if "File" in self.currentFile["mzSheetcols"]:
+        if "File" in self.currentFile.mzSheetcols:
             file_set = set()
-            if self.currentFile['settings']['multiFileOption'] == 'LOAD ALL':
-                for row in self.currentFile["rows"]:
+            if self.currentFile.settings['multiFileOption'] == 'LOAD ALL':
+                for row in self.currentFile.rows:
                     file_set.add((self.curdir + '\\' + re.compile('(\S+?.raw)').match(os.path.basename(row['File'])).groups()[0]).lower())
                 for name in list(file_set):
                     if name not in [x.lower() for x in self.sub_bank.files.keys()]:
@@ -145,13 +168,13 @@ class dbFrame(wx.Panel):
                         print name
                         self.sub_bank.addFile(name)
                         #Need to update sheet information; copy direct from currentObject
-                        self.sub_bank.files[name]["mzSheetcols"] = self.currentFile["mzSheetcols"]
-                        self.sub_bank.files[name]["rows"] = self.currentFile["rows"]
-                        self.sub_bank.files[name]["fixedmod"] = self.currentFile["fixedmod"]
-                        self.sub_bank.files[name]["database"] = self.currentFile["database"]
-                        self.sub_bank.files[name]["SearchType"] = self.currentFile["SearchType"]
+                        self.sub_bank.files[name].mzSheetcols = self.currentFile.mzSheetcols
+                        self.sub_bank.files[name].rows = self.currentFile.rows
+                        self.sub_bank.files[name].fixedmod = self.currentFile.fixedmod
+                        self.sub_bank.files[name].database = self.currentFile.database
+                        self.sub_bank.files[name].SearchType = self.currentFile.SearchType
                         #print currentGridFilename
-                        self.sub_bank.files[name]["ID_Dict"] = self.currentPage.build_ID_dict(self.currentFile["rows"], self.currentFile["mzSheetcols"], os.path.basename(name))
+                        self.sub_bank.files[name].ID_Dict = self.currentPage.build_ID_dict(self.currentFile.rows, self.currentFile.mzSheetcols, os.path.basename(name))
                         #print "DUMPING"
                         #self.currentPage.dump_ID_Dict(self.sub_bank.files[name]["ID_Dict"])
                         #self.sub_bank.files[currentGridFileName]["ID_Dict"] = self.currentFileObject["ID_Dict"]                    
@@ -177,27 +200,27 @@ class dbFrame(wx.Panel):
         #    event.Skip()
         #    return 
     
-        self.currentFile["xlsSource"]=''
-        self.currentFile['SearchType'] = None  
-        self.currentFile["database"] = None
+        self.currentFile.xlsSource=''
+        self.currentFile.SearchType = None  
+        self.currentFile.database = None
         
         
-        self.currentFile["rows"], self.currentFile["mzSheetcols"] = [], []
-        self.currentFile['header']={}
+        self.currentFile.rows, self.currentFile.mzSheetcols = [], []
+        self.currentFile.header={}
         
-        self.currentFile['fixedmod']=""
-        self.currentFile['varmod']=""
-        self.currentFile['ID_Dict']={}
+        self.currentFile.fixedmod=""
+        self.currentFile.varmod=""
+        self.currentFile.ID_Dict={}
         
-        self.currentFile["mascot_ID"] = {}
+        self.currentFile.mascot_ID = {}
         
         
-        self.currentFile["SILAC"]={"mode":False, "peaks":(), "method":None} 
+        self.currentFile.SILAC={"mode":False, "peaks":(), "method":None} 
         
-        self.currentFile["datLink"] = False
-        self.currentFile["viewMascot"] = False
-        self.currentFile['ID']=False
-        self.currentFile['label_dict']={}
+        self.currentFile.datLink = False
+        self.currentFile.viewMascot = False
+        self.currentFile.ID=False
+        self.currentFile.label_dict={}
         currentPage = self.parent.ctrl.GetPage(self.parent.ctrl.GetSelection())
         currentPage.Window.UpdateDrawing()        
         
@@ -271,7 +294,7 @@ class dbFrame(wx.Panel):
             if not varmod:
                 varmod = "None"
             key = seq + "|" + str(cg) + '|' + varmod 
-            start, stop, scan_array = mz_core.derive_elution_range_by_C12_C13(self.currentFile['m'], self.currentFile['scan_dict'], int(ms1), decal, int(cg), 0.02, 200)
+            start, stop, scan_array = mz_core.derive_elution_range_by_C12_C13(self.currentFile.m, self.currentFile.scan_dict, int(ms1), decal, int(cg), 0.02, 200)
             scan_array.sort(key=lambda t:t[1], reverse = True)
             intensity = scan_array[0][1] 
             if key in pep_dict.keys(): #KEY ALREADY FOUND
@@ -314,8 +337,8 @@ class dbFrame(wx.Panel):
             self.frm.grid.SetCellValue(currentRow, 12, str(max_dict[key]))
             mark_dict = {}
             for scan in all_scans[key]:
-                mark_dict[scan]=BlaisBrowser.XICLabel(self.currentFile['m'].timeForScan(int(scan)), int(scan), key.split('|')[0], None, cg=int(key.split('|')[1]), fixedmod=self.currentFile["fixedmod"], varmod=key.split('|')[2])
-                #{9187:XICLabel(current['m'].timeForScan(9187), 9187, "Peptide", current['xic'][1][1])}
+                mark_dict[scan]=BlaisBrowser.XICLabel(self.currentFile.m.timeForScan(int(scan)), int(scan), key.split('|')[0], None, cg=int(key.split('|')[1]), fixedmod=self.currentFile.fixedmod, varmod=key.split('|')[2])
+                #{9187:XICLabel(current.m.timeForScan(9187), 9187, "Peptide", current.xic[1][1])}
             self.frm.mark_base.append(mark_dict)
             currentRow += 1
         self.frm.OnClick(None)
@@ -338,7 +361,7 @@ class dbFrame(wx.Panel):
     def dump_bank(self):
         #print "---------------------------"
         for member in self.sub_bank.files.keys():
-            print self.sub_bank.files[member]["FileAbs"].lower()
+            print self.sub_bank.files[member].FileAbs.lower()
 
     def OnBuilder(self, event):
         self.QB = QueryBuilder.QueryBuilder(self, id=-1)
@@ -359,13 +382,13 @@ class dbFrame(wx.Panel):
         if query.find("~set1")>-1:
             query = query.replace("~set1", '"Protein Description", "Peptide Sequence", "Variable Modifications" , "Charge" ,"Peptide Score", "Spectrum Description", "Scan"')
         #-------------------------------------------------------
-        #self.rows = db.pull_data_dict(self.currentFile["database"], query)
+        #self.rows = db.pull_data_dict(self.currentFile.database, query)
         
-        #self.cols = db.get_columns(self.currentFile["database"], table='peptides' if self.currentFile["SearchType"]=='Mascot' else 'fdr')
-        #if self.currentFile["SearchType"]=="Mascot":
+        #self.cols = db.get_columns(self.currentFile.database, table='peptides' if self.currentFile.SearchType=='Mascot' else 'fdr')
+        #if self.currentFile.SearchType=="Mascot":
         try:
-            self.rows, self.cols = db.pull_data_dict(self.currentFile["database"], query)
-            self.currentFile["mzSheetcols"] = self.cols
+            self.rows, self.cols = db.pull_data_dict(self.currentFile.database, query)
+            self.currentFile.mzSheetcols = self.cols
         except:
             wx.MessageBox("There was an error processing\nthe query!")
             return
@@ -374,10 +397,10 @@ class dbFrame(wx.Panel):
             wx.MessageBox("Query returned no results.")
             return
         
-        #if self.currentFile["SearchType"]=="Pilot":
-        #    self.rows = db.pull_data_dict(self.currentFile["database"], "select * from fdr;", table='fdr')        
+        #if self.currentFile.SearchType=="Pilot":
+        #    self.rows = db.pull_data_dict(self.currentFile.database, "select * from fdr;", table='fdr')        
         
-        #self.rows, self.cols = db.construct_data_dict(self.currentFile["database"], query)
+        #self.rows, self.cols = db.construct_data_dict(self.currentFile.database, query)
         print self.cols
         self.grid.Destroy()
         self.grid = dbGrid(self, len(self.rows))
@@ -429,6 +452,7 @@ class dbFrame(wx.Panel):
         CLICKED ON COLUMN
         
         '''
+        
         if col > -1:
             if self.ordering == "desc":
                 self.ordering = 'asc'
@@ -467,109 +491,134 @@ class dbFrame(wx.Panel):
                 self.grid.Refresh()
             currentGridFileName = None
             if self.Check_diff:
-                #print self.currentFile["SearchType"]
-                spec_lookup = "Spectrum Description" if self.currentFile["SearchType"]=='Mascot' else "Spectrum"
-                spec_index = 0 if self.currentFile["SearchType"]=='Mascot' else 3
-                if self.currentFile["vendor"]=='Thermo':
-                    currentGridFileName = (self.curdir + '\\' + self.grid.GetCellValue(row, self.cols.index("Spectrum Description")).split(".")[0] + '.raw' if self.currentFile["SearchType"]=='Mascot' else self.curdir + '\\' + self.grid.GetCellValue(row, self.cols.index("File")).split(".")[0].replace("_RECAL",'') + '.raw').lower()
-                #elif self.currentFile["vendor"]=='ABI':
+                #print self.currentFile.SearchType
+                if self.currentFile.SearchType=='Mascot':
+                    spec_lookup = "Spectrum Description"
+                    spec_index = 0
+                elif self.currentFile.SearchType == "PEAKS":
+                    spec_lookup = 'Source File'
+                    spec_index = 0
+                else:
+                    spec_lookup = "Spectrum" #???
+                    spec_index = 3
+                #spec_lookup = "Spectrum Description" if self.currentFile.SearchType=='Mascot' else "Spectrum"
+                spec_index = 0 if self.currentFile.SearchType=='Mascot' else 3
+                if self.currentFile.SearchType == "PEAKS":
+                    currentGridFileName = os.path.join(self.curdir, self.grid.GetCellValue(row, self.cols.index("Source File"))).lower()
+                elif self.currentFile.vendor=='Thermo':
+                    currentGridFileName = (self.curdir + '\\' + self.grid.GetCellValue(row, self.cols.index("Spectrum Description")).split(".")[0] + '.raw' if self.currentFile.SearchType=='Mascot' else self.curdir + '\\' + self.grid.GetCellValue(row, self.cols.index("File")).split(".")[0].replace("_RECAL",'') + '.raw').lower()
+                #elif self.currentFile.vendor=='ABI':
                 #    currentGridFileName = self.curdir + '\\' + os.path.basename(self.grid.GetCellValue(row, self.cols.index("File")))[:-8]
-                if self.currentFile["FileAbs"].lower() != currentGridFileName:
+                if self.currentFile.FileAbs.lower() != currentGridFileName:
                     #Switched files, need to update self and parent
                     if currentGridFileName.lower() not in [x.lower() for x in self.sub_bank.files.keys()]:
                         #Current file is not loaded, need to load
                         self.sub_bank.addFile(currentGridFileName)
                         #Need to update sheet information; copy direct from currentObject
-                        self.sub_bank.files[currentGridFileName]["mzSheetcols"] = self.currentFile["mzSheetcols"]
-                        self.sub_bank.files[currentGridFileName]["rows"] = self.currentFile["rows"]
-                        self.sub_bank.files[currentGridFileName]["fixedmod"] = self.currentFile["fixedmod"]
-                        self.sub_bank.files[currentGridFileName]["database"] = self.currentFile["database"]
-                        self.sub_bank.files[currentGridFileName]["SearchType"] = self.currentFile["SearchType"]
+                        self.sub_bank.files[currentGridFileName].mzSheetcols = self.currentFile.mzSheetcols
+                        self.sub_bank.files[currentGridFileName].rows = self.currentFile.rows
+                        self.sub_bank.files[currentGridFileName].fixedmod = self.currentFile.fixedmod
+                        self.sub_bank.files[currentGridFileName].database = self.currentFile.database
+                        self.sub_bank.files[currentGridFileName].SearchType = self.currentFile.SearchType
                         #print currentGridFileName
-                        self.sub_bank.files[currentGridFileName]["ID_Dict"] = self.currentPage.build_ID_dict(self.currentFile["rows"], self.currentFile["mzSheetcols"], os.path.basename(currentGridFileName))
+                        self.sub_bank.files[currentGridFileName].ID_Dict = self.currentPage.build_ID_dict(self.currentFile.rows,
+                                                                                                          self.currentFile.mzSheetcols,
+                                                                                                          os.path.basename(currentGridFileName),
+                                                                                                          file_object = self.currentFile)
                         #print "DUMPING"
-                        self.currentPage.dump_ID_Dict(self.sub_bank.files[currentGridFileName]["ID_Dict"])
+                        self.currentPage.dump_ID_Dict(self.sub_bank.files[currentGridFileName].ID_Dict)
+                        self.parent.ctrl.GetPageInfo(0).caption = os.path.basename(currentGridFileName)
                         #self.sub_bank.files[currentGridFileName]["ID_Dict"] = self.currentFileObject["ID_Dict"]
                     #To switch, need to delete dictionary entry in parent msdb
                     ##print "Attempting delete..."
-                    ##print self.parent.msdb.files[self.currentFile["FileAbs"]]
-                    del self.currentPage.msdb.files[self.currentFile["FileAbs"].lower()]
+                    ##print self.parent.msdb.files[self.currentFile.FileAbs]
+                    del self.currentPage.msdb.files[self.currentFile.FileAbs.lower()]
                     #Need to update with currentFile
                     ##print currentGridFileName
                     self.currentPage.msdb.files[currentGridFileName] = self.sub_bank.files[currentGridFileName]
                     self.currentPage.msdb.Display_ID[self.ActiveFileNumber]=currentGridFileName
                     self.currentFile = self.sub_bank.files[currentGridFileName]
             if not currentGridFileName:
-                currentGridFileName = self.currentFile["FileAbs"].lower()
+                currentGridFileName = self.currentFile.FileAbs.lower()
             
             # mzSheetcols is also set somewhere else, but only sometimes, and not
             # reliably reset when a new file is loaded.
-            self.currentFile['mzSheetcols'] = [self.grid.GetColLabelValue(x) for x in range(self.grid.GetNumberCols())]
+            self.currentFile.mzSheetcols = [self.grid.GetColLabelValue(x) for x in range(self.grid.GetNumberCols())]
             
             #--------------LOOK UP SCAN NUMBER    
-            if self.currentFile['vendor']=='Thermo':
-                if self.currentFile['SearchType'] in ['Mascot', 'X!Tandem', 'COMET']:
-                    if "Spectrum Description" in self.currentFile['mzSheetcols']:
-                        desc = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Spectrum Description"))
+            if self.currentFile.vendor=='Thermo':
+                if self.currentFile.SearchType in ['Mascot', 'X!Tandem', 'COMET']:
+                    if "Spectrum Description" in self.currentFile.mzSheetcols:
+                        desc = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Spectrum Description"))
                     else:
                         wx.MessageBox("No spectrum description column!\nCan't get scan number!", "mzStudio")
                         return
                     if 'MultiplierzMGF' in desc:
                         scan = int(standard_title_parse(desc)['scan'])
                     elif 'Locus' in desc:
-                        #scan = (int(desc.split('.')[3]) * self.currentFile['m'].exp_num) + int(desc.split('.')[4].split()[0])-1# MAY NOT BE CORRECT
-                        scan = self.currentFile['m'].make_implicit[int(desc.split('.')[3]),
+                        #scan = (int(desc.split('.')[3]) * self.currentFile.m.exp_num) + int(desc.split('.')[4].split()[0])-1# MAY NOT BE CORRECT
+                        scan = self.currentFile.m.make_implicit[int(desc.split('.')[3]),
                                                                    int(desc.split('.')[4].split()[0])]
                     else:
                         scan = int(desc.split(".")[1])
+                elif self.currentFile.SearchType == "PEAKS":
+                    if "Precursor Id" in self.currentFile.mzSheetcols:
+                        prec_num = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Precursor Id"))
+                        scan = self.currentFile.m.scan_for_precursor(prec_num)
+                    else:
+                        scan = int(self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("scan")))
                 else:
                     # Proteome Discoverer
-                    if self.currentFile['FileAbs'].lower().endswith(".wiff"):
-                        scan = int(float(self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("scan"))))
-                    if self.currentFile['FileAbs'].lower().endswith(".raw"):
-                        scan = int(float(self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("First Scan"))))
-                    #scan = int(self.currentFile["mzSheetcols"].index("First Scan"))
-            elif self.currentFile['vendor']=='mgf':
-                rowdesc = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Spectrum Description"))
+                    if self.currentFile.FileAbs.lower().endswith(".wiff"):
+                        scan = int(float(self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("scan"))))
+                    if self.currentFile.FileAbs.lower().endswith(".raw"):
+                        scan = int(float(self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("First Scan"))))
+                    #scan = int(self.currentFile.mzSheetcols.index("First Scan"))
+            elif self.currentFile.vendor=='mgf':
+                rowdesc = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Spectrum Description"))
                 try:
                     rowscannum = standard_title_parse(rowdesc)['scan']
                 except:
                     rowscannum = rowdesc.split(".")[1]
                                 
-                scan = self.currentFile["scan_dict"][int(rowscannum)] # I assume its not an X-to-X dict in non-MGF cases.                 
-            elif self.currentFile['vendor']=='ABI':
-                scan = int(self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Spectrum Description")).split(".")[3])-1
+                scan = self.currentFile.scan_dict[int(rowscannum)] # I assume its not an X-to-X dict in non-MGF cases.                 
+            elif self.currentFile.vendor=='ABI':
+                scan = int(self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Spectrum Description")).split(".")[3])-1
                 try:
-                    exp = str(int(self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Spectrum Description")).split(".")[4].strip())-1)
+                    exp = str(int(self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Spectrum Description")).split(".")[4].strip())-1)
                 except:
-                    exp = str(int(self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Spectrum Description")).split(".")[4].split(" ")[0].strip())-1)                        
+                    exp = str(int(self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Spectrum Description")).split(".")[4].split(" ")[0].strip())-1)                        
 
-            self.currentFile["scanNum"] = scan
-            if self.currentFile["vendor"]=='ABI':
-                self.currentFile["experiment"] = exp
+            self.currentFile.scanNum = scan
+            if self.currentFile.vendor=='ABI':
+                self.currentFile.experiment = exp
             self.currentPage.msdb.set_scan(scan, self.ActiveFileNumber)
            
             #--------------BUILD CURRENT ID
-            if self.currentFile['vendor']=='Thermo':
+            if self.currentFile.vendor=='Thermo':
                 self.currentPage.msdb.build_current_ID(currentGridFileName, scan, 'Thermo')
-                if self.currentFile["SearchType"] in ['Mascot', 'X!Tandem', 'COMET']:
-                    sequence = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Peptide Sequence"))
+                if self.currentFile.SearchType in ['Mascot', 'X!Tandem', 'COMET']:
+                    sequence = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Peptide Sequence"))
+                elif self.currentFile.SearchType == "PEAKS":
+                    sequence = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Peptide"))
+                    #sequence = sequence.replace('(', '[').replace(')', ']').replace('+', '')
+                    sequence = peaks_modseq_to_pepcalc_modseq(sequence)
                 else: # Proteome Discoverer
-                    sequence = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Annotated Sequence")).upper()                
-            if self.currentFile['vendor']=='mgf':
+                    sequence = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Annotated Sequence")).upper()                
+            if self.currentFile.vendor=='mgf':
                 self.currentPage.msdb.build_current_ID(currentGridFileName, scan, 'mgf')
-                if self.currentFile["SearchType"] in ['Mascot', 'X!Tandem', 'COMET']:
-                    sequence = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Peptide Sequence"))
+                if self.currentFile.SearchType in ['Mascot', 'X!Tandem', 'COMET']:
+                    sequence = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Peptide Sequence"))
                 else:
-                    sequence = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Annotated Sequence"))                
-            if self.currentFile['vendor']=='ABI':
-                exp = self.currentFile['experiment']
+                    sequence = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Annotated Sequence"))                
+            if self.currentFile.vendor=='ABI':
+                exp = self.currentFile.experiment
                 #self.currentPage.msdb.build_current_ID(currentGridFileName, (scan-1, str(int(exp)-1)), 'ABI')
                 self.currentPage.msdb.build_current_ID(currentGridFileName, (scan, exp), 'ABI')
-                if self.currentFile["SearchType"] in ['Mascot', 'X!Tandem', 'COMET']:
-                    sequence = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Peptide Sequence"))
+                if self.currentFile.SearchType in ['Mascot', 'X!Tandem', 'COMET']:
+                    sequence = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Peptide Sequence"))
                 else: # Proteome Discoverer
-                    sequence = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Annotated Sequence")).upper()
+                    sequence = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Annotated Sequence")).upper()
             try:
                 if self.currentPage.msdb.files[currentGridFileName]['fd']['reaction'] == 'etd':
                     self.bpc.b.FindWindowByName('ions').SetValue('c/z')
@@ -579,20 +628,22 @@ class dbFrame(wx.Panel):
                 pass
             
             try:
-                if self.currentFile["SearchType"] in ['Mascot', 'X!Tandem', 'COMET']:
-                    score = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Peptide Score"))
+                if self.currentFile.SearchType in ['Mascot', 'X!Tandem', 'COMET']:
+                    score = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Peptide Score"))
                 else:
-                    score = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("XCorr"))
-                self.currentFile['score'] = score
+                    score = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("XCorr"))
+                self.currentFile.score = score
             except ValueError:
                 pass # Input dummy value 
             pa = re.compile('([a-z]*[A-Z]+?)')
             peptide = pa.findall(sequence)
-            fixedmod = self.currentFile["fixedmod"]
-            if self.currentFile["SearchType"] in ['Mascot', 'X!Tandem', 'COMET']:
-                varmod = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Variable Modifications"))
+            fixedmod = self.currentFile.fixedmod
+            if self.currentFile.SearchType in ['Mascot', 'X!Tandem', 'COMET']:
+                varmod = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Variable Modifications"))
+            elif self.currentFile.SearchType == "PEAKS":
+                varmod = ''
             else:
-                varmod = self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Modifications"))
+                varmod = self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Modifications"))
             if not varmod:
                 varmod = ''
             #print "---***"
@@ -622,8 +673,8 @@ class dbFrame(wx.Panel):
                       'Acetyl': 'Acetyl',
                       'Propionyl': 'Propionyl',
                       'Phenylisocyanate': 'Phenylisocyanate'}
-            #print self.currentFile["SearchType"]
-            if self.currentFile["SearchType"] in ["Mascot", "Proteome Discoverer"]:
+            #print self.currentFile.SearchType
+            if self.currentFile.SearchType in ["Mascot", "Proteome Discoverer"]:
                 #print "NTERM MODS!"
                 if fixedmod == None:
                     fixedmod = ''
@@ -653,23 +704,23 @@ class dbFrame(wx.Panel):
                         #print mod_dict[mod]
                         self.bpc.b.FindWindowByName("nTerm").SetValue(mod_dict[mod])
                     if mod.lower().find("c-term") > -1:
-                        if self.currentFile["SearchType"] == "Mascot":
+                        if self.currentFile.SearchType == "Mascot":
                             mod = mod.split(" ")[1]
                             mod = mod.strip()
                             #print mod_dict[mod]
                             self.bpc.b.FindWindowByName("cTerm").SetValue(c_mod_dict[mod])   
-                        if self.currentFile["SearchType"] == 'Proteome Discoverer':
+                        if self.currentFile.SearchType == 'Proteome Discoverer':
                             self.bpc.b.FindWindowByName("cTerm").SetValue(c_mod_dict[mod]) 
                        
                 
             self.bpc.b.OnCalculate(None)
             #----------------------IF SILAC MODE, UPDATE SILAC PEAKS
-            if self.currentFile["SILAC"]["mode"]:
+            if self.currentFile.SILAC["mode"]:
                 #calc peaks for SILAC!
                 #light medium heavy
                 multimod = False
-                if self.currentFile["SILAC"]["method"]=='SILAC K+4 K+8 R+6 R+10 [MD]':
-                    charge = int(float(self.grid.GetCellValue(row, self.currentFile["mzSheetcols"].index("Charge"))))
+                if self.currentFile.SILAC["method"]=='SILAC K+4 K+8 R+6 R+10 [MD]':
+                    charge = int(float(self.grid.GetCellValue(row, self.currentFile.mzSheetcols.index("Charge"))))
                     light = ''
                     for member in peptide_container:
                         if member[-1:] not in ["R","K"]:
@@ -707,7 +758,7 @@ class dbFrame(wx.Panel):
                     light_mz, b ,y  = mz_core.calc_pep_mass_from_residues(light, cg=charge)
                     medium_mz, b, y = mz_core.calc_pep_mass_from_residues(medium, cg=charge)
                     heavy_mz, b, y = mz_core.calc_pep_mass_from_residues(heavy, cg=charge)
-                    self.currentFile["SILAC"]["peaks"]=(light_mz, medium_mz, heavy_mz)
+                    self.currentFile.SILAC["peaks"]=(light_mz, medium_mz, heavy_mz)
             self.currentPage.Refresh()
             self.dump_bank()
             self.currentPage.Window.UpdateDrawing()

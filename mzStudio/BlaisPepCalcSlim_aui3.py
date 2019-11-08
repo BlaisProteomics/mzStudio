@@ -710,7 +710,7 @@ class BlaisPepCalc(wx.Panel):
             b_ions = []
             y_ions = []
                 
-        charge_states = [precmass] + [(precmass + (protonMass*c))/c for c in range(1, 7)]
+        charge_states = [precmass] + [(precmass + (protonMass*c))/c for c in range(1, int(cg_calc)+1)]
         
         
         ##First, precursor.  

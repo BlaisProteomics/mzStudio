@@ -343,7 +343,7 @@ class MS_Data_Manager():
         #self.targ_etd = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI r Full ms2 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
         #targms3 FTMS + c NSI Full ms3 566.40@cid35.00 792.50@hcd50.00 [100.00-2000.00]
         self.targ_ms3 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI Full ms3 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')
-        self.dd_ms3 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI k d Full ms3 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')        
+        self.dd_ms3 = re.compile('.*?([FI]TMS) [+] ([cp]) [NE]SI (?:k )?d Full ms3 (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) (\d+?.\d+?)@(hcd|cid)(\d+?.\d+?) \[(\d+?.\d+?)-(\d+?.\d+?)\]')        
         self.active_file = None
         self.svg = defaultdict(list)
         self.mr = re.compile('\[(\d+?[.]?\d*?)[-](\d+?[.]?\d*?)\]')
@@ -7052,7 +7052,7 @@ class ReportXIC(wx.Dialog):
 
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.2.2 2019-05-19)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.3 2019-11-08)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
@@ -7474,6 +7474,10 @@ class TopLevelFrame(wx.Frame):
             yo = wx.TheClipboard.SetData(data)
             wx.TheClipboard.Close()             
 
+    def OnClickRadio(self, event):
+        pass 
+
+
     def OnMiniCHNOPS(self, evt):
         #c = miniCHNOPS.miniCHNOPS(self.tb, -1) #THIS CODE ADDS TO MAIN TOOLBAR
         #self.tb4 = wx.ToolBar(self, -1, wx.DefaultPosition, (300,50), wx.TB_FLAT | wx.TB_NODIVIDER | wx.TB_HORZ_TEXT)
@@ -7506,8 +7510,12 @@ class TopLevelFrame(wx.Frame):
 
         self.area_tb.clearButton = wx.Button(self.area_tb, -1, "Clear")
         self.area_tb.Bind(wx.EVT_BUTTON, self.OnClickClear, self.area_tb.clearButton)  
-        self.area_tb.AddControl(self.area_tb.clearButton)        
-
+        self.area_tb.AddControl(self.area_tb.clearButton)   
+        
+        #self.area_tb.radioBox = wx.RadioBox(self.area_tb, -1, label="radio", choices=['row','column'], name='radio')
+        #self.area_tb.Bind(wx.EVT_RADIOBOX, self.OnClickRadio, self.area_tb.radioBox)
+        #self.area_tb.AddControl(self.area_tb.radioBox)
+        
         self.area_tb.Realize()  
         self._mgr.AddPane(self.area_tb, aui.AuiPaneInfo().Name("area_tb").Caption("AreaBank").ToolbarPane().Top().Row(2).LeftDockable(False).RightDockable(False))  
         self._mgr.Update()
@@ -8117,7 +8125,7 @@ if True:
     from multiplierz.mgf import standard_title_parse, write_mgf
     from multiplierz.spectral_process import centroid as mz_centroid
     from multiplierz.internalAlgorithms import average
-    import mzGUI_standalone as mzGUI
+    import multiplierz.mzGUI_standalone as mzGUI
     import multiplierz.mzSearch.mascot as mascot
     import multiplierz.mzTools.featureDetector as featureDetector
     import multiplierz.mzTools.featureUtilities as featureUtilities

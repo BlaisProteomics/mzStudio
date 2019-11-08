@@ -122,26 +122,17 @@ class mzBrukerWrapped(object):
             axis = {'RT' : 0, 'MZ' : 1, 'K0' : 2, 'KO' : 2, 'MOB' : 2}[filter.split(':')[0]]
             (start_time, stop_time, start_mz, 
              stop_mz, start_k0, stop_k0) = parse_mob_filter(filter)
-            
-            if axis == 'RT':
-                xic = self.source.xic(start_time, stop_time,
-                                      start_mz, stop_mz, 
-                                      start_k0, stop_k0)
-            else:
-                xic = self.generalized_xgram(axis,
-                                             start_time, stop_time,
-                                             start_mz, stop_mz,
-                                             start_k0, stop_k0)
+            xic = self.generalized_xgram(axis,
+                                         start_time, stop_time,
+                                         start_mz, stop_mz,
+                                         start_k0, stop_k0)
         elif not force and stop_mz - start_mz > 500:
             print "Assuming full-MZ-range XIC!"
             # Does not add to the in-code cache, since it's fast regardless.
             return [x for x in self.tic() if
                     start_time <= x[0] <= stop_time]  
         else:
-            #xic = self.source.xic_batch([window])[0][1]
-            xic = self.source.xic(start_time, stop_time,
-                                  start_mz, stop_mz, 
-                                  0.0, 10.0)
+            xic = self.source.xic_batch([window])[0][1]
                 
         self._xic_cache[window, filter] = xic    
         return xic

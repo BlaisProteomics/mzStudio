@@ -1,3 +1,6 @@
+#import wxversion
+#wxversion.select('3')
+#import wx.gizmos as dataview
 import wx
 #from wx.dataview import TreeListCtrl
 from wx.lib.agw.customtreectrl import CustomTreeCtrl as TreeListCtrl
@@ -163,12 +166,12 @@ class SpectrumTree(treemixin.DragAndDrop,
         
         #########
         #wx.MessageDialog(self, "SpecViewLite showing %s goes here!" % data['Object'], style = wx.OK).ShowModal()
-        
-        if data['Object'].type == 'Spectrum':
-            frame = svl.SpecViewLitePanel(None, data['Object'])
-        elif data['Object'].type == "XIC":
-            frame = rvlm.RICviewLitePanel(None, data['Object'])
-        frame.Show()
+        if 'Object' in data.keys():
+            if data['Object'].type == 'Spectrum':
+                frame = svl.SpecViewLitePanel(None, data['Object'])
+            elif data['Object'].type == "XIC":
+                frame = rvlm.RICviewLitePanel(None, data['Object'])
+            frame.Show()
         #########
         
         event.Skip()

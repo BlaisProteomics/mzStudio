@@ -105,6 +105,8 @@ class mzFile(mzAPImzFile):
         def parseToScan(desc):
             if 'MultiplierzMGF' in desc:
                 return int(mgf.standard_title_parse(desc)['scan'])
+            elif r'1/K0' in desc:
+                return int(desc.split('#')[1].split('-')[0])
             else:
                 return int(desc.split('.')[1])
         mgf_data = mgf.parse_mgf(data_file, labelType = parseToScan)

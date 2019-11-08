@@ -12,12 +12,14 @@ def perform_check(filename):
     search_type = 'Unknown'
     try:
         rdr = mzReport.reader(filename, sheet_name="Data")
-    except IOError as err:
-        if filename.lower().endswith('.txt'):
+    except (IOError, TypeError) as err:
+        if filename.split('.')[-1] in {'csv', 'txt'}:
             from multiplierz.mzReport.mzCSV import CSVReportReader
             rdr = CSVReportReader(filename)
             if 'DeltaCn' in rdr.columns:
                 return 'Proteome Discoverer'
+            elif 'AScore' in rdr.columns:
+                return 'PEAKS'
         else:
             raise IOError, 'Report type not recognized. (Not PD file.)'
     sheets = rdr.sheet_names()
@@ -31,7 +33,11 @@ def perform_check(filename):
     #elif 'PSMs' in sheets:
         #search_type = "Proteome Discoverer"
     else:
-        raise IOError, 'Report type not recognized. (No *_Header sheet, and not PD file.)'
+        if 'Data' in sheets:
+            print "WARNING- Assuming Multiplerz-style Mascot PSM file."
+            search_type = 'Mascot'
+        else:
+            raise IOError, 'Report type not recognized. (No *_Header sheet, and not PD file.)'
     return search_type
     
 def test():
