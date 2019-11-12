@@ -1,5 +1,7 @@
-# mzStudio (current version 1.2, 2018-12-17)
+# mzStudio (current version 1.3, 2019-11-08)
 The mzStudio Proteomic Mass Spectrometry Analysis Tool
+
+New update!  Details coming soon....
 
 Recent additions:
   * Updated to MSFileReader 4.0 for faster access to raw data files from Thermo Fisher Scientific mass spectrometers.
