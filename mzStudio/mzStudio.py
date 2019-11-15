@@ -1277,10 +1277,7 @@ class MS_Data_Manager():
             current.time_ranges = [current.m.time_range()]
             if vendor == "Thermo":
                 if current.viewCentroid:
-                    try:
-                        current.scan = current.m.rscan(1)
-                    except AttributeError:
-                        current.scan = mz_centroid(current.m.scan(1))
+                    current.scan = mz_centroid(current.m.scan(1))
                 else:
                     current.scan = current.m.scan(1)
             if vendor == 'mgf':
@@ -1863,7 +1860,7 @@ class MS_Data_Manager():
             key = (scan, exp)
         if self.files[filename].filter_dict[key].find("+ p")>-1:
             if vendor == 'Thermo':
-                scan_data = self.files[filename].m.rscan(self.files[filename].scanNum)
+                scan_data = self.files[filename].m.scan(self.files[filename].scanNum, centroid = True)
             if vendor == 'ABI':
                 scan_data = self.files[filename].m.rscan(self.files[filename].m.scan_time_from_scan_name(scan), exp)
         else:
@@ -1921,7 +1918,7 @@ class MS_Data_Manager():
         #if currentFilter.find("+ p")>-1:
         if "+ p" in currentFilter:
             if currentFilter.find("FTMS")>-1:
-                scan_data = self.files[filename].m.rscan(self.files[filename].scanNum)
+                scan_data = self.files[filename].m.scan(self.files[filename].scanNum, centroid = True)
             
             elif currentFilter.find("TOF PI + p NSI Full ms2")>-1 or currentFilter.find("EPI + p NSI Full ms2")>-1:
             #if vendor == 'ABI':
@@ -2938,8 +2935,12 @@ class DrawPanel(wx.Panel):
         if vendor == "Thermo":
             if profile:
                 if filt.find('FTMS')>-1:
-                    scan_data = currentFile.m.scan(scanNum)
-                    cent_data = currentFile.m.rscan(scanNum)
+                    try:
+                        scan_data = currentFile.m.scan(scanNum, centroid = False)
+                        cent_data = currentFile.m.scan(scanNum, centroid = True)
+                    except IOError: # Profile data 
+                        scan_data = currentFile.m.scan(scanNum, centroid = True)
+                        cent_data = scan_data
                 elif any([filt.find(x) for x in ['TOF', 'Q1', 'Q3']]):
                     scan_data= currentFile.m.scan(scanNum)
                     cent_data = currentFile.m.scan(scanNum, centroid=True)
@@ -6799,9 +6800,10 @@ class xicFrame(wx.Frame):
                             cx = self.parent.msdb.GetAnXIC(self, self.currentFile.m, xr, self.currentFile.filter_dict, self.currentFile.rt2scan)
                             xr_list.append(xr)
                         elif windows[win][trace][7]=='TIC' or not windows[win][trace][7]:
-                            cx = self.currentFile.m.tic()
-                            if not cx:
-                                print "File does not contain true TIC data."
+                            try:
+                                cx = self.currentFile.m.tic()
+                                assert cx
+                            except (AttributeError, AssertionError):
                                 cx = self.parent.msdb.GetAnXIC(self, self.currentFile.m, xr, self.currentFile.filter_dict, self.currentFile.rt2scan)
                             starttime, stoptime = xr[:2]
                             # This is sort of messy and should be replaced with
@@ -7052,7 +7054,7 @@ class ReportXIC(wx.Dialog):
 
 class TopLevelFrame(wx.Frame):
 
-    def __init__(self, parent, id=-1, title="mzStudio (version 1.3 2019-11-08)", pos=wx.DefaultPosition,
+    def __init__(self, parent, id=-1, title="mzStudio (version 1.3 2019-11-15)", pos=wx.DefaultPosition,
                  size=(1200, 600), style=wx.DEFAULT_FRAME_STYLE):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
